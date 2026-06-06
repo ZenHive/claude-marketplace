@@ -1,0 +1,12 @@
+{
+  "name": "elixir",
+  "version": "0.1.0",
+  "description": "Essential Elixir/OTP development support — per-edit check hooks (format, compile, test.json, credo, dialyzer.json, sobelow, doctor) plus core skills: code-style, development-commands/philosophy, dialyzer-json, ex-unit-json, elixir-setup, elixir-ci-harness, integration-testing, usage-rules, hex-docs-search, reach, tidewave-guide, web-command, agent-economy, api-toolkit, zen-websocket.",
+  "author": {
+    "name": "ZenHive",
+    "url": "https://github.com/ZenHive"
+  },
+  "repository": "https://github.com/ZenHive/claude-marketplace",
+  "license": "MIT",
+  "keywords": ["elixir", "erlang", "beam", "otp", "functional"]
+}

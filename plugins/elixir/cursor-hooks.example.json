@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "hooks": {
+    "postToolUse": [
+      {
+        "command": "/ABS/PATH/TO/marketplace/plugins/elixir/scripts/cursor-post-edit-adapt.sh",
+        "matcher": "Write|TabWrite",
+        "timeout": 60
+      },
+      {
+        "command": "/ABS/PATH/TO/marketplace/plugins/elixir/scripts/cursor-ash-codegen-adapt.sh",
+        "matcher": "Write|TabWrite",
+        "timeout": 30
+      }
+    ]
+  }
+}

@@ -1,0 +1,100 @@
+# Forward-compat Elixir harness — explicit matrix for runtime migrations.
+# Use this variant ONLY during a runtime migration (e.g., OTP 27 → 29) when
+# you want dep incompatibilities to surface at PR-open time so cloud agents
+# can fix them autonomously. In steady state, prefer `harness.yml` (single
+# version sourced from `.tool-versions` — drift-free).
+#
+# CRITICAL: the `primary` matrix entry MUST mirror `.tool-versions` exactly.
+# Drift between this file and `.tool-versions` reintroduces the format-drift
+# class of bug this skill exists to solve. When `.tool-versions` changes,
+# update this file in the same commit.
+#
+# Worked example (cartouche, OTP 27 → 29 migration): adding OTP 29-RC to the
+# matrix would have caught a `meck` pin incompatibility at PR-open time,
+# letting Cursor (which can run mix tasks) amend the PR autonomously without
+# a human round-trip. That's high-leverage during a migration; remove the
+# secondary entries once `.tool-versions` is updated to the new runtime.
+#
+# Customization points (search for "[CUSTOMIZE]"):
+#   1. Branch trigger     — default `[development]`
+#   2. MIX_ENV            — default `test`
+#   3. Matrix primary     — MUST match `.tool-versions` exactly
+#   4. Matrix secondary   — the in-flight runtime (RC, beta, future major)
+#   5. Coverage threshold — default `85`
+#   6. Integration tag    — default `integration`
+
+name: Harness
+
+on:
+  pull_request:
+    branches: [development]   # [CUSTOMIZE 1]: branch trigger
+  push:
+    branches: [development]   # [CUSTOMIZE 1]: branch trigger
+
+permissions:
+  contents: read
+
+concurrency:
+  group: harness-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  harness:
+    name: Harness (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test           # [CUSTOMIZE 2]: MIX_ENV
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # [CUSTOMIZE 3] PRIMARY — MUST mirror `.tool-versions` exactly.
+          # Update both files in the same commit when bumping versions.
+          - elixir: '1.18.4'
+            otp: '27.3'
+          # [CUSTOMIZE 4] SECONDARY — forward-compat / migration target.
+          # Add the in-flight runtime here so dep incompatibilities surface at
+          # PR-open time. Remove once `.tool-versions` is updated to it.
+          - elixir: '1.20.0-rc.4'
+            otp: '29.0'
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: beam
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Cache deps & _build (covers dialyxir PLT default path)
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: mix-${{ runner.os }}-otp${{ steps.beam.outputs.otp-version }}-elixir${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            mix-${{ runner.os }}-otp${{ steps.beam.outputs.otp-version }}-elixir${{ steps.beam.outputs.elixir-version }}-
+
+      - run: mix deps.get
+
+      - name: Compile (warnings as errors)
+        run: mix compile --warnings-as-errors
+
+      - name: Format check
+        run: mix format --check-formatted
+
+      - name: Credo (strict, excluding TODO/FIXME design tags)
+        run: mix credo --strict --ignore TagTODO,TagFIXME
+
+      - name: Doctor (--raise overrides .doctor.exs raise=false to gate CI)
+        run: mix doctor --raise
+
+      - name: Sobelow (honors .sobelow-conf, exit=Low)
+        run: mix sobelow
+
+      - name: Tests + coverage gate (>=85%)
+        run: mix test.json --cover --cover-threshold 85 --summary-only --exclude integration   # [CUSTOMIZE 5,6]
+
+      - name: Dialyzer
+        run: mix dialyzer
