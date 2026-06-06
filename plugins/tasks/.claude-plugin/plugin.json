@@ -1,0 +1,12 @@
+{
+  "name": "tasks",
+  "version": "0.1.0",
+  "description": "Roadmap-driven task management: the rmap roadmap substrate (tasks.toml → ROADMAP.md), D/B/U prioritization scoring, task-as-prompt authoring, and pickup / plan-and-file execution modes that preserve implementer–reviewer separation. Skills: rmap, task-driver, task-writing, roadmap-planning.",
+  "author": {
+    "name": "ZenHive",
+    "url": "https://github.com/ZenHive"
+  },
+  "repository": "https://github.com/ZenHive/claude-marketplace",
+  "license": "MIT",
+  "keywords": ["roadmap", "rmap", "tasks", "planning", "prioritization", "language-agnostic"]
+}

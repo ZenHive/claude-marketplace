@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/check-unaudited-commits.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "git-commit",
+  "version": "0.1.0",
+  "description": "Intelligent git commit workflow automation with AI-powered file grouping and configurable message formats. Command: /git-commit:commit.",
+  "author": {
+    "name": "ZenHive",
+    "url": "https://github.com/ZenHive"
+  },
+  "commands": "./commands/commit.md",
+  "repository": "https://github.com/ZenHive/claude-marketplace",
+  "license": "MIT",
+  "keywords": ["git", "commit", "workflow", "version-control", "automation"]
+}

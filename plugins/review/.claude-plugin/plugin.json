@@ -1,0 +1,12 @@
+{
+  "name": "review",
+  "version": "0.1.0",
+  "description": "Universal staged review chain: code-review (pre-commit single-reviewer triage) and audit-review (post-merge dual-reviewer audit with mandatory Codex). SessionStart hook surfaces unaudited commit tails; commands run an audit-status snapshot and a batched audit. Skills: code-review, audit-review.",
+  "author": {
+    "name": "ZenHive",
+    "url": "https://github.com/ZenHive"
+  },
+  "repository": "https://github.com/ZenHive/claude-marketplace",
+  "license": "MIT",
+  "keywords": ["code-review", "review", "audit", "post-merge", "staged", "language-agnostic"]
+}

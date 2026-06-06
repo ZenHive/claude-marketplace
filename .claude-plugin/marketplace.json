@@ -15,6 +15,48 @@
       "repository": "https://github.com/ZenHive/claude-marketplace",
       "license": "MIT",
       "homepage": "https://github.com/ZenHive/claude-marketplace"
+    },
+    {
+      "name": "workflow",
+      "source": "./plugins/workflow",
+      "description": "Language-agnostic development workflow — worktree-per-branch isolation, the dev lifecycle (task → worktree → review → merge → audit), session-per-phase / evaluator-separation principles, and the upstream-PR contribution flow. Skills: git-worktrees, dev-lifecycle, workflow-philosophy, upstream-pr-workflow.",
+      "repository": "https://github.com/ZenHive/claude-marketplace",
+      "license": "MIT"
+    },
+    {
+      "name": "tasks",
+      "source": "./plugins/tasks",
+      "description": "Roadmap-driven task management — the rmap roadmap substrate (tasks.toml → ROADMAP.md), D/B/U prioritization scoring, task-as-prompt authoring, and pickup / plan-and-file execution modes. Skills: rmap, task-driver, task-writing, roadmap-planning.",
+      "repository": "https://github.com/ZenHive/claude-marketplace",
+      "license": "MIT"
+    },
+    {
+      "name": "review",
+      "source": "./plugins/review",
+      "description": "Universal staged review chain — code-review (pre-commit single-reviewer triage) and audit-review (post-merge dual-reviewer audit with mandatory Codex). SessionStart hook surfaces unaudited commit tails. Skills: code-review, audit-review.",
+      "repository": "https://github.com/ZenHive/claude-marketplace",
+      "license": "MIT"
+    },
+    {
+      "name": "delegation",
+      "source": "./plugins/delegation",
+      "description": "Linear-as-queue + cloud-agent (Codex, Cursor, Sprite) delegation. Composable skills: linear-queue (substrate), agent-dispatch, agent-pr-review, flow-review, delegation-rules, cloud-agent-environments, sprite-claude-code. AGENTS.md auto-sync hook.",
+      "repository": "https://github.com/ZenHive/claude-marketplace",
+      "license": "MIT"
+    },
+    {
+      "name": "portfolio",
+      "source": "./plugins/portfolio",
+      "description": "Power-law portfolio rule — cross-repo decision framework for starting, continuing, or killing projects. Classify normal vs power-law bets, check portfolio health, enforce kill criteria. Skill: portfolio-strategy.",
+      "repository": "https://github.com/ZenHive/claude-marketplace",
+      "license": "MIT"
+    },
+    {
+      "name": "git-commit",
+      "source": "./plugins/git-commit",
+      "description": "Intelligent git commit workflow automation with AI-powered file grouping and configurable message formats. Command: /git-commit:commit.",
+      "repository": "https://github.com/ZenHive/claude-marketplace",
+      "license": "MIT"
     }
   ]
 }

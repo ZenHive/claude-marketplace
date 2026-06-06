@@ -1,0 +1,12 @@
+{
+  "name": "portfolio",
+  "version": "0.1.0",
+  "description": "Power-law portfolio rule — cross-repo decision framework for starting, continuing, or killing projects. Classify normal vs power-law bets, check portfolio health, enforce kill criteria. Skill: portfolio-strategy.",
+  "author": {
+    "name": "ZenHive",
+    "url": "https://github.com/ZenHive"
+  },
+  "repository": "https://github.com/ZenHive/claude-marketplace",
+  "license": "MIT",
+  "keywords": ["portfolio", "strategy", "power-law", "decision-framework", "cross-repo"]
+}
