@@ -1,0 +1,20 @@
+{
+  "name": "zenhive",
+  "owner": {
+    "name": "ZenHive"
+  },
+  "metadata": {
+    "description": "ZenHive Claude Code plugins — orchestration and per-language development tooling, each plugin independently toggleable per repo",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "harness",
+      "source": "./plugins/harness",
+      "description": "Language-agnostic orchestration surface for the harness OTP engine — drive the implement → review → land loop (rmap tasks, verified runs, cross-family grading) from any consuming repo. Skills: harness-driver (API/MCP contract), harness-workflow (the loop). Stale-base guard hook.",
+      "repository": "https://github.com/ZenHive/claude-marketplace",
+      "license": "MIT",
+      "homepage": "https://github.com/ZenHive/claude-marketplace"
+    }
+  ]
+}

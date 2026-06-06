@@ -1,0 +1,21 @@
+{
+  "name": "harness",
+  "version": "0.1.0",
+  "description": "Drive the harness OTP orchestration engine (implement → review → land) from any consuming repo: rmap-task dispatch, isolated-worktree implementer runs, cross-family reviewer-AI gating, and post-merge audit — over harness's native MCP surface.",
+  "author": {
+    "name": "ZenHive",
+    "url": "https://github.com/ZenHive"
+  },
+  "repository": "https://github.com/ZenHive/claude-marketplace",
+  "license": "MIT",
+  "keywords": [
+    "harness",
+    "orchestration",
+    "agent",
+    "mcp",
+    "rmap",
+    "code-review",
+    "elixir",
+    "otp"
+  ]
+}
