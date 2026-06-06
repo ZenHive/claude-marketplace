@@ -1,0 +1,12 @@
+{
+  "name": "marketplace-hygiene",
+  "version": "0.1.1",
+  "description": "Marketplace-integrity hooks for zenhive plugin development: blocks direct edits to auto-synced SKILL.md files (redirecting to the canonical ~/.claude/includes/*.md source via the shared scripts/skill-include-map.sh), and validates marketplace.json / plugin.json / hooks.json on every edit so JSON parse errors surface immediately instead of at marketplace-load time. Self-contained, no plugin-internal dependencies.",
+  "author": {
+    "name": "ZenHive",
+    "url": "https://github.com/ZenHive"
+  },
+  "repository": "https://github.com/ZenHive/claude-marketplace",
+  "license": "MIT",
+  "keywords": ["marketplace", "plugin-dev", "json-validation", "skill-sync"]
+}

@@ -57,6 +57,27 @@
       "description": "Intelligent git commit workflow automation with AI-powered file grouping and configurable message formats. Command: /git-commit:commit.",
       "repository": "https://github.com/ZenHive/claude-marketplace",
       "license": "MIT"
+    },
+    {
+      "name": "code-quality",
+      "source": "./plugins/code-quality",
+      "description": "Language-agnostic LLM-based code quality gate — blocks untracked TODOs, unmarked deferred work, stub functions, and silent workarounds on every source-file edit.",
+      "repository": "https://github.com/ZenHive/claude-marketplace",
+      "license": "MIT"
+    },
+    {
+      "name": "dev-discipline",
+      "source": "./plugins/dev-discipline",
+      "description": "Pause-and-pick PreToolUse reminders (non-blocking) at the moments Claude tends to choose ceremony over inline fix: about-to-rmap-new, about-to-add-[[task]]-via-direct-edit, and about-to-sleep/poll. Fires at the trigger word, where memory entries don't.",
+      "repository": "https://github.com/ZenHive/claude-marketplace",
+      "license": "MIT"
+    },
+    {
+      "name": "marketplace-hygiene",
+      "source": "./plugins/marketplace-hygiene",
+      "description": "Marketplace-integrity hooks: blocks direct edits to auto-synced SKILL.md files (redirecting to the canonical ~/.claude/includes/*.md source via the shared scripts/skill-include-map.sh), and validates marketplace/plugin/hooks JSON on every edit so parse errors surface immediately. Self-contained, no plugin-internal dependencies.",
+      "repository": "https://github.com/ZenHive/claude-marketplace",
+      "license": "MIT"
     }
   ]
 }

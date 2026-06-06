@@ -1,0 +1,12 @@
+{
+  "name": "dev-discipline",
+  "version": "0.1.0",
+  "description": "Pause-and-pick PreToolUse reminders (non-blocking) at the moments Claude tends to choose ceremony over inline fix: about-to-`rmap new`, about-to-add-`[[task]]`-via-direct-edit, and about-to-`sleep N` / poll. Fires at the trigger word, where memory entries don't.",
+  "author": {
+    "name": "ZenHive",
+    "url": "https://github.com/ZenHive"
+  },
+  "repository": "https://github.com/ZenHive/claude-marketplace",
+  "license": "MIT",
+  "keywords": ["dev-discipline", "pre-commit", "hooks", "ceremony", "task-churn"]
+}
