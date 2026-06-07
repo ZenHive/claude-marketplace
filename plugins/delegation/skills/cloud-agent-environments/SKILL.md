@@ -147,7 +147,7 @@ Unlike Codex Cloud and Cursor Cloud, these four run as **local CLIs** on the dev
 
 ### CI as the Shared Harness
 
-When the target repo has a `harness.yml` (see `elixir-ci-harness` skill in `claude-marketplace-elixir`), every PR push runs the full Elixir harness as a GitHub check — visible to user, agent, and PR review tooling. CI doesn't close the Codex hex.pm + PATH gap (a PR with no harness-validated commits is one CI green away from the same uncertainty either way — one reason `[CX]` code-mutation delegation is suspended). For Cursor PRs, CI is the authoritative harness signal regardless of whether the agent ran the harness pre-PR.
+When the target repo has a `harness.yml` (see `elixir-ci-harness` skill in `claude-marketplace`), every PR push runs the full Elixir harness as a GitHub check — visible to user, agent, and PR review tooling. CI doesn't close the Codex hex.pm + PATH gap (a PR with no harness-validated commits is one CI green away from the same uncertainty either way — one reason `[CX]` code-mutation delegation is suspended). For Cursor PRs, CI is the authoritative harness signal regardless of whether the agent ran the harness pre-PR.
 
 The shift this enables:
 
@@ -165,10 +165,10 @@ Both Codex and Cursor read `AGENTS.md` at the repo root if present. Generate it 
 
 #### Canonical generator
 
-`scripts/sync-agents-md.sh` in the `claude-marketplace-elixir` plugin (path: `~/_DATA/code/claude-marketplace-elixir/scripts/sync-agents-md.sh`). Run from inside the target repo:
+`scripts/sync-agents-md.sh` in the `claude-marketplace` repo (path: `~/_DATA/code/claude-marketplace/scripts/sync-agents-md.sh`) — a **manual** tool (the old `delegation`-plugin PostToolUse auto-sync hook was retired in the zenhive migration). Run from inside the target repo:
 
 ```bash
-bash ~/_DATA/code/claude-marketplace-elixir/scripts/sync-agents-md.sh
+bash ~/_DATA/code/claude-marketplace/scripts/sync-agents-md.sh
 ```
 
 The script reads `./CLAUDE.md`, resolves `@`-imports (including `~/`), inlines content with `<!-- @-import: ... -->` markers, and writes `./AGENTS.md`. Marker comment at the top reads `<!-- Auto-generated from CLAUDE.md by ... — do not edit manually -->`.
@@ -197,5 +197,5 @@ Fly Sprite-hosted Claude Code is a third delegation option that doesn't fit the 
 - `agent-dispatch.md` § "Cursor Delegation Flow" / "Codex Delegation (`[CX]`)" — issue creation, PR review, merge gate
 - `agent-dispatch.md` § "Codex Delegation (`[CX]`)" — eligibility criteria for delegation
 - `critical-rules.md` § "FIX HOOK-FLAGGED ISSUES ON FILES YOU TOUCH" — touched-file scope for harness fixes
-- `elixir-ci-harness` skill (claude-marketplace-elixir) — copy-ready CI workflow that closes the Codex-Cloud-no-hex.pm gap
+- `elixir-ci-harness` skill (claude-marketplace) — copy-ready CI workflow that closes the Codex-Cloud-no-hex.pm gap
 - `feedback_codex_sandbox_pr_gap.md` — observed Codex env gaps post-allowlist

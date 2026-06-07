@@ -1,0 +1,29 @@
+{
+  "schema_version": 2,
+  "project": "zenhive",
+  "default_branch": "main",
+  "vision": "A single Claude Code marketplace (zenhive) distributing a set of independent, per-repo-toggleable plugins — orchestration (harness, workflow, tasks, review, delegation, portfolio, git-commit), development discipline (code-quality, dev-discipline, marketplace-hygiene), and per-language dev tooling (elixir, elixir-volt, phoenix, elixir-workflows). A marketplace is the distribution unit; a plugin is the isolation unit. Most skill bodies are auto-synced from the canonical ~/.claude/includes/*.md source via scripts/skill-include-map.sh, so the includes stay the single source of truth and the plugins are their distribution channel. Supersedes the older deltahedge marketplace (ZenHive/claude-marketplace-elixir), rebranded to the org name and restructured so orchestration and per-language concerns are distinct plugins.",
+  "phases": {
+    "1": {
+      "name": "Migration & cutover (deltahedge → zenhive)",
+      "order": 1,
+      "status": "done"
+    },
+    "2": {
+      "name": "Maintenance & new plugins",
+      "order": 2,
+      "status": "pending"
+    }
+  },
+  "bundles": {},
+  "milestones": {
+    "v0_1": {
+      "name": "zenhive cutover",
+      "description": "Proves the deltahedge→zenhive rename + concern-split lands cleanly: all plugins resolve, includes→skills sync works from the new repo, and the old marketplace is fully unregistered.",
+      "order": 1,
+      "status": "done",
+      "target_version": "0.1.0"
+    }
+  },
+  "task": []
+}

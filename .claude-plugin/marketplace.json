@@ -40,7 +40,7 @@
     {
       "name": "delegation",
       "source": "./plugins/delegation",
-      "description": "Linear-as-queue + cloud-agent (Codex, Cursor, Sprite) delegation. Composable skills: linear-queue (substrate), agent-dispatch, agent-pr-review, flow-review, delegation-rules, cloud-agent-environments, sprite-claude-code. AGENTS.md auto-sync hook.",
+      "description": "Linear-as-queue + cloud-agent (Codex, Cursor, Sprite) delegation. Composable skills: linear-queue (substrate), agent-dispatch, agent-pr-review, flow-review, delegation-rules, cloud-agent-environments, sprite-claude-code.",
       "repository": "https://github.com/ZenHive/claude-marketplace",
       "license": "MIT"
     },
