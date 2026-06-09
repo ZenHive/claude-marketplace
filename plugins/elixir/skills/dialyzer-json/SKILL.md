@@ -80,6 +80,8 @@ jq '.warnings[] | select(.fix_hint == "code")' /tmp/dialyzer.json
 
 **0.2+:** honors `.dialyzer_ignore.exs` (filtered → `summary.skipped`) and `:dialyzer` flags from `mix.exs` (`dialyzer_flags`, `dialyzer_removed_defaults`). `message` is dialyxir's friendly format; `raw_message` is dialyzer's original.
 
+> **🚨 Ignore-file format gotcha — `dialyzer_json` reads ONLY the `.exs` term format.** dialyxir accepts two ignore-file shapes: the legacy **plain-text** `.dialyzer_ignore` (one substring/line per warning) and the **term-format** `.dialyzer_ignore.exs` (a list of tuples / regexes). `dialyzer_json` loads `.dialyzer_ignore.exs` **only** — it **silently ignores** a plain-text `.dialyzer_ignore`: no error, nothing suppressed, `summary.skipped: 0`, and `mix dialyzer` exits non-zero on warnings you thought were muted. The failure mode: a repo carries a working-under-dialyxir plain-text ignore, adds `dialyzer_json`, and the gate goes red for "new" warnings that were always there. **Fix:** convert to `.dialyzer_ignore.exs` term format — a list whose entries match the warning (regex against the short-description is robust: `[{~r/Unknown type: Ash.Resource.record\/0/}]`). The `.exs` term format is honored by **both** dialyxir-native and `dialyzer_json`, so converting loses nothing. Verify in-BEAM that the `FilterMap` loads and `skip?` returns `true` for the target warning before trusting the suppression. (Observed: tapakly Task 26, 2026-06 — 6 spurious OTP-29 `Ash.Resource.record/0` warnings stayed red because the ignore was plain-text.)
+
 ### Exit Codes
 
 | Code | Meaning |
