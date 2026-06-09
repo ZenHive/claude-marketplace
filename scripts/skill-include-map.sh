@@ -9,7 +9,10 @@
 # starts denying direct edits to it on the next session.
 #
 # NOTE: harness plugin's skills (harness-driver, harness-workflow) are NOT mapped
-# here — they self-sync from their own canonical sources with per-file headers.
+# here — their canonical sources live in the HARNESS repo, not ~/.claude/includes,
+# so they propagate via that repo's `scripts/sync-harness-skills.sh` (run it after
+# editing priv/includes/harness-workflow.md or skills/harness-driver/SKILL.md there).
+# This general sync intentionally leaves them alone.
 
 MAPPINGS=(
   # --- elixir (core dev tooling + libs) ---
