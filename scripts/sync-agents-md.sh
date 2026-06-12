@@ -10,8 +10,11 @@
 # Note: this used to fire automatically via a PostToolUse hook in the
 # `delegation` plugin (`agents-md-sync.sh`). That auto-sync hook was retired in
 # the deltahedge→zenhive migration; this standalone generator is the manual
-# replacement. Re-add a hook wrapper around it if portfolio-wide auto-sync is
-# wanted again.
+# replacement. The --check mode below is the freshness gate a re-added hook
+# wrapper (or a CI step / harness check_command) calls to fail loudly when
+# AGENTS.md has drifted from CLAUDE.md — without it, a stale AGENTS.md silently
+# makes cross-family reviewers (codex/cursor/grok) gate against rules you've
+# already changed.
 #
 # Recursion depth-limit matches Claude Code's documented @-import behavior
 # (https://code.claude.com/docs/en/memory#import-additional-files): 5 levels.
@@ -19,13 +22,39 @@
 # Usage:
 #   ./sync-agents-md.sh             # write AGENTS.md
 #   ./sync-agents-md.sh --dry-run   # print to stdout instead
+#   ./sync-agents-md.sh --check     # exit non-zero if AGENTS.md is stale/missing
+#                                   # (compares rendered output, so it catches
+#                                   #  drift in transitive @-imports too)
 
 set -euo pipefail
 
-DRY_RUN=false
-if [[ "${1:-}" == "--dry-run" ]]; then
-  DRY_RUN=true
-fi
+MODE="write"
+case "${1:-}" in
+  --dry-run) MODE="dry-run" ;;
+  --check)   MODE="check" ;;
+  --help|-h)
+    cat <<'USAGE'
+Generate AGENTS.md by inlining @-imports from ./CLAUDE.md.
+
+Usage:
+  sync-agents-md.sh             write AGENTS.md
+  sync-agents-md.sh --dry-run   print rendered output to stdout, write nothing
+  sync-agents-md.sh --check     exit non-zero if AGENTS.md is stale or missing
+  sync-agents-md.sh --help      show this message
+
+--check compares the rendered output (not mtimes), so it catches drift in
+transitive @-imports too. Use it as a CI / pre-commit / harness check_command
+gate so a stale AGENTS.md fails loudly instead of misleading reviewers.
+USAGE
+    exit 0
+    ;;
+  "") ;;
+  *)
+    echo "ERROR: unknown argument: $1" >&2
+    echo "Usage: $0 [--dry-run | --check | --help]" >&2
+    exit 2
+    ;;
+esac
 
 CLAUDE_MD="./CLAUDE.md"
 AGENTS_MD="./AGENTS.md"
@@ -94,12 +123,26 @@ if [[ "$errors" -gt 0 ]]; then
   exit 1
 fi
 
-if [[ "$DRY_RUN" == true ]]; then
-  printf '%s' "$output"
-  echo ""
-  echo "--- Summary ---" >&2
-  echo "Dry run — would write to $AGENTS_MD" >&2
-else
-  printf '%s' "$output" > "$AGENTS_MD"
-  echo "Wrote $AGENTS_MD"
-fi
+case "$MODE" in
+  dry-run)
+    printf '%s' "$output"
+    echo ""
+    echo "--- Summary ---" >&2
+    echo "Dry run — would write to $AGENTS_MD" >&2
+    ;;
+  check)
+    if [[ ! -f "$AGENTS_MD" ]]; then
+      echo "STALE: $AGENTS_MD is missing — run sync-agents-md.sh" >&2
+      exit 1
+    fi
+    if ! diff -q <(printf '%s' "$output") "$AGENTS_MD" >/dev/null; then
+      echo "STALE: $AGENTS_MD has drifted from CLAUDE.md (+@-imports) — run sync-agents-md.sh" >&2
+      exit 1
+    fi
+    echo "OK: $AGENTS_MD is up to date"
+    ;;
+  write)
+    printf '%s' "$output" > "$AGENTS_MD"
+    echo "Wrote $AGENTS_MD"
+    ;;
+esac
