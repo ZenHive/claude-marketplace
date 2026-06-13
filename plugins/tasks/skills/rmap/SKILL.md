@@ -29,9 +29,11 @@ This file is the **decision layer** — *which* command, *when*. The authoritati
 | Intent | Command |
 |---|---|
 | Read one task / many | `rmap show <id> [--json]` · `rmap list --status\|--phase\|--marker\|--bundle\|--milestone\|--delivered-by [--json]` |
+| Traverse the dependency graph | `rmap blocks <id> [--json]` (transitive dependents — what `<id>` unblocks) · `rmap deps <id> [--json]` (transitive dependencies — what `<id>` needs first) |
 | Pick the next task | `rmap next [--marker M] [--bundle B] [--milestone V] [--count N] [--json]` |
 | Pick a session-sized bundle | `rmap next-bundle [--json]` · `rmap bundles` to discover them |
 | Pick the parallel-safe dispatch set | `rmap ready [--bundle B] [--phase N] [--marker M] [--milestone V] [--count N] [--dispatchable] [--fields a,b,c] [--json]` |
+| See the parallel dispatch schedule | `rmap waves [--json]` — every pending/unblocked task grouped by `dep_layer`; wave 0 runs first, each wave gates the next |
 | List release lines / pin to a release | `rmap milestones [--has-next\|--status\|--json]` · `rmap milestone <id> <name\|none>` |
 | Change status | `rmap status <id> <pending\|in_progress\|blocked\|done\|superseded> [--implemented "..."] [--delivered-by <agent>] [--verified] [--shipped-in <sha>] [--reason "..."]` (bulk `1,2,3` atomic; `done` requires `implemented`; outcome flags settable only on `done`; `--reason` settable only on `blocked`) |
 | Toggle a marker | `rmap mark <id> +parallel -cx` |
@@ -41,10 +43,11 @@ This file is the **decision layer** — *which* command, *when*. The authoritati
 | Migrate a hand-edited ROADMAP.md | `rmap import` |
 | See what changed vs a git ref | `rmap diff [--verbose] [--json]` |
 | List stalled in-progress tasks | `rmap stale --over <dur>` (e.g. `30d`, `2w`; also folded into `doctor`) |
-| Health signals (soft, always exit 0) | `rmap doctor [--json]` |
+| Health signals (soft, always exit 0) | `rmap doctor [--json] [--bottleneck-min N]` |
 | Strict gates (pre-commit / CI) | `rmap validate` · `rmap validate --check-render` |
 | Render after editing tasks.toml directly | `rmap render` (or `rmap watch` for live re-render) |
 | Emit data.json to stdout (read-only) | `rmap export json` (`render` is what writes the file) |
+| Emit the dep graph as Graphviz (read-only) | `rmap export dot` — DOT digraph of the in-repo `depends_on` graph (edges dependency → dependent); pipe to `dot` |
 
 All mutators **validate-then-write**: an invalid mutation leaves `tasks.toml` byte-equal to its prior state. `--json` envelopes on the read commands are append-only stable surfaces.
 
@@ -165,6 +168,7 @@ When you need *the set of tasks I can dispatch in parallel right now* — not "a
 
 - **`assignee`** (creation-time field, validated against `human|claude|codex|cursor|grok|antigravity|pi|droid`): **THE agent-routing field** — which agent executes the task. Orchestrators route on it (`--fields id,assignee,markers`), and `rmap delegate` defaults `--to` from it. `assignee = "human"` means "not for autonomous dispatch" — consumers skip it. Don't overload `model` (a free-text LLM id) or the `cx`/`csr` markers (filter/discovery tags) for routing. **Set `assignee` at creation** (`rmap new` / `--from-stdin`) — it's easy to omit, but an unset assignee carries no routing intent, so the interactive `rmap delegate` errors (pass `--to`) and an autonomous consumer falls back to *its* configured default dispatch agent rather than your intent. Pick the agent when you file the task; leave it `human` only when the work genuinely isn't for headless dispatch.
 - **`dep_layer`** (computed, on every `--json`): longest-path depth over the in-repo dep graph. Within a result set the lowest `dep_layer` present is the current parallel wave; higher layers are later waves — makes `next-bundle`'s topo chain self-describing.
+- **`unlocks`** (computed, on every `--json`): count of tasks that transitively depend on this one — the size of its `rmap blocks <id>` set. Turns hand-guessed unlock leverage (the `U` score's leverage component) into a graph fact: a high-`unlocks` pending task gates a lot of downstream work. Like `dep_layer` / `eff`, computed at read time, never persisted. Use `rmap blocks <id>` to see *which* tasks, `unlocks` to rank by *how many*.
 - **`handbuild` marker + `--dispatchable`**: `--dispatchable` (on `ready` / `list`) drops `handbuild`-marked tasks. **UI/LiveView/CSS work is NOT handbuild by default** — incremental UI against an existing design system or a frontend-design doc is normal headless dispatch. Reserve `handbuild` for the genuine minority where a human-in-browser is required: net-new visual identity with no design spec to build against (exploratory look-and-feel / motion / brand). Everything else — backend and spec-anchored UI alike — is headless-dispatchable by default.
 - **`touches`** (creation-time field): the broader *involvement hint* — files a task may read or write, typically a superset of `files_to_modify` (the write target). Consumer collision rule (you dedupe; rmap doesn't enforce): two tasks conflict iff `(touches(A) ∪ files_to_modify(A)) ∩ (touches(B) ∪ files_to_modify(B)) ≠ ∅`. Unioning both fields keeps `files_to_modify` respected even when a task's `touches` isn't a perfect superset — `touches` is "typically," not guaranteed, a superset. Set it via `rmap new --from-stdin`.
 - **`--fields a,b,c`** (on `ready` / `list`): projects `--json` to a bare array of just the named keys per task — token-cheap for an orchestrator that only needs `id,status,eff,depends_on,dep_layer,touches`. Implies `--json`; unknown name exits 1.
@@ -214,7 +218,7 @@ Three optional transition-time fields next to `implemented`, all set by `rmap st
 - `verified = true` — independent evaluator confirmed the task. Two-state: `true` = a check separate from the implementer passed (verification stack green, code-review approved); absent = not yet graded (hand-built, bootstrap, merged directly). Settable via `--verified` presence flag on `done`; to clear, edit `tasks.toml` directly. Encodes evaluator-separation as a fact, not as a status — `done` means "an implementer said so", `verified` means "a grader agreed".
 - `shipped_in = "<sha>"` — where the work landed (commit SHA / PR ref, free-text, unvalidated). Settable via `--shipped-in <sha>` on `done` transitions; overwrites on re-set. No sha-shape validation, no git auto-derivation — the caller supplies it.
 
-All three surface in `rmap show`, `rmap list` JSON / `data.json` (via `ExportedTask`), and `rmap diff --verbose`. `rmap list --delivered-by <agent>` filters the roadmap into a per-agent delivery ledger (status-agnostic — matches the field, not just done tasks). `rmap doctor` emits a soft `ClaimedNotGraded` advisory for `done && verified.is_none()` ("claimed, not graded") — always exit 0, hand-built tasks are legitimate. All three stay off `StdinTask` / `NewTaskFields` on purpose; they are outcome facts, not creation-time intent.
+All three surface in `rmap show`, `rmap list` JSON / `data.json` (via `ExportedTask`), and `rmap diff --verbose`. `rmap list --delivered-by <agent>` filters the roadmap into a per-agent delivery ledger (status-agnostic — matches the field, not just done tasks). `rmap doctor` emits a soft `ClaimedNotGraded` advisory for `done && verified.is_none()` ("claimed, not graded") — always exit 0, hand-built tasks are legitimate. Graph-health advisories (`bottleneck`, `isolated_node`) flag high-leverage gating tasks and disconnected/off-milestone nodes — also soft, exit 0; tune the bottleneck cutoff with `--bottleneck-min` (default 3). All three stay off `StdinTask` / `NewTaskFields` on purpose; they are outcome facts, not creation-time intent.
 
 ### Pinning an LLM model per task
 
