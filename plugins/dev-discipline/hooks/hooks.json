@@ -23,6 +23,21 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/tasks-toml-new-task-pause.sh",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/tasks-toml-block-human-assignee.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/tasks-toml-warn-demand-hedging.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/tasks-toml-warn-evidenceless-done.sh",
+            "timeout": 5
           }
         ]
       }
