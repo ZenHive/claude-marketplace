@@ -87,7 +87,7 @@ Use structured discovery instead of reading source. Contracts are compile-time v
 - **Direct module access:** `Module.__api__()` / `.__api__(:func)` — `hints` has the same fields as Level 3
 - **Batch:** `Descripex.Manifest.build(modules)` — JSON-serializable map of the whole API
 
-See the library's `SKILLS.md` for exact output shapes.
+See the library's `CONSUMING.md` for exact output shapes.
 
 ### Tier 3: Trustless Verification (EIP-8004 ecosystem)
 

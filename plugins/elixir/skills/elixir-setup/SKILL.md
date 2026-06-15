@@ -56,7 +56,7 @@ defp deps do
     {:bandit, "~> 1.10", only: :dev},      # non-Phoenix only
     {:ex_dna, "~> 1.5", only: [:dev, :test], runtime: false},
     {:ex_ast, "~> 0.12", only: [:dev, :test], runtime: false},
-    {:descripex, "~> 0.6"},                # full dep — macros expand at compile time
+    {:descripex, "~> 0.10"},               # full dep — macros expand at compile time
     {:api_toolkit, "~> 0.1"}               # API services only
   ]
 end
