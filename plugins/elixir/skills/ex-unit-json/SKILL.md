@@ -8,15 +8,17 @@ allowed-tools: Read, Bash
 
 ## ExUnitJSON — `mix test.json`
 
-AI-friendly JSON test output. Use instead of `mix test`. Default (v0.3.0+) shows only failures.
+AI-friendly JSON test output. Use instead of `mix test`. Default shows only failures.
 
 ### Install
 
 ```elixir
 defp deps do
-  [{:ex_unit_json, "~> 0.4", only: [:dev, :test], runtime: false}]
+  [{:ex_unit_json, "~> 0.5", only: [:dev, :test], runtime: false}]
 end
 ```
+
+Requires Elixir 1.18+ (uses built-in `:json` — no external JSON dependency).
 
 `cli/0` for `preferred_envs` is required — see `elixir-setup.md` (or invoke the `elixir:elixir-setup` skill if the include isn't `@`-imported in your project).
 
@@ -44,18 +46,19 @@ Auto-reminder: if you forget `--failed` when previous failures exist, output inc
 | `--failed` | Re-run only previously failed tests |
 | `--summary-only` | Counts only, no test details |
 | `--all` | Include passing tests (default shows failures only) |
-| `--failures-only` | Failed tests only (default in v0.3.0+) |
+| `--failures-only` | Failed tests only (default behavior) |
 | `--first-failure` | Stop at first failure |
 | `--group-by-error` | Cluster failures by error message |
 | `--filter-out "X"` | Exclude failures matching pattern (repeatable) |
 | `--output FILE` | Write to file instead of stdout |
 | `--compact` | JSONL output, one line per test |
 | `--cover` / `--cover-threshold N` | Coverage collection / fail under N% |
-| `--no-retry` | Disable auto-retry of failed tests (v0.5.0+, on by default) |
+| `--no-retry` | Disable auto-retry of failed tests (on by default) |
+| `--no-warn` | Suppress "use --failed" tip when prior failures exist |
 
 ExUnit flags compose: `mix test.json --only integration --quiet`, `mix test.json test/foo_test.exs --quiet`, `--seed 12345`.
 
-### Automatic Retry — Flaky Healing (v0.5.0+, default on)
+### Automatic Retry — Flaky Healing (default on)
 
 When a bare run has failures, `mix test.json` re-runs **only** the previously-failed tests once (ExUnit-native `--failed --all`, in a subprocess) and merges by `{module, name}`:
 
@@ -87,11 +90,11 @@ config :ex_unit_json, retry: false
 }
 ```
 
-Conditional fields: `coverage` only with `--cover`; `coverage.threshold_met` only with `--cover-threshold`; `filtered` only with `--filter-out`; `error_groups` only with `--group-by-error`; `module_failures` only on `setup_all` failure; `tests` omitted with `--summary-only`; `retry`/`flaky` (and `summary.flaky`) only when a retry actually ran (v0.5.0+). A flake that healed appears in `flaky[]`, **not** `tests[]`.
+Conditional fields: `coverage` only with `--cover`; `coverage.threshold_met` only with `--cover-threshold`; `filtered` only with `--filter-out`; `error_groups` only with `--group-by-error`; `module_failures` only on `setup_all` failure; `tests` omitted with `--summary-only`; `retry`/`flaky` (and `summary.flaky`) only when a retry actually ran. A flake that healed appears in `flaky[]`, **not** `tests[]`.
 
 ### Using jq
 
-**One run captures everything — never summarize-then-detail.** `mix test.json --quiet --output /tmp/r.json` writes the full schema in one payload: `summary`, failing `tests`, `error_groups`, `coverage`, `module_failures`. Slice it after: `jq '.summary' /tmp/r.json` for the summary view, `jq '.tests[] | select(.state == "failed")'` for detail, `jq '.error_groups'` for clusters. The default output is *already* compacted (v0.3.0+ shows only failed tests in `.tests[]`), so a "summary-only first, full run for details next" pass doubles compile-cache rehydration + suite-execution cost for zero informational gain. **Do not** start with `--summary-only` to "scope the failure space" — the captured full JSON contains the summary AND the detail AND the error-groups already.
+**One run captures everything — never summarize-then-detail.** `mix test.json --quiet --output /tmp/r.json` writes the full schema in one payload: `summary`, failing `tests`, `error_groups`, `coverage`, `module_failures`. Slice it after: `jq '.summary' /tmp/r.json` for the summary view, `jq '.tests[] | select(.state == "failed")'` for detail, `jq '.error_groups'` for clusters. The default output is already compacted (only failed tests in `.tests[]`), so a "summary-only first, full run for details next" pass doubles compile-cache rehydration + suite-execution cost for zero informational gain. **Do not** start with `--summary-only` to "scope the failure space" — the captured full JSON contains the summary AND the detail AND the error-groups already.
 
 **Default to `--output FILE`. Always.** Pick a path (e.g. `/tmp/r.json`) before running. A re-run is seconds-to-minutes; a `jq` against the captured file is microseconds. Even a "one-shot" pipe is wrong-by-default: the moment you want to slice a second facet you've paid for the suite twice. Piping is the exception, not the rule — reserve it for genuinely throwaway shell composition.
 
