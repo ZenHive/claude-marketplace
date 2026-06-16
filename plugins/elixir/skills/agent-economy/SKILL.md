@@ -38,6 +38,8 @@ def annualize(rate, period_hours \\ 8), do: ...
 
 **Manual `@doc` coexistence:** Place `api()` *before* an existing `@doc`. Hand-written `@doc` overwrites only slot 4 (prose); slot 5 (hints) survives. Standard for annotating existing codebases. For multi-clause functions, place `api()` before the first clause only.
 
+**Variable opts → `emit_api/3` (v0.11+):** `api/3` preprocesses `schema:` keys at expansion and so requires a *literal* keyword-list `opts`. To declare apis in a `for`-comprehension or with macro-time variable opts (e.g. generating N declarations from a method table), use `emit_api(name, desc, opts)` — same emissions, skips preprocessing (caller pre-converts any `schema:`). It raises `ArgumentError` on literal opts, steering you back to `api/3`.
+
 **Param kinds (the key distinction agents need):**
 - `:value` — caller provides (number, date, config)
 - `:exchange_data` — must be fetched first; include `source: "fetch_trades(symbol)"`
