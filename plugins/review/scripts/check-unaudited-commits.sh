@@ -28,9 +28,9 @@ fi
 IFS=$'\t' read -r count last_sha last_date range <<<"$tsv"
 
 if [[ "$last_sha" != "-" ]]; then
-  msg="${count} unaudited commits since audit(${last_sha}) on ${last_date} (range: ${range}). Run \`/staged-review:audit-status\` for the full snapshot, or \`Skill(audit-review)\` to audit ${range}."
+  msg="${count} unaudited commits since audit(${last_sha}) on ${last_date} (range: ${range}). Run \`/review:audit-status\` for the full snapshot, or \`Skill(audit-review)\` to audit ${range}."
 else
-  msg="${count} commits with no audit history yet (range: ${range}). Run \`/staged-review:audit-status\` for details, or \`Skill(audit-review)\` to start the audit corpus."
+  msg="${count} commits with no audit history yet (range: ${range}). Run \`/review:audit-status\` for details, or \`Skill(audit-review)\` to start the audit corpus."
 fi
 
 jq -n --arg msg "$msg" '{

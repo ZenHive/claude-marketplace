@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared helper for /staged-review:audit-status and the unaudited-commits SessionStart hook.
+# Shared helper for /review:audit-status and the unaudited-commits SessionStart hook.
 #
 # Detects the last `audit(...)` commit ancestor and counts commits since.
 # Prints TSV: count<TAB>last_audit_sha<TAB>last_audit_date<TAB>range

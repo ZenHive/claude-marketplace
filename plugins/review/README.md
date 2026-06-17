@@ -57,8 +57,8 @@ See [`templates/auto-merge.md`](./templates/auto-merge.md) for full setup (branc
 
 Fully autonomous post-commit pass. Deferred — runs on user invocation, not chained off any merge or PR-create:
 
-1. **SessionStart hook** (`check-unaudited-commits.sh`, ≥3 threshold) surfaces unaudited tails next session via `additionalContext` recommending `/staged-review:audit-status` or `Skill(audit-review) <range>`
-2. **Manual** via `/staged-review:audit-review [<sha>|<range>]` for catch-up audits, batch passes, or compliance asks
+1. **SessionStart hook** (`check-unaudited-commits.sh`, ≥3 threshold) surfaces unaudited tails next session via `additionalContext` recommending `/review:audit-status` or `Skill(audit-review) <range>`
+2. **Manual** via `/review:audit-review [<sha>|<range>]` for catch-up audits, batch passes, or compliance asks
 
 Workflow:
 
@@ -78,25 +78,25 @@ The `audit(...)` commit lands on the repo's default branch without asking (commi
 Quick "is this repo current?" check without running an audit:
 
 ```
-/staged-review:audit-status              # current repo
-/staged-review:audit-status --all        # walk ~/_DATA/code/*, aggregate
+/review:audit-status              # current repo
+/review:audit-status --all        # walk ~/_DATA/code/*, aggregate
 ```
 
 Prints a table: branch / unaudited-count / last-audit-sha / last-audit-date / range. No mutations, no `git fetch`, no audit triggered. Reuses the same `git log --grep '^audit('` ancestor walk that `audit-review` uses.
 
 ## SessionStart Hook — Unaudited-Tail Detection
 
-A `SessionStart` hook (`scripts/check-unaudited-commits.sh`) fires when ≥3 commits sit past the last `audit(...)` ancestor on the current branch. Emits a one-line `additionalContext` recommendation pointing at `/staged-review:audit-status` (for the snapshot) or `Skill(audit-review)` (to actually audit). Silent below the threshold, silent outside a git repo. This is the primary trigger for the deferred audit model — covers interrupted sessions, manual `git commit` outside any flow, branch switches, and the steady-state merge tail.
+A `SessionStart` hook (`scripts/check-unaudited-commits.sh`) fires when ≥3 commits sit past the last `audit(...)` ancestor on the current branch. Emits a one-line `additionalContext` recommendation pointing at `/review:audit-status` (for the snapshot) or `Skill(audit-review)` (to actually audit). Silent below the threshold, silent outside a git repo. This is the primary trigger for the deferred audit model — covers interrupted sessions, manual `git commit` outside any flow, branch switches, and the steady-state merge tail.
 
 ## Usage
 
 ```
-/staged-review:code-review              # pre-commit review
-/staged-review:audit-review             # post-commit / post-merge audit (manual)
-/staged-review:audit-review HEAD~3..HEAD  # explicit range
-/staged-review:audit-review --full <sha>  # suppress tiny-commit fast-path
-/staged-review:audit-status             # read-only drift snapshot
-/staged-review:audit-status --all       # portfolio-wide aggregate
+/review:code-review              # pre-commit review
+/review:audit-review             # post-commit / post-merge audit (manual)
+/review:audit-review HEAD~3..HEAD  # explicit range
+/review:audit-review --full <sha>  # suppress tiny-commit fast-path
+/review:audit-status             # read-only drift snapshot
+/review:audit-status --all       # portfolio-wide aggregate
 ```
 
 For pre-merge, use `gh pr merge <N> --auto --squash --delete-branch` at PR-open time — see [`templates/auto-merge.md`](./templates/auto-merge.md).

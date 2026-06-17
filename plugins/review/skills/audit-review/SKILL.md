@@ -23,7 +23,7 @@ Walk a commit range. Audit each commit. Auto-apply hygiene fixes. Write a `.audi
 |---|---|---|---|---|
 | Pre-commit (Phase 2 sub-phase) | `code-review` | `git diff --staged` | Implementer about to commit | One: exit-plan-to-apply |
 | Pre-merge (Phase 4) | none — GH-native | `gh pr merge --auto` set at PR open | Required checks green + no requested-changes + no `[BLOCK-MERGE]` | Zero (manual hold via `[BLOCK-MERGE]` label) |
-| Post-merge (Phase 5, this skill) | **`audit-review`** | `git log <range>` + each commit's PR + Linear context | Deferred — `staged-review` SessionStart hook surfaces unaudited tails (≥3 commits past last `audit(...)` ancestor); user invokes `/staged-review:audit-status` or `Skill(audit-review) <range>` | **Zero** |
+| Post-merge (Phase 5, this skill) | **`audit-review`** | `git log <range>` + each commit's PR + Linear context | Deferred — `staged-review` SessionStart hook surfaces unaudited tails (≥3 commits past last `audit(...)` ancestor); user invokes `/review:audit-status` or `Skill(audit-review) <range>` | **Zero** |
 
 `audit-review` shares Categories 1-6 and the Codex dispatch payload with `code-review`. The differences are:
 
@@ -146,7 +146,7 @@ PROD_FILES=$(git show --name-only --format='' "$SHA" | grep -cE '^(lib|src)/')
 - No Codex dispatch.
 - The commit still contributes to the batched `audit(...)` commit (Step 12), but with no fixes.
 
-**Override:** the user can force full audit on a tiny commit via `/staged-review:audit-review --full HEAD~1..HEAD` (treat the `--full` flag as a directive to skip the fast-path classification). Default is fast-path; full is opt-in.
+**Override:** the user can force full audit on a tiny commit via `/review:audit-review --full HEAD~1..HEAD` (treat the `--full` flag as a directive to skip the fast-path classification). Default is fast-path; full is opt-in.
 
 **Why `lib/`:** changes to docs, configs, tests, READMEs don't ship code to runtime. The 5+1 categories deliver value on production-code paths (control flow, abstractions, TODO discipline, doc drift). Skipping audit on non-production paths = skipping an audit that wouldn't have found anything.
 
@@ -233,7 +233,7 @@ fi
 
 ### Step 5a: Apply Review Categories (Claude)
 
-For each non-tiny commit, walk the 5+1 categories from `code-review` Step 3a. Identical surface. Reproduced here in compressed form; the canonical text lives in `staged-review:code-review` SKILL.md and should be consulted whenever a category's edge case is unclear.
+For each non-tiny commit, walk the 5+1 categories from `code-review` Step 3a. Identical surface. Reproduced here in compressed form; the canonical text lives in `review:code-review` SKILL.md and should be consulted whenever a category's edge case is unclear.
 
 **Category 1 — Bugs & Logic Errors.** Null/nil paths, type confusion, silent failures, unreachable code, concurrency bugs, untested error paths added in the diff. **Confidence filter:** only report if you can name the specific input that triggers the bug.
 
@@ -322,9 +322,9 @@ If `.audit/_in_progress_*.md` exists at audit start, the previous session stalle
 
 #### Dispatch Payload (What to Send Codex on Every Dispatch)
 
-Identical structure to `code-review`'s "Dispatch Payload" (search `staged-review:code-review` SKILL.md for that section). Four required sections in order:
+Identical structure to `code-review`'s "Dispatch Payload" (search `review:code-review` SKILL.md for that section). Four required sections in order:
 
-1. **Task** — "Audit commit `<SHA>` against Categories 1-6 from `staged-review:audit-review` SKILL.md. Same surface as `code-review` Step 3a. Return a per-finding table with file:line, category, priority (1-10) or `discuss`, and a one-line description."
+1. **Task** — "Audit commit `<SHA>` against Categories 1-6 from `review:audit-review` SKILL.md. Same surface as `code-review` Step 3a. Return a per-finding table with file:line, category, priority (1-10) or `discuss`, and a one-line description."
 2. **Context** — embed the full `git show <sha>` output, the relevant ROADMAP.md excerpt for the current phase / task, and the commit's parent SHA so Codex can `git diff <parent> <sha>` if needed.
 3. **Project tool inventory** — the project's MCP servers (e.g., `mcp__tidewave__project_eval`), mix tasks (`mix test.json --quiet --failed`, `mix dialyzer.json --quiet --filter-type no_return`, `mix credo --strict --format json`), hex-docs URLs for any packages referenced in the diff (`https://hexdocs.pm/<pkg>/llms.txt`), and other project scripts visible in `mix.exs` aliases.
 4. **Verification instruction** — explicit: "Before asserting any claim about the codebase, verify it with one of the tools above. Training-data recall is insufficient. If a tool isn't available, say so; don't guess."
@@ -721,7 +721,7 @@ Reasoning: typo fixes, formatting, doc-only commits don't earn a Codex dispatch 
 
 The skill runs deferred — it is NOT chained synchronously off any merge or PR-create. Two invocation paths, both user-driven:
 
-1. **SessionStart hook surfaces the tail.** The `staged-review` plugin's SessionStart hook (`check-unaudited-commits.sh`, ≥3 unaudited threshold) emits `additionalContext` recommending `/staged-review:audit-status` (read-only snapshot) or `Skill(audit-review) <range>` (batched audit). User reads the prompt, invokes one.
+1. **SessionStart hook surfaces the tail.** The `staged-review` plugin's SessionStart hook (`check-unaudited-commits.sh`, ≥3 unaudited threshold) emits `additionalContext` recommending `/review:audit-status` (read-only snapshot) or `Skill(audit-review) <range>` (batched audit). User reads the prompt, invokes one.
 
 2. **Manual** (`/audit-review`): user runs the slash command for catch-up audits, batch passes after a backfill, compliance asks, or the `agent-pr-review.md` § "Bundled Code-Revisions in Bookkeeping Commit" variant (one case where the audit fires on a specific merge SHA in the same session). Default range is HEAD..last-audit (exclusive); user can pass any commit or range.
 
@@ -756,7 +756,7 @@ The skill runs deferred — it is NOT chained synchronously off any merge or PR-
 
 Closely related includes and skills:
 
-- `staged-review:code-review` — pre-commit local-work counterpart. Source of truth for Categories 1-6 prose, Codex dispatch payload, rating scale. Audit-review reuses these by reference; consult `code-review` SKILL.md when an edge case is unclear
+- `review:code-review` — pre-commit local-work counterpart. Source of truth for Categories 1-6 prose, Codex dispatch payload, rating scale. Audit-review reuses these by reference; consult `code-review` SKILL.md when an edge case is unclear
 - `plugins/staged-review/templates/auto-merge.md` — GH-native pre-merge replacement (`gh pr merge --auto --squash --delete-branch` + `[BLOCK-MERGE]` label). Pre-merge phase carries zero Claude tokens; this skill absorbs the post-merge work (bot triage, Linear close-out, acceptance-criteria check)
 - `~/.claude/includes/critical-rules.md` § GIT COMMIT / PUSH / PR-CREATE — `audit(...)` commits are auto-allowed inside tracked worktrees AND on `main` (post-merge audit lands on `main` by design, scoped to commits matching `^audit\(`)
 - `~/.claude/includes/critical-rules.md` § "🚨 FIX HOOK-FLAGGED ISSUES ON FILES YOU TOUCH" — pre-commit hook flags during the audit commit get fixed in a new commit, not bypassed

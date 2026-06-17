@@ -68,18 +68,18 @@ To start working in a new worktree, open a fresh Claude Code session in that dir
 
 ## After PR Merge — `audit-review` Is Deferred
 
-`staged-review:audit-review` catches hygiene drift (extractions, doc gaps, missing TODO markers, ROADMAP/CHANGELOG drift) that pre-commit `code-review` may have skipped, writes `.audit/<sha>.md` reports, and lands one `audit(...)` commit on the default branch.
+`review:audit-review` catches hygiene drift (extractions, doc gaps, missing TODO markers, ROADMAP/CHANGELOG drift) that pre-commit `code-review` may have skipped, writes `.audit/<sha>.md` reports, and lands one `audit(...)` commit on the default branch.
 
 **Not chained off `gh pr merge`.** The post-merge tail ends at branch cleanup. The `staged-review` plugin's SessionStart hook (`check-unaudited-commits.sh`, ≥3 unaudited threshold) surfaces accumulated tails next session:
 
 ```
-/staged-review:audit-status        # read-only snapshot of unaudited commits per branch
+/review:audit-status        # read-only snapshot of unaudited commits per branch
 Skill(audit-review) <range>        # batched audit over the accumulated range
 ```
 
 `<range>` is typically `<last-audit-sha>..<default-branch-HEAD>` — one batched pass covers all merge SHAs since the last audit.
 
-**Manual override:** `/staged-review:audit-review [<sha>|<range>]` for catch-up audits, batch passes, or compliance asks.
+**Manual override:** `/review:audit-review [<sha>|<range>]` for catch-up audits, batch passes, or compliance asks.
 
 **Tiny-commit fast path.** For commits ≤100 LOC AND no `lib/` (or language equivalent) touched, the skill skips Codex dispatch and writes a `verdict: clean — fast-path` report. No separate skip flag needed; if every commit in the range is fast-path-eligible, the audit is cosmetic and ends in seconds.
 
@@ -142,4 +142,4 @@ A project can opt out of the worktree workflow by pinning a memory file under `~
 - `~/.claude/includes/critical-rules.md` § "NEVER COMMIT WITHOUT EXPLICIT REQUEST" — the relaxed rule for tracked worktrees
 - `~/.claude/includes/delegation-rules.md` — strict rules that stay strict (cloud-agent branches); auto-merge loosened for cloud-agent PRs
 - `~/.claude/includes/task-prioritization.md` § "Parallel Work (`parallel` marker)" — when roadmap-tracked work uses worktrees
-- `staged-review:audit-review` skill — the post-merge hygiene pass
+- `review:audit-review` skill — the post-merge hygiene pass

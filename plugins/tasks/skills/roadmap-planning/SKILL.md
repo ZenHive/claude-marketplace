@@ -69,7 +69,7 @@ Mark independent tasks with the `parallel` marker (`rmap mark <id> +parallel`, o
 
 ### Ceremony Floor — When NOT to Open a Task
 
-**Scope:** applies to **review-surface findings** (`staged-review:code-review` pre-commit; `staged-review:audit-review` post-merge). Discoveries during `/research`, `/plan`, or implementation follow the discovery-capture rules (file via `rmap new`) — not this floor.
+**Scope:** applies to **review-surface findings** (`review:code-review` pre-commit; `review:audit-review` post-merge). Discoveries during `/research`, `/plan`, or implementation follow the discovery-capture rules (file via `rmap new`) — not this floor.
 
 Findings during code review or PR review have a ceremony floor below which they are NEVER tracked as `rmap` tasks. The roadmap-as-queue earns its overhead only when work spans sessions; an inline `defp` extraction does not.
 

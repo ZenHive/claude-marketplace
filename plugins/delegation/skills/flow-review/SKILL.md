@@ -94,4 +94,4 @@ Post-merge ROADMAP/CHANGELOG/README updates land in a single deferred `audit-rev
 - `linear-queue.md` — the Linear-as-queue substrate
 - `delegation-rules.md` § "NEVER PUSH TO A CLOUD-AGENT'S BRANCH" — the base rule this carve-out is an authorized exception to; § "DON'T AUTO-MERGE PRS" — the GH-native auto-merge gate
 - `plugins/staged-review/templates/auto-merge.md` — GH-native auto-merge wire-up; `[BLOCK-MERGE]` label is the manual-hold path for critical-tier PRs in the train
-- `staged-review:audit-review` skill — deferred; invoke once over `<train-base>..<default-branch-HEAD>` after the cascade completes
+- `review:audit-review` skill — deferred; invoke once over `<train-base>..<default-branch-HEAD>` after the cascade completes

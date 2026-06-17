@@ -15,7 +15,7 @@ Roadmap-driven task execution workflow. Language-agnostic — works with any pro
 ## Usage
 
 ```
-/task-driver:task-driver
+/tasks:task-driver
 ```
 
 ## Relationship to Other Skills

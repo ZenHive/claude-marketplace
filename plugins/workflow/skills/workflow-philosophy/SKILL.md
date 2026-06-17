@@ -36,14 +36,14 @@ Plans produce testable criteria a fresh QA session can check without ambiguity.
 **The agent doing the work must not grade its own output** — the single strongest lever from the harness research.
 
 - **Hooks** — real-time (post-edit compile, format)
-- **`staged-review:code-review`** — pre-commit (staged changes)
+- **`review:code-review`** — pre-commit (staged changes)
 - **`/elixir-qa`** — post-implementation (against the plan)
 
 Implementer and evaluator are always different sessions. Even with the same model, separation beats self-evaluation. For high-stakes code (auth, crypto, money, migrations), a second reviewer catches what self-review misses.
 
 ### Implementer / Reviewer Handoff
 
-The done-signal between sessions is **staged-but-uncommitted**, not a commit. The implementer session stages the finished change set (`git add`) and stops; a fresh session runs `staged-review:code-review` against `git diff --cached`, then commits only after approval. This is the only handoff shape that lets the reviewer see exactly what shipped *and* kept evaluator separation — if the implementer commits, they've self-graded by declaring the work mergeable.
+The done-signal between sessions is **staged-but-uncommitted**, not a commit. The implementer session stages the finished change set (`git add`) and stops; a fresh session runs `review:code-review` against `git diff --cached`, then commits only after approval. This is the only handoff shape that lets the reviewer see exactly what shipped *and* kept evaluator separation — if the implementer commits, they've self-graded by declaring the work mergeable.
 
 - **Implementer:** when tests pass and docs are updated, `git add` the final set and summarise what's staged. Do **not** `git commit`, even if the task "feels done" — that's the temptation the rule exists to stop.
 - **Reviewer (fresh session):** read the staged diff, run the review, stage no new code (the set being reviewed must be frozen); either approve + commit, or push back and let the original author amend the staged set in a follow-up.
@@ -96,7 +96,7 @@ No completion claims without fresh evidence. Run the command, read the output, t
 | Existing roadmap task (harness BEAM running) | `@~/.claude/includes/harness-workflow.md` + `skills/harness-driver/SKILL.md` |
 | Existing roadmap task (no harness) | `task-driver` skill |
 | New feature from scratch | `/elixir-plan` → `/elixir-implement` |
-| Pre-commit review | `staged-review:code-review` |
+| Pre-commit review | `review:code-review` |
 | Post-implementation validation | `/elixir-qa` |
 | Small-medium feature, single session | `/elixir-oneshot` |
 | Large feature | Separate sessions + `.thoughts/` handoffs |
@@ -106,6 +106,6 @@ No completion claims without fresh evidence. Run the command, read the output, t
 | Layer | Scope | Example |
 |-------|-------|---------|
 | Global includes | Language-agnostic, loaded everywhere | `workflow-philosophy.md`, `task-prioritization.md`, `harness-workflow.md` |
-| Universal skills | Language-agnostic foundations | `task-driver`, `staged-review:code-review` |
+| Universal skills | Language-agnostic foundations | `task-driver`, `review:code-review` |
 | Language commands | Domain concerns | `/elixir-plan`, `/elixir-qa` |
 | Language hooks | Real-time enforcement | `post-edit-check.sh`, `pre-commit-unified.sh` |

@@ -1,6 +1,6 @@
 # Pre-Merge Auto-Merge (GitHub-Native)
 
-Replaces `staged-review:commit-review` (deleted v1.5+). Pre-merge phase is **zero-Claude / zero-cloud-agent** — bot ensemble + CI gate the merge; `gh pr merge --auto --squash --delete-branch` set when the PR opens.
+Replaces `review:commit-review` (deleted v1.5+). Pre-merge phase is **zero-Claude / zero-cloud-agent** — bot ensemble + CI gate the merge; `gh pr merge --auto --squash --delete-branch` set when the PR opens.
 
 ## The Mechanism
 
@@ -114,7 +114,7 @@ Use cases: critical-tier diffs, suspected regressions, holding for a coordinatio
 
 ## Cross-References
 
-- `staged-review:audit-review` — post-merge audit (deferred, batched, autonomous)
+- `review:audit-review` — post-merge audit (deferred, batched, autonomous)
 - `~/.claude/includes/delegation-rules.md` § "DON'T AUTO-MERGE PRS" — auto-merge preconditions (now framed GH-native)
 - `~/.claude/includes/worktree-workflow.md` § "PR auto-merge" — self-authored worktree flow
 - `~/.claude/includes/agent-dispatch.md` § "Cursor Delegation Flow" — cloud-agent task template

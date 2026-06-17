@@ -41,7 +41,7 @@ WHAT THIS SKILL DOES:
 
 WHAT THIS SKILL DOES NOT DO:
   - Create roadmaps from scratch (use the `roadmap-planning` skill for the framework, the `rmap` skill for the CLI)
-  - Code review (use staged-review:code-review)
+  - Code review (use review:code-review)
   - Language-specific checks (use project linters and hooks)
   - Implement in Plan-and-File mode (the filed issue is the handoff; a fresh session implements)
 

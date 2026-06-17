@@ -52,7 +52,7 @@ When all four hold, GitHub merges automatically. Zero Claude / zero cloud-agent 
 
 **`[BLOCK-MERGE]` label is the manual override.** Add via `gh pr edit <N> --add-label "BLOCK-MERGE"` to pause auto-merge on any PR (cloud-agent or self-authored worktree) — useful when the user wants to inspect manually before shipping (uncertainty, late-arriving context, holding for a coordination batch). Remove via `gh pr edit <N> --remove-label "BLOCK-MERGE"` and auto-merge fires when remaining checks stay green.
 
-**Auto-merge tail ends at branch cleanup.** GitHub's `--auto --delete-branch` deletes the feature branch on merge. Do NOT chain `audit-review` — it runs deferred via the `staged-review` SessionStart hook (`check-unaudited-commits.sh`, ≥3 unaudited threshold). Clear via `/staged-review:audit-status` (snapshot) or `Skill(audit-review) <range>` (batched audit).
+**Auto-merge tail ends at branch cleanup.** GitHub's `--auto --delete-branch` deletes the feature branch on merge. Do NOT chain `audit-review` — it runs deferred via the `staged-review` SessionStart hook (`check-unaudited-commits.sh`, ≥3 unaudited threshold). Clear via `/review:audit-status` (snapshot) or `Skill(audit-review) <range>` (batched audit).
 
 ### Forbidden under any condition
 
@@ -74,7 +74,7 @@ The five-phase chain (`task-driver` → worktree implementer + pre-commit `code-
 - `plugins/staged-review/templates/auto-merge.md` — GH-native auto-merge adoption guide (branch protection setup, `block-merge-gate.yml`, optional auto-undraft action).
 - `~/.claude/includes/critical-rules.md` § "Git Commit / Push / PR-Create — Allowed by Default" — commits (including `audit(...)` on the default branch) need no per-action authorization; only history-rewrite confirms first.
 - `~/.claude/includes/delegation-rules.md` § "Force-Push to `cursor/*` Is One-Shot Scope Authorization" — companion autonomy-first loosening for the iteration loop.
-- `staged-review:audit-review` skill — deferred post-merge hygiene + bookkeeping pass; surfaced by `staged-review`'s SessionStart hook, next session runs `Skill(audit-review) <range>` off that signal (`/staged-review:audit-status` is a read-only snapshot the user can run if they want a peek).
+- `review:audit-review` skill — deferred post-merge hygiene + bookkeeping pass; surfaced by `staged-review`'s SessionStart hook, next session runs `Skill(audit-review) <range>` off that signal (`/review:audit-status` is a read-only snapshot the user can run if they want a peek).
 
 ## 🚨 POST LINEAR / PR COMMENTS WITHOUT ASKING DURING DELEGATION FLOWS
 

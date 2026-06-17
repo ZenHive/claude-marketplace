@@ -80,7 +80,7 @@ curl -X POST https://api.sprites.dev/v1/sprites \
 # Then sprite api <path> for further calls.
 ```
 
-Across all three: agent ends by `gh pr create` + `gh pr merge <N> --auto --squash --delete-branch` (GH-native auto-merge wire-up); dispatcher polls `gh pr list --search 'head:<branch>'` for the new PR; GitHub handles the merge gate (CI green + no requested-changes + no `[BLOCK-MERGE]` label); `staged-review:audit-review` picks up post-merge via the deferred SessionStart hook. **No built-in "agent done" signal** — observe the artifact (PR appearance) or grep `claude --print` stdout for a done-marker.
+Across all three: agent ends by `gh pr create` + `gh pr merge <N> --auto --squash --delete-branch` (GH-native auto-merge wire-up); dispatcher polls `gh pr list --search 'head:<branch>'` for the new PR; GitHub handles the merge gate (CI green + no requested-changes + no `[BLOCK-MERGE]` label); `review:audit-review` picks up post-merge via the deferred SessionStart hook. **No built-in "agent done" signal** — observe the artifact (PR appearance) or grep `claude --print` stdout for a done-marker.
 
 ### Anthropic auth (three options)
 

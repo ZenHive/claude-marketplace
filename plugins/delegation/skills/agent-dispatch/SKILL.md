@@ -153,13 +153,13 @@ If you find yourself reaching for the ad-hoc template repeatedly, that's a signa
 
 ### Code-Only PRs + Required Acceptance Criteria
 
-**Cloud-agent PRs touch code + tests only.** They do NOT modify `ROADMAP.md`, `CHANGELOG.md`, `README.md`, or `.sobelow-skips`. These files are owned by `staged-review:audit-review` and updated in a single `audit(...)` commit on the repo's default branch in the deferred audit pass (next session, off the SessionStart-hook signal).
+**Cloud-agent PRs touch code + tests only.** They do NOT modify `ROADMAP.md`, `CHANGELOG.md`, `README.md`, or `.sobelow-skips`. These files are owned by `review:audit-review` and updated in a single `audit(...)` commit on the repo's default branch in the deferred audit pass (next session, off the SessionStart-hook signal).
 
 **Why centralize.** Shared-doc edits across parallel PRs hit merge conflicts (`mergeable: CONFLICTING`, `mergeStateStatus: DIRTY`) against earlier merges — every PR adds a rebase round just to resolve doc conflicts. One reviewer-owned commit per audit pass eliminates the conflict class.
 
 **How to apply.** In the issue body's `## Out of scope`, list the files explicitly:
 
-> Out of scope: `ROADMAP.md`, `CHANGELOG.md`, `README.md`, `.sobelow-skips`. Reviewer (`staged-review:audit-review`, deferred post-merge pass) updates these on the repo's default branch.
+> Out of scope: `ROADMAP.md`, `CHANGELOG.md`, `README.md`, `.sobelow-skips`. Reviewer (`review:audit-review`, deferred post-merge pass) updates these on the repo's default branch.
 
 **Required acceptance-criteria bullet** (every delegated issue's `## Acceptance criteria` MUST include this; do NOT add doc-update bullets):
 

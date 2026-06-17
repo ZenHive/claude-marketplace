@@ -182,4 +182,4 @@ Team key, project list, repo↔project mapping, project IDs, worked examples are
 - `worktree-workflow.md` — the worktree mechanics the Self-Authored Worktree Flow rides on
 - `workflow-philosophy.md` § "Implementer / Reviewer Handoff" — the handoff shape Linear+worktree implements
 - `delegation-rules.md` § "POST LINEAR / PR COMMENTS WITHOUT ASKING DURING DELEGATION FLOWS" — comment-posting permission for the self-authored flow
-- `staged-review:audit-review` skill — deferred post-merge hygiene + bookkeeping; SessionStart hook surfaces unaudited tails, next session runs `Skill(audit-review) <range>` to batch-clear
+- `review:audit-review` skill — deferred post-merge hygiene + bookkeeping; SessionStart hook surfaces unaudited tails, next session runs `Skill(audit-review) <range>` to batch-clear
