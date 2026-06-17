@@ -24,4 +24,5 @@
 <!-- TASKS:BEGIN phase=2 -->
 | Task | Status | Notes |
 |------|--------|-------|
+| Task 1 | ⬜ | 🎁 **skill-ref-hygiene** · Sweep bare `staged-review` plugin-name and path references after staged-review→review rename [D:3/B:4/U:5 → Eff:1.5?] 🚀 |
 <!-- TASKS:END -->
