@@ -15,7 +15,13 @@
       "status": "pending"
     }
   },
-  "bundles": {},
+  "bundles": {
+    "skill-ref-hygiene": {
+      "phase": 2,
+      "order": 1,
+      "description": "Sweep stale plugin/skill references left by the deltahedge→zenhive consolidation and the staged-review→review plugin rename."
+    }
+  },
   "milestones": {
     "v0_1": {
       "name": "zenhive cutover",
@@ -25,5 +31,34 @@
       "target_version": "0.1.0"
     }
   },
-  "task": []
+  "task": [
+    {
+      "id": 1,
+      "phase": 2,
+      "bundle": "skill-ref-hygiene",
+      "status": "pending",
+      "title": "Sweep bare `staged-review` plugin-name and path references after staged-review→review rename",
+      "scores": {
+        "d": 3,
+        "b": 4,
+        "u": 5
+      },
+      "eff": 1.5,
+      "dep_layer": 0,
+      "unlocks": 0,
+      "markers": [],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "grep -rn 'staged-review' across the marketplace returns only intentional archaeology (CHANGELOG + 'deleted v1.5+' notes)",
+        "No broken `plugins/staged-review/...` paths remain in any SKILL.md, README, command, or template",
+        "Canonical includes fixed at source and SKILL.md regenerated via sync-skills-from-includes.sh (not hand-edited)"
+      ],
+      "out_of_scope": [
+        "Colon-qualified plugin:skill rename (already done in commit 569b463)",
+        "The harness plugin's two self-synced skills"
+      ],
+      "body": "The `staged-review` plugin was renamed to `review` (directory `plugins/staged-review/` no longer exists). A prior sweep fixed all colon-qualified `staged-review:<skill>` invocation tokens, but ~30 BARE references remain stale across ~15 files: plugin-name prose (e.g. \"the `staged-review` SessionStart hook\", \"the `staged-review` plugin\") and broken path references (e.g. `plugins/staged-review/templates/auto-merge.md`, `plugins/staged-review/scripts/check-unaudited-commits.sh`).\n\nMany live in the canonical `~/.claude/includes/*.md` sources (so fix the include, then run `scripts/sync-skills-from-includes.sh`), not the generated SKILL.md bodies. The two unmapped hand-authored review SKILL.md files (`plugins/review/skills/audit-review`, `.../code-review`) need direct edits.\n\nRename bare `staged-review` -> `review` and `plugins/staged-review/...` -> `plugins/review/...`. EXCLUDE genuine archaeology: CHANGELOG.md historical entries and \"Replaces ... (deleted v1.5+)\" notes that intentionally reference the old name as a historical record — judge each occurrence, this is not a blind global replace.\n",
+      "cross_repo": []
+    }
+  ]
 }
