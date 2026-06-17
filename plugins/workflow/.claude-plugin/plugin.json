@@ -1,6 +1,6 @@
 {
   "name": "workflow",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Language-agnostic development workflow: worktree-per-branch isolation, the dev lifecycle (task → worktree → review → merge → audit), session-per-phase / evaluator-separation principles, and the upstream-PR contribution flow. Skills: git-worktrees, dev-lifecycle, workflow-philosophy, upstream-pr-workflow. Command: /workflow:dev-lifecycle.",
   "author": {
     "name": "ZenHive",

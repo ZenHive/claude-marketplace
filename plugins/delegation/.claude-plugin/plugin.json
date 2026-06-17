@@ -1,6 +1,6 @@
 {
   "name": "delegation",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Linear-as-queue + cloud-agent (Codex, Cursor, Sprite) delegation. Composable skills along a substrate/layer axis: linear-queue (substrate), agent-dispatch, agent-pr-review, flow-review (merge-train), plus delegation-rules, cloud-agent-environments, sprite-claude-code.",
   "author": {
     "name": "ZenHive",
