@@ -1,7 +1,7 @@
 {
   "name": "dev-discipline",
-  "version": "0.2.0",
-  "description": "PreToolUse discipline hooks that fire at the trigger word, where memory entries don't: pause-and-pick reminders (about-to-`rmap new`, about-to-add-`[[task]]`-via-direct-edit, about-to-`sleep N`/poll) plus three roadmap/tasks.toml integrity guards — block masking work as `assignee = \"human\"` without a `# human:` blocker, warn on demand-hedge phrasing, warn on evidenceless `status = \"done\"`.",
+  "version": "0.3.0",
+  "description": "PreToolUse discipline hooks that fire at the trigger word, where memory entries don't: pause-and-pick reminders (about-to-`rmap new`, about-to-add-`[[task]]`-via-direct-edit, about-to-`sleep N`/poll) plus four roadmap/tasks.toml integrity guards — block masking work as `assignee = \"human\"` without a `# human:` blocker, block dead model pins (`model = \"gpt-5-codex\"`), warn on demand-hedge phrasing, warn on evidenceless `status = \"done\"`.",
   "author": {
     "name": "ZenHive",
     "url": "https://github.com/ZenHive"

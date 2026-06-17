@@ -4,6 +4,20 @@ All notable changes to the `zenhive` Claude Code marketplace are documented here
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); versions
 track `.claude-plugin/marketplace.json` `metadata.version`.
 
+## [Unreleased]
+
+### Changed
+
+- **`dev-discipline` 0.2.0 → 0.3.0** — added a fourth `roadmap/tasks.toml`
+  integrity guard: `tasks-toml-block-stale-model.sh` (PreToolUse
+  Edit/Write/MultiEdit) **blocks** any edit introducing `model = "gpt-5-codex"`
+  into a `tasks.toml`. That model id is absent from the codex catalog and is
+  operator-blocked (subscription Codex accounts can't run it); because a
+  per-task `model` pin overrides `agent_model.codex`, a stale pin silently
+  breaks dispatch (codex → "unavailable", claude adapter →
+  "invalid_model_for_adapter"). The deny message points to the valid
+  `gpt-5.5`. Distributes to every repo that enables the plugin.
+
 ## [0.1.0] — 2026-06-08
 
 Initial `zenhive` marketplace. Supersedes the older `deltahedge` marketplace
