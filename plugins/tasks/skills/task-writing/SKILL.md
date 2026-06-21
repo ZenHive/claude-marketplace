@@ -54,6 +54,29 @@ Run all 5 before `rmap new`. Any fail → defer / merge / rewrite. Do not create
 
 Pass all 5 → write body (next section).
 
+### 🚨 Re-Generalize an Agent's Decomposition Before Filing
+
+**When an agent breaks a too-big problem into sub-tasks, its split is overfit to the
+solution it happened to find — not the problem's natural seams.** The tasks read as
+"the steps of *my* implementation," carrying the agent's accidental architecture
+forward into your roadmap. File them verbatim and you've hard-coded one run's
+incidental structure as the project's plan.
+
+Before turning any agent-proposed breakdown into `rmap new` tasks, re-generalize:
+
+- **Ask "what are the problem's seams?", not "what did the agent build?"** A task
+  should name a capability/boundary that survives a different implementation — not a
+  step that only exists because the agent chose approach X.
+- **Strip solution-shape tells:** sub-tasks named after the agent's modules/functions,
+  a split that mirrors its file-creation order, "wire up the thing the previous step
+  made" steps (that's the coupling smell from `rmap.md` § Right-size — fold it in).
+- **Re-apply the coupling test to the *generalized* shape**, not the agent's — overfit
+  splits routinely propose N tasks where the problem has 2 (or 1).
+
+This pairs with the Pre-Creation Gate: the gate filters *whether* a task earns its
+existence; this filters *whose architecture* its shape encodes. The agent's
+decomposition is a draft input, never the filed plan.
+
 ### Bad: Over-Specified
 
 ```

@@ -14,7 +14,7 @@ AI-friendly JSON test output. Use instead of `mix test`. Default shows only fail
 
 ```elixir
 defp deps do
-  [{:ex_unit_json, "~> 0.5", only: [:dev, :test], runtime: false}]
+  [{:ex_unit_json, "~> 0.6", only: [:dev, :test], runtime: false}]
 end
 ```
 
@@ -74,6 +74,31 @@ If **every** first-run failure heals, `summary.result` becomes `"passed"` and th
 config :ex_unit_json, retry: false
 ```
 
+### Message Tracing — Flight Recorder (opt-in, v0.6+)
+
+Capture the inter-process `send`/`receive` flow that led to a failure. Wire the setup callback once into a shared `ExUnit.CaseTemplate`:
+
+```elixir
+defmodule MyApp.Case do
+  use ExUnit.CaseTemplate
+  using do
+    quote do
+      setup {ExUnitJSON.Trace, :setup}
+    end
+  end
+end
+```
+
+Then opt a test or module in with a tag:
+
+```elixir
+@moduletag trace_messages: true   # whole module
+@tag trace_messages: true         # one test
+@tag trace_messages: 200          # one test, ring buffer of 200 events
+```
+
+**Only failing tests** emit a `"trace"` block (passing tests discard it); untagged tests are a zero-cost no-op. The `messages` flow is the reliable signal; `mailboxes` is a best-effort, `approx`-labeled snapshot of processes still alive near the failure (a dead process's mailbox can't be recovered on the BEAM). `overflow: true` means a per-test event budget was hit and tracing stopped early; `dropped` counts events lost. Requires OTP 27+ (already implied by `:json`).
+
 ### Output Schema (v1)
 
 ```json
@@ -86,11 +111,15 @@ config :ex_unit_json, retry: false
   "retry": {"ran": true, "passes": 1, "retried": 4, "confirmed": 2, "flaky": 2},
   "flaky": [{"module": "...", "name": "...", "state": "failed"}],
   "module_failures": [...],
-  "tests": [...]
+  "tests": [{"file": "...", "name": "...", "state": "failed", "trace": {
+    "messages": [{"t_us": 12, "dir": "send", "from": "#PID<0.310.0>", "to": "#PID<0.311.0>", "msg": "{:place_order, %{...}}"}],
+    "mailboxes": [{"pid": "#PID<0.311.0>", "registered": "MyServer", "messages": ["..."], "approx": true}],
+    "overflow": false, "dropped": 0
+  }}]
 }
 ```
 
-Conditional fields: `coverage` only with `--cover`; `coverage.threshold_met` only with `--cover-threshold`; `filtered` only with `--filter-out`; `error_groups` only with `--group-by-error`; `module_failures` only on `setup_all` failure; `tests` omitted with `--summary-only`; `retry`/`flaky` (and `summary.flaky`) only when a retry actually ran. A flake that healed appears in `flaky[]`, **not** `tests[]`.
+Conditional fields: `coverage` only with `--cover`; `coverage.threshold_met` only with `--cover-threshold`; `filtered` only with `--filter-out`; `error_groups` only with `--group-by-error`; `module_failures` only on `setup_all` failure; `tests` omitted with `--summary-only`; `retry`/`flaky` (and `summary.flaky`) only when a retry actually ran; a test's `trace` only on a **failing** test tagged `trace_messages`. A flake that healed appears in `flaky[]`, **not** `tests[]`.
 
 ### Using jq
 
