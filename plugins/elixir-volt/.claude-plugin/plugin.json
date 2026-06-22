@@ -1,6 +1,6 @@
 {
   "name": "elixir-volt",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "JS-on-BEAM stack support — the Volt/Phoenix client-side toolchain and its npm hygiene. Skills: elixir-volt, oxc, quickbeam, popcorn, npm-ci-verify, npm-dep-analysis, npm-security-audit. Skills only, no hooks.",
   "author": {
     "name": "ZenHive",
@@ -8,5 +8,13 @@
   },
   "repository": "https://github.com/ZenHive/claude-marketplace",
   "license": "MIT",
-  "keywords": ["elixir", "volt", "javascript", "npm", "oxc", "popcorn", "quickbeam"]
+  "keywords": [
+    "elixir",
+    "volt",
+    "javascript",
+    "npm",
+    "oxc",
+    "popcorn",
+    "quickbeam"
+  ]
 }
