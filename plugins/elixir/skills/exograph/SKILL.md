@@ -107,7 +107,18 @@ mix exograph.index.hex --mode latest --mirror https://hex.elixir.toys --prefix h
 
 # With live progress dashboard at /progress
 mix exograph.index.hex --mode latest --web --port 4200
+
+# Managed shard directory + recovery mode (0.8.1+)
+mix exograph.index.hex --mode latest --duckdb-shards 4 \
+  --shard-dir /tmp/hex_shards \
+  --duckdb-recovery-mode no_wal_writes \
+  --manifest-path hex_index.json
 ```
+
+Key flags for sharded DuckDB indexing:
+- `--shard-dir` — directory for managed DuckDB shard files (keeps shards separate from the working directory)
+- `--duckdb-recovery-mode` — `no_wal_writes` disables WAL for rebuildable/CI indexes where durability isn't needed
+- `--manifest-path` — ETF manifest enabling resume-after-interruption (required for correct shard-dir tracking)
 
 Indexing resumes automatically after interruption (manifest tracks progress).
 
@@ -275,7 +286,7 @@ from(f in Fragment,
 | Sharded index fanout OOM on very large corpora | All shard results merged in memory | Limit with `opts: [limit: N]` on `Exograph.all/3`; paginate via cursor API |
 | DuckDB concurrent write error | Two indexing processes on same shard file | Use separate `--prefix` per indexing run; merge via `ShardedIndex` at query time |
 | FTS ranking differs between backends | DuckDB FTS vs Postgres BM25 (ParadeDB) use different scoring | Normalise on `fragment_id` rather than score rank when comparing backends |
-| `mix exograph.index.hex` stalls and doesn't resume | Manifest path not set | Pass `--manifest-path hex_index.json`; indexing then resumes from last checkpoint |
+| `mix exograph.index.hex` stalls and doesn't resume | Manifest path not set | Pass `--manifest-path hex_index.json` (and `--shard-dir` when using managed shards); indexing then resumes from last checkpoint |
 
 ---
 

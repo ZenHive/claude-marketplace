@@ -105,21 +105,25 @@ Then opt a test or module in with a tag:
 {
   "version": 1,
   "seed": 12345,
-  "summary": {"total": 100, "passed": 80, "failed": 20, "skipped": 0, "filtered": 15, "flaky": 2, "duration_us": 123456, "result": "failed"},
+  "hint": "3 test(s) failed previously. Use --failed to re-run only those.",
+  "summary": {"total": 100, "passed": 80, "failed": 20, "skipped": 0, "excluded": 0, "invalid": 0, "filtered": 15, "flaky": 2, "duration_us": 123456, "result": "failed"},
   "coverage": {"total_percentage": 92.5, "threshold": 80, "threshold_met": true, "modules": [{"module": "MyApp.Users", "percentage": 95.0, "uncovered_lines": [45, 67]}]},
   "error_groups": [{"pattern": "Connection refused", "count": 10, "example": {"file": "...", "line": 42}}],
   "retry": {"ran": true, "passes": 1, "retried": 4, "confirmed": 2, "flaky": 2},
   "flaky": [{"module": "...", "name": "...", "state": "failed"}],
-  "module_failures": [...],
+  "module_failures": [{"name": "MyApp.SomeTest", "file": "test/some_test.exs", "state": "failed", "failures": [...]}],
   "tests": [{"file": "...", "name": "...", "state": "failed", "trace": {
-    "messages": [{"t_us": 12, "dir": "send", "from": "#PID<0.310.0>", "to": "#PID<0.311.0>", "msg": "{:place_order, %{...}}"}],
+    "messages": [
+      {"t_us": 12, "dir": "send", "from": "#PID<0.310.0>", "to": "#PID<0.311.0>", "msg": "{:place_order, %{...}}"},
+      {"t_us": 45, "dir": "recv", "pid": "#PID<0.311.0>", "msg": "{:ok, %Order{...}}"}
+    ],
     "mailboxes": [{"pid": "#PID<0.311.0>", "registered": "MyServer", "messages": ["..."], "approx": true}],
     "overflow": false, "dropped": 0
   }}]
 }
 ```
 
-Conditional fields: `coverage` only with `--cover`; `coverage.threshold_met` only with `--cover-threshold`; `filtered` only with `--filter-out`; `error_groups` only with `--group-by-error`; `module_failures` only on `setup_all` failure; `tests` omitted with `--summary-only`; `retry`/`flaky` (and `summary.flaky`) only when a retry actually ran; a test's `trace` only on a **failing** test tagged `trace_messages`. A flake that healed appears in `flaky[]`, **not** `tests[]`.
+Conditional fields: `hint` only when prior failures exist and retry is disabled/not applicable (suppressed when auto-retry is ON — its default — because the retry supersedes the manual tip; suppressed by `--no-warn`); `coverage` only with `--cover`; `coverage.threshold_met` only with `--cover-threshold`; `summary.filtered` only with `--filter-out`; `summary.flaky` and top-level `flaky`/`retry` only when a retry actually ran; `error_groups` only with `--group-by-error`; `module_failures` only on `setup_all` failure; `tests` omitted with `--summary-only`; a test's `trace` only on a **failing** test tagged `trace_messages`. `summary.excluded` and `summary.invalid` are always present (zero when none). Test `state` is one of `"passed"`, `"failed"`, `"skipped"`, `"excluded"`, or `"invalid"` (`invalid` occurs when `setup_all` fails; it also drives `summary.result: "failed"`). A flake that healed appears in `flaky[]`, **not** `tests[]`. Trace `messages` entries differ by direction: `send` has `from`/`to`; `recv` has `pid` instead.
 
 ### Using jq
 

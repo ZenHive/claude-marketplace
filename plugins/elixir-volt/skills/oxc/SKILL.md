@@ -10,7 +10,7 @@ allowed-tools: Read, Bash, Grep, Glob
 
 Rust NIF bindings for the [OXC](https://oxc.rs) toolchain. Parses, transforms, minifies, and bundles JS/TS on the BEAM — no Node.js.
 
-**Min version: `{:oxc, "~> 0.15"}`.** The atom-keyed AST contract: `:type`/`:kind` values are snake_case atoms (`:import_declaration`, not `"ImportDeclaration"`); error tuples are `{:error, [%{message: String.t()}]}`; bang functions raise `OXC.Error`. Source-taking APIs accept `iodata()` across parse / transform / minify / collect_imports / lint / format / patch_string / virtual bundle inputs. Surface includes `OXC.codegen/1,!`, `OXC.bind/2`/`splice/3` (placeholder templating), `OXC.transform_many/2` (parallel via rayon), `OXC.Format` (oxfmt as a separate Rust NIF — Prettier-compatible, ~30× faster, ships `:sort_imports` and `:sort_tailwindcss` plugins), `OXC.Lint` (oxlint's 650+ rules, custom Elixir rules via `OXC.Lint.Rule`, and `tsgolint`-backed type-aware mode), and the full Rolldown bundle option surface (`:external`, `:exports`, `:preserve_entry_signatures`, `:conditions`, `:main_fields`, `:modules`, `:module_types`, `:cwd`). `OXC.bundle/2` accepts either a filesystem entry path (string) or a virtual `[{filename, source}]` project. The low-level `OXC.Native` NIF surface is public (rarely needed — use the `OXC` wrapper).
+**Min version: `{:oxc, "~> 0.17"}`.** The atom-keyed AST contract: `:type`/`:kind` values are snake_case atoms (`:import_declaration`, not `"ImportDeclaration"`); error tuples are `{:error, [%{message: String.t()}]}`; bang functions raise `OXC.Error`. Source-taking APIs accept `iodata()` across parse / transform / minify / collect_imports / lint / format / patch_string / virtual bundle inputs. Surface includes `OXC.codegen/1,!`, `OXC.bind/2`/`splice/3` (placeholder templating), `OXC.transform_many/2` (parallel via rayon), `OXC.Format` (oxfmt as a separate Rust NIF — Prettier-compatible, ~30× faster, ships `:sort_imports` and `:sort_tailwindcss` plugins), `OXC.Lint` (oxlint's 650+ rules, custom Elixir rules via `OXC.Lint.Rule`, and `tsgolint`-backed type-aware mode), the full Rolldown (1.1+) bundle option surface (`:external`, `:exports`, `:preserve_entry_signatures`, `:conditions`, `:main_fields`, `:modules`, `:module_types`, `:cwd`), and `OXC.Bundle` (composable pipeline for multi-entry builds returning all chunks and assets via `OXC.Bundle.Result`). `OXC.bundle/2` accepts either a filesystem entry path (string) or a virtual `[{filename, source}]` project (single-entry convenience). `OXC.select/3` extracts lightweight parser events (8 selector atoms — `:import_sources`, `:asset_urls`, `:workers`, `:glob_imports`, `:require_calls`, and more) without allocating a full AST. The low-level `OXC.Native` NIF surface is public (rarely needed — use the `OXC` wrapper).
 
 **Does NOT cover:** runtime JS execution (→ QuickBEAM), installing npm packages (→ `mix npm.install`), frontend build + HMR (→ Volt).
 
@@ -99,6 +99,7 @@ OXC.splice(ast, :body, ["const x = 1;", "return x;"]) |> OXC.codegen!()
 ```elixir
 {:ok, minified} = OXC.minify(source, "file.js")                     # DCE, constant folding, whitespace
 {:ok, minified} = OXC.minify(source, "file.js", mangle: false)      # keep original names
+minified = OXC.minify!(source, "file.js")                           # bang — raises OXC.Error
 ```
 
 ### Format
@@ -166,6 +167,8 @@ Each result is `{:ok, code}`, `{:ok, %{code:, sourcemap:}}` (with `sourcemap: tr
 ### Bundle
 
 ```elixir
+js = OXC.bundle!("priv/js/app.ts", cwd: File.cwd!())   # bang — raises OXC.Error
+
 # Virtual project — list of {filename, source} tuples; :entry REQUIRED
 {:ok, js} = OXC.bundle(
   [
@@ -209,6 +212,31 @@ Each result is `{:ok, code}`, `{:ok, %{code:, sourcemap:}}` (with `sourcemap: tr
 
 **Filesystem vs virtual:** virtual projects (`[{filename, source}]`) are best for tests, generated sources, and the esbuild-style "load this exact string" use case. Filesystem entries (`"path/to/entry.ts"`) resolve packages through `node_modules` via `:cwd` — closes the gap the README pattern in this repo previously fills with `npx esbuild`.
 
+### OXC.Bundle — Composable Multi-Entry Pipeline
+
+`OXC.Bundle` wraps Rolldown's full multi-entry build — returns **all chunks and assets** as `OXC.Bundle.Result` instead of a single string. Use `OXC.bundle/2` for single-entry convenience; use `OXC.Bundle` when you need multiple entry points, output-directory writes, or want to inspect individual output chunks.
+
+```elixir
+# Multi-entry build
+{:ok, %OXC.Bundle.Result{outputs: outputs, warnings: warns}} =
+  OXC.Bundle.new()
+  |> OXC.Bundle.entry("src/index.js")
+  |> OXC.Bundle.entry("src/admin.js")
+  |> OXC.Bundle.cwd(File.cwd!())
+  |> OXC.Bundle.outdir("dist")
+  |> OXC.Bundle.format(:esm)
+  |> OXC.Bundle.minify(true)
+  |> OXC.Bundle.treeshake(true)
+  |> OXC.Bundle.run()
+
+# Each output is %OXC.Bundle.Output{} with fields:
+#   :code, :file_name, :path, :name, :type, :source,
+#   :sourcemap, :exports, :imports, :dynamic_imports
+Enum.each(outputs, fn out -> File.write!(out.path, out.code) end)
+```
+
+**Builder functions:** `new/1`, `entry/2`, `entries/2`, `file/2`, `files/2`, `cwd/2`, `outdir/2`, `format/2`, `minify/2`, `treeshake/2`, `output/2`, `resolve/2`, `transform/2`. All return the updated `OXC.Bundle.t()` struct for piping; `run/1` executes and returns `{:ok, Result.t()} | {:error, [map()]}`.
+
 ### Imports
 
 ```elixir
@@ -222,11 +250,40 @@ Each result is `{:ok, code}`, `{:ok, %{code:, sourcemap:}}` (with `sourcemap: tr
 #          :start, :end (byte offsets, including quotes)
 ```
 
+### Select (Compact Parser Events)
+
+`OXC.select/3` extracts lightweight metadata from source in a single pass — no full AST allocation. Faster than `parse` + walk when you only need import/export shapes or asset references.
+
+```elixir
+# Selector is an atom; returns {:ok, list} | {:error, errors}
+{:ok, refs} = OXC.select(source, "file.ts", :import_sources)
+# => [%{specifier: "vue", type: :static, kind: :import, start: 20, end: 25}]
+```
+
+Available selectors:
+
+| Selector | Returns |
+|---|---|
+| `:import_sources` | import/export specifiers with `:type`, `:kind`, byte `:start`/`:end` (superset of `collect_imports`) |
+| `:import_specifiers` | just the specifier strings |
+| `:asset_urls` | `new URL(...)` references with byte positions |
+| `:workers` | Web Worker constructor call sites |
+| `:glob_imports` | `import.meta.glob(...)` patterns |
+| `:import_meta_env` | `import.meta.env.*` accesses |
+| `:dynamic_import_templates` | template-literal dynamic imports |
+| `:require_calls` | CommonJS `require()` calls |
+
+**Prefer `OXC.imports/2` or `OXC.collect_imports/2`** for the common case of just listing static import specifiers — they predate `select/3` and are equally fast. Use `select/3` when you need non-import event types (assets, workers, env refs, require calls).
+
 ### Rewrite Specifiers
 
 ```elixir
 # Callback MUST return {:rewrite, new} | :keep — bare string raises CaseClauseError.
 {:ok, rewritten} = OXC.rewrite_specifiers(source, "file.ts", fn
+  "vue" -> {:rewrite, "/@vendor/vue.js"}
+  _ -> :keep
+end)
+rewritten = OXC.rewrite_specifiers!(source, "file.ts", fn  # bang — raises OXC.Error
   "vue" -> {:rewrite, "/@vendor/vue.js"}
   _ -> :keep
 end)
@@ -452,9 +509,10 @@ end
 
 1. Don't use string keys — always atom-keyed maps (`node.type`, not `node["type"]`).
 2. Don't parse just to validate — use `OXC.valid?/2`.
-3. Don't parse just for imports — use `OXC.imports/2` or `OXC.collect_imports/2`.
+3. Don't parse just for imports — use `OXC.imports/2`, `OXC.collect_imports/2`, or `OXC.select/3` (for non-import events like `:asset_urls` or `:require_calls`).
 4. Don't hand-roll import rewrites — `OXC.rewrite_specifiers/3` is a single pass.
 5. Don't use OXC to run JS — static analysis only. Use QuickBEAM for runtime.
+6. Don't use `OXC.bundle/2` for multi-entry builds — use `OXC.Bundle` pipeline to get all chunks and assets.
 
 ### Performance
 

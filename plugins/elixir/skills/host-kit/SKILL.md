@@ -10,11 +10,11 @@ allowed-tools: Read, Bash, Grep, Glob
 
 Declare a Linux host in `.exs`, generate an inspectable plan diff, review it, then apply locally or over SSH. No Elixir, Mix, Docker, or runtime required on target machines.
 
-**Min version: `{:host_kit, "~> 0.1.0-beta.4"}`.**  Requires Elixir `~> 1.20`.
+**Min version: `{:host_kit, "~> 0.1.0-beta.5"}`.**  Requires Elixir `~> 1.20`.
 
 **Beta — DSL, provider, and recipe APIs may still change before a stable release.** Core plan/apply workflow is usable and documented.
 
-**Key deps pulled in:** `systemdkit ~> 0.1.3`, `unitctl ~> 0.1.0`, `jason ~> 1.4`, `yaml_elixir ~> 2.11`, `req ~> 0.5`, `bash ~> 0.5.1`.
+**Key deps pulled in:** `systemdkit ~> 0.1.4`, `unitctl ~> 0.1.0`, `json_codec ~> 0.1.4`, `jason ~> 1.4`, `yaml_elixir ~> 2.11`, `req ~> 0.5`, `bash ~> 0.5.1`.
 
 **Design axioms:** DSL evaluation never applies changes — it only builds structs. Plans are inspectable JSON artifacts. Mix tasks are wrappers around the runtime API; prefer the API in Elixir callers.
 
@@ -172,9 +172,10 @@ target = HostKit.Target.local(:prod)
 | YAML config | `yaml path, content: [...], opts` | Keyword list for stable order; decoded with `yaml_elixir`, rendered with `ymlr` |
 | dotenv | `dotenv path, opts do ... end` | `.env` file; secret values are `:redacted`-safe |
 | Systemd service | `daemon :name do ... end` | Derives unit name from service prefix; enables `multi-user.target` |
-| Systemd timer | `schedule :name do ... end` | Paired with `daemon` for cron-like jobs |
+| Systemd timer | `schedule :name do ... end` | Paired with `daemon` for cron-like jobs; typed helpers: `daily`, `weekly`, `monthly`, `jitter`, `repeat_after`, `after_boot` |
 | Shell command | `bash :name, "script"` | Use `command/2` with explicit `down:` for reversible ops |
 | Git checkout | `source :name, github: "org/repo", ref: "main"` | Source rollback is not inferred; treat as explicit lifecycle |
+| Binary release | `release :name` | Emits version-directory + current-symlink resources for binary release layouts |
 | User account | `account system: true` | Rollback: `:keep` by default |
 | mise runtime | `mise do; tool :erlang, "29.0.2"; end` | Installs BEAM toolchain without system packages |
 
@@ -200,7 +201,7 @@ end
 | Provider | DSL macro | What it emits |
 |----------|-----------|---------------|
 | `HostKit.Providers.Caddy` | `caddy_site "host" do ... end` | Caddy JSON site config; `reverse_proxy :http` wires to daemon listener |
-| `HostKit.Providers.Gatus` | `gatus_config path do ... end` / `monitor :http, ...` | Structured `yaml/2` config resource (thin helper, not a managed daemon) |
+| `HostKit.Providers.Gatus` | `monitor :http, ...` / `gatus_monitor_endpoints/1` | Provider-neutral HTTP endpoint projection; `gatus_monitor_endpoints/1` renders declared monitors to structured `yaml/2` config (thin helper, not a managed daemon) |
 
 Providers should emit inspectable HostKit structs, not opaque shell calls.
 
@@ -353,9 +354,9 @@ exec argv("cmd", opts: [foo_bar: "baz"], style: :underscore) # --foo_bar baz
 ### Dependencies
 
 ```elixir
-{:host_kit, "~> 0.1.0-beta.4"}
+{:host_kit, "~> 0.1.0-beta.5"}
 # Transitive runtime deps pulled in automatically:
-# systemdkit ~> 0.1.3, unitctl ~> 0.1.0, jason ~> 1.4,
+# systemdkit ~> 0.1.4, unitctl ~> 0.1.0, json_codec ~> 0.1.4, jason ~> 1.4,
 # yaml_elixir ~> 2.11, ymlr ~> 5.1, req ~> 0.5, bash ~> 0.5.1,
 # hammer ~> 7.0, dotenvy ~> 1.1, jsonpatch ~> 2.3, telemetry ~> 1.0
 ```

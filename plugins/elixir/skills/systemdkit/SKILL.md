@@ -10,7 +10,7 @@ allowed-tools: Read, Bash, Grep, Glob
 
 Pure Elixir interface to systemd: build typed unit files, control the manager, track jobs — no `systemctl` shell-outs, no string templating.
 
-**Min version: `{:systemdkit, "~> 0.1"}`.** Current stable: v0.1.3.
+**Min version: `{:systemdkit, "~> 0.1"}`.** Current stable: v0.1.4.
 **Hex package is `systemdkit`; all public modules use the `Systemd.*` namespace.**
 **Two APIs:** top-level `Systemd.*` for short-lived one-offs; `Systemd.Manager.*` for connection-reuse or job tracking.
 **Linux-only at runtime.** Integration tests require Linux + systemd; gate them behind `SYSTEMD_INTEGRATION=1`.
@@ -69,12 +69,18 @@ Systemd.UnitFile.service(
   install: [wanted_by: "multi-user.target"]
 )
 
-# Timer unit
+# Timer unit — use Systemd.Calendar helpers to build the on_calendar value
 Systemd.UnitFile.timer(
   unit: [description: "Nightly snapshot"],
-  timer: [on_calendar: "daily", persistent: true],
+  timer: [on_calendar: Systemd.Calendar.daily_at(~T[02:30:00]), persistent: true],
   install: [wanted_by: "timers.target"]
 )
+
+# Systemd.Calendar helpers (0.1.4+) — return systemd calendar expression strings
+Systemd.Calendar.daily_at(~T[02:30:00])          # → "daily 02:30:00"
+Systemd.Calendar.weekly_at(:monday, ~T[09:00:00]) # → "Monday 09:00:00"
+Systemd.Calendar.monthly_at(1, ~T[00:00:00])      # → "*-*-1 00:00:00"
+# All three accept either a Time.t() or a "HH:MM:SS" string.
 
 # Socket unit
 Systemd.UnitFile.socket(
