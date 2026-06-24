@@ -203,11 +203,11 @@ erlang 29.0-rc3
 
 ## Worked Example Reference
 
-`cartouche/.github/workflows/harness.yml` on the `development` branch is the canonical reference implementation. The cartouche workflow has iterated three times (`ad7fed0` initial → `c4cb0eb` YAML fix → `3a3a79d` "stop gating CI on TagTODO/TagFIXME") and may iterate further. This skill captures *current best practice as a snapshot*, not an immutable template.
+`onchain_tempo/.github/workflows/harness.yml` on the `main` branch is the canonical reference implementation — it embodies this skill's guidance directly: `version-file: .tool-versions` sourcing (no matrix-pin drift), config-less `mix doctor` / `mix sobelow` steps, a conservative 70% coverage floor, and `actions/checkout@v7` / `actions/cache@v6`. This skill captures *current best practice as a snapshot*, not an immutable template.
 
-When cartouche's workflow evolves, **resync the templates here** — see "Maintaining the Template" below.
+When onchain_tempo's workflow evolves, **resync the templates here** — see "Maintaining the Template" below.
 
-**Known follow-up:** at the time this skill was written, cartouche's CI still pinned `1.18.4 / 27.3` while its `.tool-versions` declared `1.20.0-rc.4-otp-29 / 29.0-rc3` — 8 versions of drift, exactly the failure mode this skill exists to solve. Cartouche should adopt the `version-file: .tool-versions` pattern as a follow-up referencing this skill.
+**Migration note:** `cartouche/.github/workflows/harness.yml` is still on the *older* shape — an explicit `strategy.matrix` with `elixir-version: ${{ matrix.elixir }}` pins (not `version-file`), `actions/checkout@v4` / `cache@v4`, and an `85% --exclude integration` gate. It predates this template's version-file pattern and is a migration candidate, **not** the reference; new adopters should mirror onchain_tempo above.
 
 ## Verification
 
@@ -219,15 +219,15 @@ When cartouche's workflow evolves, **resync the templates here** — see "Mainta
 
 ## Maintaining the Template
 
-The template is a snapshot of cartouche's current best practice. To resync:
+The template is a snapshot of onchain_tempo's current best practice. To resync:
 
 ```bash
 diff -u \
-  <(cd ~/_DATA/code/cartouche && git show development:.github/workflows/harness.yml) \
-  ~/_DATA/code/claude-marketplace-elixir/plugins/elixir/skills/elixir-ci-harness/templates/harness.yml
+  <(cd ~/_DATA/code/onchain_tempo && git show main:.github/workflows/harness.yml) \
+  ~/_DATA/code/claude-marketplace/plugins/elixir/skills/elixir-ci-harness/templates/harness.yml
 ```
 
-The diff should show only the customization-point comments this skill adds. If cartouche's workflow has gained new steps or comments, copy them in and update this SKILL.md's threshold/tag/branch sections to match.
+The diff should show only the customization-point comments this skill adds. If onchain_tempo's workflow has gained new steps or comments, copy them in and update this SKILL.md's threshold/tag/branch sections to match.
 
 ## Cross-References
 
