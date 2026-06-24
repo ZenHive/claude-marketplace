@@ -169,9 +169,11 @@ Read `ROADMAP.md` (or the project's equivalent task doc) **once at the start of 
 
 If the project has no ROADMAP.md (per `linear-queue.md` § "ROADMAP-Fallback Flow"), proceed without it — Category 6 still catches CHANGELOG / CLAUDE.md / README drift; only the ROADMAP-status-flip findings are absent.
 
-### Step 4.5: Resolve Source PR + Fetch PR + Linear Comments (Per Non-Tiny Commit)
+### Step 4.5: Resolve Source PR + Fetch PR + Linear Comments + GitHub Advisories (Per Non-Tiny Commit)
 
 For each non-tiny commit in the range, resolve its source PR and pull bot + Linear context. Bot review comments (CodeRabbit / Copilot / Codex GH bot) become third-reasoner inputs to Step 5a (Cat 1 + Cat 6). Linear acceptance criteria drive Step 9's extension.
+
+**When you check comments, also check GitHub security advisories.** The same `gh` surface that carries PR/bot comments also carries the repo's open security advisories and Dependabot alerts — fetch them too (once per run, repo-scoped) and feed them into Step 5a Category 1 (security). A landed commit that touches a dependency named in an open Dependabot alert, or a surface named in an open advisory, is a Cat-1 finding the per-task reviewer never saw.
 
 **Resolve the PR number:**
 
@@ -208,6 +210,23 @@ if [ -n "$ISSUE_ID" ] && have_linear_mcp; then
 fi
 ```
 
+**Repo security advisories + Dependabot alerts (once per run, not per commit):**
+
+```bash
+# Open security advisories (private/published vuln reports on this repo).
+# `state` takes ONE enum (triage|draft|published|closed); omit it and drop
+# closed ones client-side to catch every still-open advisory in one call.
+gh api "repos/${OWNER_REPO}/security-advisories" \
+  --jq '[.[] | select(.state != "closed") | {ghsa: .ghsa_id, severity, summary, state}]' 2>/dev/null || echo "[]"
+
+# Open Dependabot alerts (vulnerable dependencies) — 403 if alerts disabled or no admin
+gh api "repos/${OWNER_REPO}/dependabot/alerts?state=open" \
+  --jq '[.[] | {package: .dependency.package.name, severity: .security_advisory.severity,
+                ghsa: .security_advisory.ghsa_id, summary: .security_advisory.summary}]' 2>/dev/null || echo "[]"
+```
+
+If either returns `403`/empty, the feature isn't enabled or the token lacks scope — note it and proceed (don't fail the audit). Cross-reference each open alert/advisory against the commit range's changed paths and dependency-manifest diffs (e.g. `mix.lock`, `package-lock.json`); a match becomes a Cat-1 finding.
+
 **Cache per PR.** If the batch has multiple commits per PR (rebase-merge), one fetch per PR number. Squash-merge is one commit ↔ one PR — no caching needed.
 
 **Per-commit context object** (carry into Steps 5a, 5d, 9, 12.5):
@@ -224,6 +243,15 @@ fi
   linear_state:           string | null,
   linear_acceptance:      [string] | null,                  # parsed from issue body
   linear_comments:        [{author, body}] | null,
+}
+```
+
+**Run-level security context** (fetched once in Step 4.5, shared across all commits — feeds Step 5a Cat 1):
+
+```
+{
+  open_advisories:    [{ghsa, severity, summary, state}],          # repo security advisories
+  dependabot_alerts:  [{package, severity, ghsa, summary}],        # open vulnerable deps
 }
 ```
 
