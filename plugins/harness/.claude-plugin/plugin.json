@@ -1,6 +1,6 @@
 {
   "name": "harness",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Drive the harness OTP orchestration engine (implement → review → land) from any consuming repo: rmap-task dispatch, isolated-worktree implementer runs, cross-family reviewer-AI gating, and post-merge audit — over harness's native MCP surface.",
   "author": {
     "name": "ZenHive",
