@@ -16,7 +16,7 @@ OTP-supervised DuckDB via the Quack protocol: DBConnection client, Ecto adapter,
 
 **Optional integrations activate when packages are present:** `{:ecto_sql, "~> 3.13"}`, `{:explorer, "~> 0.11"}`, `{:geo, "~> 4.1"}`.
 
-**Hex-published at v0.5.13.** Use `{:quackdb, "~> 0.5"}` — do NOT pin to 0.3.x (older readme snapshots show that).
+**Hex-published at v0.5.15.** Use `{:quackdb, "~> 0.5"}` — do NOT pin to 0.3.x (older readme snapshots show that).
 
 **Caveat:** Unsupported vector/logical types raise at runtime. Ecto coverage is analytics-first; edge cases in OLTP-style operations are not guaranteed. QuackDB does not stage local files to remote servers.
 
@@ -29,6 +29,10 @@ OTP-supervised DuckDB via the Quack protocol: DBConnection client, Ecto adapter,
 ### Supervised Setup (Managed Binary)
 
 `QuackDB.Server.child_specs/1` generates both server and client child specs, auto-downloads the DuckDB binary with checksum verification, and injects a shared random token — nothing to wire manually.
+
+As of v0.5.15, the server writes default boot SQL (including the generated token) to a temporary init file rather than embedding it in process arguments, so tokens no longer appear in `ps` output.
+
+As of v0.5.14, `INSTALL quack` runs idempotently before `LOAD quack` — the extension installs itself on first boot even when using a stock DuckDB binary.
 
 ```elixir
 # application.ex
@@ -68,8 +72,8 @@ Remote-only (no managed server):
 ```elixir
 # Parameterized query — positional ?
 {:ok, result} = QuackDB.query(conn, "SELECT ? AS name, ? AS n", ["duck", 42])
-result.rows      # [[\"duck\", 42]]
-result.columns   # [\"name\", \"n\"]
+result.rows      # [["duck", 42]]
+result.columns   # ["name", "n"]
 result.num_rows  # 1
 result.command   # :select
 
@@ -78,22 +82,44 @@ result = QuackDB.query!(conn, "SELECT current_date")
 
 # Row maps
 QuackDB.maps(conn, "SELECT 1 AS x, 2 AS y")
-# {:ok, [%{\"x\" => 1, \"y\" => 2}]}
+# {:ok, [%{"x" => 1, "y" => 2}]}
 
-# Column-oriented — preserves order + metadata
+# Column-oriented — returns QuackDB.Columns (preserves order + metadata)
 {:ok, %QuackDB.Columns{} = cols} = QuackDB.columnar(conn, "SELECT ...")
+
+# Column-oriented — returns plain maps keyed by column name
+{:ok, col_maps} = QuackDB.columns(conn, "SELECT ...")
 
 # Streaming — lazy, backpressure-safe
 QuackDB.stream(conn, "SELECT * FROM huge_table", [])
 |> Stream.each(&process/1)
 |> Stream.run()
 
-# Column batches for vector-shaped processing
+# Column batches returning QuackDB.Columns structs (with metadata)
 QuackDB.columnar_batches(conn, "SELECT ...", [])
+|> Enum.each(&process_batch/1)
+
+# Column batches returning plain maps (no metadata)
+QuackDB.column_batches(conn, "SELECT ...", [])
 |> Enum.each(&process_batch/1)
 ```
 
 Result struct fields: `columns`, `rows`, `num_rows`, `command`, `connection_id`, `messages`, `metadata`. Results implement `Table.Reader` for Livebook.
+
+---
+
+### Prepared Statements
+
+```elixir
+# Prepare once, execute many
+{:ok, stmt} = QuackDB.prepare(conn, "SELECT * FROM events WHERE category = ?")
+
+# Prepare and execute in one call
+{:ok, result} = QuackDB.prepare_execute(conn, "SELECT ? AS n", [42])
+
+# Health check
+:ok = QuackDB.ping(conn)
+```
 
 ---
 
@@ -285,19 +311,20 @@ Telemetry events emitted: `[:quackdb, :query, :start | :stop]`, `[:quackdb, :app
 
 | Problem | Cause | Fix |
 |---------|-------|-----|
-| `quack extension not found` | DuckDB binary missing the extension | Use `duckdb: :managed` or ensure DuckDB 1.5.3+ with quack |
+| `quack extension not found` | DuckDB binary missing the extension | Upgrade to v0.5.14+ (auto-installs via `INSTALL quack`) or use `duckdb: :managed` |
 | Type encode error on nil column | DuckDB can't infer type from nil list | Pass `:columns` type specs in `insert_columns/4` |
 | Spatial functions undefined | `spatial` extension not loaded | Add `"LOAD spatial;"` to `:boot_sql` |
 | Windows managed binary fails | Windows not yet supported | Provide DuckDB binary path explicitly |
 | Ecto migration errors | Adapter is analytics-first | Stick to supported DDL; avoid OLTP edge cases |
 | `Table.Reader` not available | Explorer not in deps | `{:explorer, "~> 0.11"}` for Livebook integration |
+| Token visible in `ps` output | Older server version | Upgrade to v0.5.15+ (boot SQL written to temp init file) |
 
 ---
 
 ### DO NOT
 
 1. Use QuackDB as a drop-in production Postgres replacement — the Quack protocol is experimental.
-2. Pin to `"~> 0.3"` — the README snapshots on mirror sites are stale; 0.5.13 is current.
+2. Pin to `"~> 0.3"` — the README snapshots on mirror sites are stale; 0.5.15 is current.
 3. Call `LOAD spatial` inside queries at runtime without connection pooling awareness — load it in `:boot_sql`.
 4. Expect Windows managed-binary support — provide the DuckDB path explicitly on Windows.
 5. Use `insert_rows!` for very wide schemas with nil-only columns without `:columns` type specs — DuckDB cannot infer the type.

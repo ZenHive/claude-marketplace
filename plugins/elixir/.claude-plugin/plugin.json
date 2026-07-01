@@ -1,6 +1,6 @@
 {
   "name": "elixir",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Essential Elixir/OTP development support — per-edit check hooks (format, compile, test.json, credo, dialyzer.json, sobelow, doctor) plus core skills: code-style, development-commands/philosophy, dialyzer-json, ex-unit-json, elixir-setup, elixir-ci-harness, integration-testing, usage-rules, hex-docs-search, reach, tidewave-guide, web-command, agent-economy, api-toolkit, zen-websocket.",
   "author": {
     "name": "ZenHive",

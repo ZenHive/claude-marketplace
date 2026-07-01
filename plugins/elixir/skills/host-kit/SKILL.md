@@ -10,7 +10,7 @@ allowed-tools: Read, Bash, Grep, Glob
 
 Declare a Linux host in `.exs`, generate an inspectable plan diff, review it, then apply locally or over SSH. No Elixir, Mix, Docker, or runtime required on target machines.
 
-**Min version: `{:host_kit, "~> 0.1.0-beta.5"}`.**  Requires Elixir `~> 1.20`.
+**Min version: `{:host_kit, "~> 0.1.0-beta.7"}`.**  Requires Elixir `~> 1.20`.
 
 **Beta — DSL, provider, and recipe APIs may still change before a stable release.** Core plan/apply workflow is usable and documented.
 
@@ -18,7 +18,7 @@ Declare a Linux host in `.exs`, generate an inspectable plan diff, review it, th
 
 **Design axioms:** DSL evaluation never applies changes — it only builds structs. Plans are inspectable JSON artifacts. Mix tasks are wrappers around the runtime API; prefer the API in Elixir callers.
 
-**Caveat:** Repology-based package resolution adds a network call on first plan; use `--repology-cache` in CI. Rollback coverage is resource-type-dependent (files/symlinks yes; directories/packages default to keep).
+**Caveat:** Repology-based package resolution adds a network call on first plan; use `--repology-cache` in CI. Rollback coverage is resource-type-dependent (files/symlinks yes; directories/packages default to keep). Symlink ownership is **unmanaged by default** (beta.6+) — `owner:` and `group:` must be set explicitly on `symlink/2` or ownership will not be tracked in plans.
 
 **Does NOT cover:** runtime config management (Ansible-style variables), container orchestration, multi-host convergence loops, or Windows hosts.
 
@@ -81,6 +81,14 @@ project :prod do
       owner: "root", group: service_user(), mode: 0o640,
       content: [endpoints: [[name: "api", url: "http://127.0.0.1:4000/health"]]]
 
+    toml path(:config, "app.toml"),                # structured TOML — deterministic rendering + drift comparison (beta.7)
+      owner: "root", group: service_user(), mode: 0o640 do
+      set "log_level", "info"
+      section "server" do
+        set "port", 4000
+      end
+    end
+
     daemon :api do
       env :runtime
       exec argv("/opt/api/bin/server",             # argv/2 builds inspectable flag lists
@@ -120,6 +128,10 @@ mix host_kit.apply --host app \
 
 # Dry-run without --plan (re-plans inline, no artifact guarantee)
 mix host_kit.apply --host app --dry-run infra/config.exs
+
+# Service-scoped plan/apply — only resources under :api (beta.6)
+mix host_kit.plan --host app --service api infra/config.exs
+mix host_kit.apply --host app --service api --dry-run infra/config.exs
 ```
 
 **Execution graph** — append `--show-graph` to `plan` to see dependency layers:
@@ -148,6 +160,11 @@ mix host_kit.plan --host app --show-graph infra/config.exs
 # Partial rollback — only selected resources
 {:ok, down_plan} = HostKit.down(plan, only: [{:file, "/etc/app/config.ini"}])
 
+# Release-retention cleanup — build plan from recorded release metadata (beta.7)
+{:ok, clean_plan} = HostKit.clean(project, host: :app)
+:ok               = HostKit.format_plan(clean_plan) |> IO.puts()
+{:ok, _}          = HostKit.apply(clean_plan, confirm: true)
+
 # Read + audit (inspect state without applying)
 target = HostKit.Target.local(:prod)
 {:ok, current}     = HostKit.Project.read(project, target: target)
@@ -166,16 +183,20 @@ target = HostKit.Target.local(:prod)
 | OS package | `package :name` / `packages [:a, :b]` | Repology semantic resolution; lock with `--write-package-lock` |
 | File | `file "/path", content: "..."` | Tracks ownership, mode, content |
 | Directory | `directory "/path", mode: 0o755` | Rollback: `:keep` by default; opt in with `rollback: :delete_if_created` |
-| Symlink | `symlink "/opt/app/current", to: "..."` | Rollback restores prior target |
+| Symlink | `symlink "/opt/app/current", to: "..."` | Ownership **unmanaged by default** (beta.6+) — set `owner:`/`group:` explicitly; rollback restores prior target |
 | Template (EEx) | `template path(:config, "file.conf"), from: "tpl.eex", assigns: %{}` | Assigns may contain `%HostKit.Secret{}` |
 | INI config | `ini path, opts do ... end` | Structured diff by key/section; `:redacted` values omit from plans |
 | YAML config | `yaml path, content: [...], opts` | Keyword list for stable order; decoded with `yaml_elixir`, rendered with `ymlr` |
+| TOML config | `toml path, opts do ... end` | Structured TOML; deterministic rendering and public-path drift comparison (beta.7) |
 | dotenv | `dotenv path, opts do ... end` | `.env` file; secret values are `:redacted`-safe |
+| Quoted `.exs` | `exs PATH do ... end` | `.exs` file resource; only `unquote(value(...))` and `unquote(secret(...))` placeholders allowed inside (beta.6) |
 | Systemd service | `daemon :name do ... end` | Derives unit name from service prefix; enables `multi-user.target` |
 | Systemd timer | `schedule :name do ... end` | Paired with `daemon` for cron-like jobs; typed helpers: `daily`, `weekly`, `monthly`, `jitter`, `repeat_after`, `after_boot` |
 | Shell command | `bash :name, "script"` | Use `command/2` with explicit `down:` for reversible ops |
+| Command monitor | `monitor :command, exec: ...` | Monitor execution reusing command shapes; readiness checks triggered by dependency changes (beta.6) |
 | Git checkout | `source :name, github: "org/repo", ref: "main"` | Source rollback is not inferred; treat as explicit lifecycle |
-| Binary release | `release :name` | Emits version-directory + current-symlink resources for binary release layouts |
+| Binary release | `release :name` | Emits version-directory + current-symlink resources; records metadata for `mix host_kit.clean` (beta.7) |
+| OTP release | `otp_release` | ReleaseKit artifact builds with typed v2 manifests; records metadata for cleanup planning (beta.6/beta.7) |
 | User account | `account system: true` | Rollback: `:keep` by default |
 | mise runtime | `mise do; tool :erlang, "29.0.2"; end` | Installs BEAM toolchain without system packages |
 
@@ -294,20 +315,40 @@ exec argv("cmd", opts: [foo_bar: "baz"], style: :underscore) # --foo_bar baz
 # bool true → emit flag, false/nil → omit; list values → repeat option
 ```
 
+### BEAM CLI Builders (beta.6)
+
+First-class command-line builders for Mix and Elixir invocations; DSL defaults are rooted at the `:bin` convention root.
+
+```elixir
+# Run a Mix task — exec argv equivalent for `mix` invocations
+exec mix("ecto.migrate", env: [{"MIX_ENV", "prod"}])
+
+# Run the Elixir binary directly
+exec elixir("script.exs")
+exec elixir("script.exs", args: ["--flag"])
+
+# Inline eval
+exec eval("MyApp.Release.migrate()")
+exec eval("MyApp.Release.migrate()", env: [{"MIX_ENV", "prod"}])
+```
+
+Use these in `command/2`, `daemon/2 exec:`, or any context that accepts a command shape — they compose with `down:` for reversible operations.
+
 ---
 
 ### Mix Task Reference
 
 | Task | Purpose | Key flags |
 |------|---------|-----------|
-| `host_kit.plan` | Build plan, print diff | `--host`, `--out`, `--write-package-lock`, `--show-graph`, `--ignore type:name` |
-| `host_kit.apply` | Apply a plan | `--plan`, `--confirm` / `--dry-run`, `--track`, `--quiet`, `--verbose` |
+| `host_kit.plan` | Build plan, print diff | `--host`, `--out`, `--write-package-lock`, `--show-graph`, `--ignore type:name`, `--service` |
+| `host_kit.apply` | Apply a plan | `--plan`, `--confirm` / `--dry-run`, `--track`, `--quiet`, `--verbose`, `--service` |
 | `host_kit.down` | Build rollback plan from artifact | `--plan`, `--last`, `--run RUN_ID`, `--out` |
-| `host_kit.audit` | Read state + print drift report | `--host`, `--ignore`, `--package-lock` |
+| `host_kit.audit` | Read state + print drift report | `--host`, `--ignore`, `--package-lock`, `--service` |
 | `host_kit.read` | Read current resource state (no diff) | `--host`, `--format text\|json\|inspect` |
 | `host_kit.facts` | Collect host facts | `--only os,users,systemd,ports` |
 | `host_kit.instance` | `status\|ensure\|destroy INSTANCE` | `--require` |
 | `host_kit.runs` | List/prune tracked run records | `--latest`, `--id`, `--prune --keep N`, `--verbose` |
+| `host_kit.clean` | Inspectable release-retention cleanup from recorded release metadata | `--host`, `--out`, `--confirm` / `--dry-run` (beta.7) |
 | `host_kit.render` | Render a single resource to stdout | positional: `type name` |
 | `host_kit.dump` | Dump loaded project structs | `--require` |
 
@@ -327,6 +368,7 @@ exec argv("cmd", opts: [foo_bar: "baz"], style: :underscore) # --foo_bar baz
 | SSH host key rejected | New host or key rotation | Add `accept_hosts true` in `ssh do` block or use `--silently-accept-hosts` once, then remove |
 | Repology timeout in CI | No cache configured | Add `--repology-cache /tmp/repology_cache` and commit the lock file |
 | Directory not removed on rollback | Default rollback policy is `:keep` | Add `rollback: :delete_if_created` to the `directory` call |
+| Symlink ownership not tracked after beta.6 upgrade | Ownership is now unmanaged by default | Add explicit `owner:` and `group:` to any `symlink/2` where ownership matters |
 
 ---
 
@@ -339,6 +381,7 @@ exec argv("cmd", opts: [foo_bar: "baz"], style: :underscore) # --foo_bar baz
 5. Store secret values in plan artifacts — use `secret_env/1` or `secret key, env: "VAR"`.
 6. Skip `--write-package-lock` on first plan in production — package lock ensures deterministic applies.
 7. Call Mix tasks from Elixir code — use the runtime API (`HostKit.load!/1`, `HostKit.plan/2`, `HostKit.apply/2`).
+8. Assume symlinks inherit `owner:`/`group:` from their target or context — set explicitly or ownership is untracked (beta.6+).
 
 ---
 
@@ -354,7 +397,7 @@ exec argv("cmd", opts: [foo_bar: "baz"], style: :underscore) # --foo_bar baz
 ### Dependencies
 
 ```elixir
-{:host_kit, "~> 0.1.0-beta.5"}
+{:host_kit, "~> 0.1.0-beta.7"}
 # Transitive runtime deps pulled in automatically:
 # systemdkit ~> 0.1.4, unitctl ~> 0.1.0, json_codec ~> 0.1.4, jason ~> 1.4,
 # yaml_elixir ~> 2.11, ymlr ~> 5.1, req ~> 0.5, bash ~> 0.5.1,
