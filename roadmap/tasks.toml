@@ -37,6 +37,11 @@ phase = 2
 order = 1
 description = "Sweep stale plugin/skill references left by the deltahedge→zenhive consolidation and the staged-review→review plugin rename."
 
+[bundles.stack-hygiene]
+phase = 2
+order = 2
+description = "Portfolio-wide developer-hygiene plugins shipped from the marketplace and enabled across the onchain-stack repos (dependency advisories, etc.)."
+
 # ----------------------------------------------------------------------------
 # Tasks
 # ----------------------------------------------------------------------------
@@ -66,3 +71,31 @@ out_of_scope = [
   "Colon-qualified plugin:skill rename (already done in commit 569b463)",
   "The harness plugin's two self-synced skills",
 ]
+
+[[task]]
+id = 2
+phase = 2
+bundle = "stack-hygiene"
+status = "pending"
+title = "Add ecosystem-detecting dependency-advisory SessionStart hook (stack-wide, one shared plugin)"
+scores = { d = 4, b = 6, u = 6 }
+acceptance_criteria = ["A single shared script (one source of truth) ships in a marketplace plugin and is invoked via SessionStart hooks.json using ${CLAUDE_PLUGIN_ROOT}, mirroring plugins/review's hook wiring", "Script detects ecosystem per repo: mix.lock -> mix_audit + hex.audit; native/**/Cargo.toml -> cargo audit; package.json -> npm audit", "Hook is non-blocking and silent when no advisories, when tooling is missing, and when the watermark is fresh — never errors or stalls a session", "Watermark-gated so the nag is periodic, not every-session, following mpp's .sdk-watch.json checked_at pattern", "On findings, output suggests a triage flow that files sanitized rmap tasks per the repo's disclosure policy (no exploit detail in committed files)", "Install path documented: mix_audit added where expected; cargo-audit prerequisite noted; hook no-ops cleanly pre-install"]
+out_of_scope = ["Copying mpp's refs-pull SessionStart hook or its parity-diff (sdk-delta-watch) machinery — the stack wraps deps, it does not reimplement upstreams", "Per-repo duplicated copies of the script (must be one shared plugin-shipped source)", "Actually triaging/fixing any specific advisory — this task ships the detector + nag, not the remediation", "Zig-dependency auditing for onchain_js beyond npm (note as a follow-up if no clean Zig advisory tool exists)"]
+body = """
+Ship ONE shared SessionStart hook that nags (never blocks) when a repo's dependencies carry known security advisories, installed across the seven onchain-stack repos via the marketplace plugin mechanism — not copied per-repo.
+
+Motivation: mpp's `.claude/hooks/sdk-watch-reminder.sh` SessionStart hook proves the "watermark-gated staleness nag -> suggest a triage skill, quiet when fresh" pattern works well. But mpp's hook is repo-local and parity-diff-driven because mpp REIMPLEMENTS a protocol (it vendors upstream reference SDKs under refs/ and git-diffs them). The onchain stack does NOT reimplement — it depends on pinned packages (Hex deps everywhere; revm/alloy/solang Rust crates in onchain_evm; npm/Zig in onchain_js). So the transferable slice is the nag MECHANISM repointed at dependency ADVISORIES, not ref-diffing. Do not copy mpp's refs-pull hook or parity-watch machinery.
+
+Build it as a single ecosystem-detecting script shipped by an existing portfolio/dev-discipline-style plugin (model the wiring on `plugins/review/hooks/hooks.json` + `${CLAUDE_PLUGIN_ROOT}/scripts/check-unaudited-commits.sh`). One script, auto-adapting per repo by detecting which manifests are present:
+  - `mix.lock` present  -> mix_audit (mix.lock CVEs) + `mix hex.audit` (retired packages) — the uniform layer across ALL seven repos
+  - `native/**/Cargo.toml` present -> `cargo audit` (RustSec) — onchain_evm only
+  - `package.json` / `npm.lock` present -> `npm audit` — onchain_js only
+
+Quiet when clean or when tooling is absent (degrade gracefully, never error a session). Watermark-gate the nag the way mpp does (a small state file with a checked_at threshold) so it surfaces periodically, not every session. When advisories are found, the hook output should suggest running a triage skill/flow that files findings as rmap tasks in the affected repo (under that repo's security-disclosure policy — see critical-rules section "NEVER BROADCAST AN UNPATCHED VULNERABILITY": sanitized rmap body, detail in a private advisory).
+
+Tooling is NOT yet present: `mix_audit` is not a dep in any repo, and `cargo-audit` is not installed. Part of this task is documenting/wiring the install path (add `:mix_audit` as a dev/test dep where the hook expects it; note the `cargo install cargo-audit` prerequisite for onchain_evm) — the hook must no-op cleanly until the tooling exists rather than spewing errors.
+
+The seven repos and their enablement live in onchain-workspace.md; enabling the owning plugin in each repo's `.claude/settings.json` (same `enabledPlugins` shape mpp uses for `elixir@zenhive`) is how the one hook reaches all seven.
+"""
+created_at = "2026-06-24"
+scored_at = "2026-06-24"
