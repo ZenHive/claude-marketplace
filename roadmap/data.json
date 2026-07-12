@@ -72,6 +72,7 @@
         "Colon-qualified plugin:skill rename (already done in commit 569b463)",
         "The harness plugin's two self-synced skills"
       ],
+      "shipped_in": "94a76a8a661a950fa2cf4328271ccee1a0f4fdf1",
       "body": "The `staged-review` plugin was renamed to `review` (directory `plugins/staged-review/` no longer exists). A prior sweep fixed all colon-qualified `staged-review:<skill>` invocation tokens, but ~30 BARE references remain stale across ~15 files: plugin-name prose (e.g. \"the `staged-review` SessionStart hook\", \"the `staged-review` plugin\") and broken path references (e.g. `plugins/staged-review/templates/auto-merge.md`, `plugins/staged-review/scripts/check-unaudited-commits.sh`).\n\nMany live in the canonical `~/.claude/includes/*.md` sources (so fix the include, then run `scripts/sync-skills-from-includes.sh`), not the generated SKILL.md bodies. The two unmapped hand-authored review SKILL.md files (`plugins/review/skills/audit-review`, `.../code-review`) need direct edits.\n\nRename bare `staged-review` -> `review` and `plugins/staged-review/...` -> `plugins/review/...`. EXCLUDE genuine archaeology: CHANGELOG.md historical entries and \"Replaces ... (deleted v1.5+)\" notes that intentionally reference the old name as a historical record — judge each occurrence, this is not a blind global replace.\n",
       "started_at": "2026-07-12",
       "done_at": "2026-07-12",

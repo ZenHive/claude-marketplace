@@ -114,6 +114,7 @@ via `@deltahedge` (only harness@zenhive is current) — a separate,
 pre-existing marketplace-rename sweep, out of scope here."""
 started_at = "2026-07-12"
 done_at = "2026-07-12"
+shipped_in = "94a76a8a661a950fa2cf4328271ccee1a0f4fdf1"
 
 [[task]]
 id = 2
