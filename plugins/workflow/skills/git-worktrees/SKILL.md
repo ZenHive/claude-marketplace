@@ -70,7 +70,7 @@ To start working in a new worktree, open a fresh Claude Code session in that dir
 
 `review:audit-review` catches hygiene drift (extractions, doc gaps, missing TODO markers, ROADMAP/CHANGELOG drift) that pre-commit `code-review` may have skipped, writes `.audit/<sha>.md` reports, and lands one `audit(...)` commit on the default branch.
 
-**Not chained off `gh pr merge`.** The post-merge tail ends at branch cleanup. The `staged-review` plugin's SessionStart hook (`check-unaudited-commits.sh`, ≥3 unaudited threshold) surfaces accumulated tails next session:
+**Not chained off `gh pr merge`.** The post-merge tail ends at branch cleanup. The `review` plugin's SessionStart hook (`check-unaudited-commits.sh`, ≥3 unaudited threshold) surfaces accumulated tails next session:
 
 ```
 /review:audit-status        # read-only snapshot of unaudited commits per branch
@@ -98,7 +98,7 @@ GitHub holds the merge until all required checks pass (CI green + `block-merge-g
 
 **To hold a PR for manual review before merging:** `gh pr edit <N> --add-label "BLOCK-MERGE"`. Remove the label to release.
 
-Full adoption guide: `plugins/staged-review/templates/auto-merge.md` (branch protection setup, `block-merge-gate.yml`, optional auto-undraft action).
+Full adoption guide: `plugins/review/templates/auto-merge.md` (branch protection setup, `block-merge-gate.yml`, optional auto-undraft action).
 
 ## Lifecycle — Cleanup Is Part of Completion
 

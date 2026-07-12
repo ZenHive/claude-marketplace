@@ -193,5 +193,5 @@ Auto-detects `--repo` from current git dir. Use after a cloud-agent PR merges to
 - `cloud-agent-environments.md` — per-agent env reference; the Push-Back matrix depends on it
 - `delegation-rules.md` § "DON'T AUTO-MERGE PRS", § "NEVER PUSH TO A CLOUD-AGENT'S BRANCH", § "POST LINEAR / PR COMMENTS WITHOUT ASKING DURING DELEGATION FLOWS"
 - `review:audit-review` skill — deferred post-merge audit; consumes the tier matrix + push-back framing here (post-merge gaps file as rmap follow-ups per audit-review Step 9 / Step 5d). The Bundled Code-Revisions variant pre-stages into a same-session invocation.
-- `plugins/staged-review/templates/auto-merge.md` — GH-native auto-merge wire-up; `[BLOCK-MERGE]` label is the manual-hold gate the tier matrix above pivots around.
+- `plugins/review/templates/auto-merge.md` — GH-native auto-merge wire-up; `[BLOCK-MERGE]` label is the manual-hold gate the tier matrix above pivots around.
 - `task-prioritization.md` § "Ceremony Floor" — review-time cost-benefit gate

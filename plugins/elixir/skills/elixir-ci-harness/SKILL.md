@@ -12,7 +12,7 @@ Copy a ready GitHub Actions workflow into the target repo so every PR push runs 
 
 - **Adding CI to a delegation target.** A repo receives `[CX]` (Codex) or `[CSR]` (Cursor) PRs and currently has no shared harness gate. Without CI, every PR review re-runs the harness locally (15+ minutes per PR) and the cloud agent ships drift.
 - **Auditing existing CI.** A repo has a workflow but it's missing canonical steps (no coverage gate, no `--strict` credo, no `--warnings-as-errors`, runs only on push not PR).
-- **Baseline for GH-native auto-merge.** `gh pr merge --auto` (wired at PR-open per `plugins/staged-review/templates/auto-merge.md`) holds the merge until required status checks pass. This skill is the prerequisite that makes those checks present — the `harness` job is the canonical required check.
+- **Baseline for GH-native auto-merge.** `gh pr merge --auto` (wired at PR-open per `plugins/review/templates/auto-merge.md`) holds the merge until required status checks pass. This skill is the prerequisite that makes those checks present — the `harness` job is the canonical required check.
 
 Skip if the repo isn't a delegation target *and* has no plans to be — local hooks already cover the gates for solo work.
 
@@ -234,5 +234,5 @@ The diff should show only the customization-point comments this skill adds. If o
 - `~/.claude/includes/elixir-setup.md` — standard deps + `cli/0` for `preferred_envs`
 - `~/.claude/includes/critical-rules.md` § "RAISE COVERAGE BEFORE MUTATING" — coverage tier definitions
 - `~/.claude/includes/cloud-agent-environments.md` § "CI as the Shared Harness" — how CI closes the Codex-Cloud-no-hex.pm gap
-- `plugins/staged-review/templates/auto-merge.md` — GH-native auto-merge (`gh pr merge --auto`) holds merge until required status checks pass; the `harness` job is the canonical required check
+- `plugins/review/templates/auto-merge.md` — GH-native auto-merge (`gh pr merge --auto`) holds merge until required status checks pass; the `harness` job is the canonical required check
 - `development-commands` skill — `mix test.json`, `mix dialyzer.json`, `mix credo --strict --format json`

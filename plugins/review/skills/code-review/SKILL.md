@@ -29,7 +29,7 @@ Same 5+1 categories across both review skills. `audit-review` skips plan-mode (t
 
 **Why no Codex at this layer?** `audit-review` runs deferred — the SessionStart hook (`check-unaudited-commits.sh`, ≥3 unaudited threshold) surfaces accumulated merge tails for batched audit, or the user invokes `Skill(audit-review) <range>` manually. Every commit eventually reaches the dual-reviewer pass either way. Running Codex pre-commit AND post-merge is redundant work on the same code; the post-merge pass has the committed view, ROADMAP scope, all hygiene categories, AND bot findings already integrated, so it's the better place to spend the dual-reviewer cost. Pre-commit stays fast.
 
-**When NOT to use `code-review`:** if the code is already committed (use `audit-review`). For pre-merge PR review, use the GH-native gate — add `[BLOCK-MERGE]` label to hold; remove to release. See `plugins/staged-review/templates/auto-merge.md`.
+**When NOT to use `code-review`:** if the code is already committed (use `audit-review`). For pre-merge PR review, use the GH-native gate — add `[BLOCK-MERGE]` label to hold; remove to release. See `plugins/review/templates/auto-merge.md`.
 
 ## Scope
 
@@ -264,7 +264,7 @@ Otherwise, surface each `discuss-design` finding to the user in a brief paragrap
 
 Wait for their decision. Apply what they choose.
 
-**Defer-to-audit option.** The user can also say "let audit handle it" — the `discuss-design` item drops to the `audit-review` queue, which runs a Claude+Codex dialogue deferred post-merge (surfaced by the `staged-review` SessionStart hook or invoked manually via `Skill(audit-review)`). That's the lower-friction path when the user doesn't want to context-switch into the design question right now. Note the deferral in the Step 9 summary so the user knows the dual-reviewer pass will revisit it.
+**Defer-to-audit option.** The user can also say "let audit handle it" — the `discuss-design` item drops to the `audit-review` queue, which runs a Claude+Codex dialogue deferred post-merge (surfaced by the `review` SessionStart hook or invoked manually via `Skill(audit-review)`). That's the lower-friction path when the user doesn't want to context-switch into the design question right now. Note the deferral in the Step 9 summary so the user knows the dual-reviewer pass will revisit it.
 
 After user-resolved or deferred items are handled, move to the summary.
 
@@ -315,7 +315,7 @@ Investigate and fix. The downstream code at [file:line] depends on this.
 
 ## Why Single-Reviewer at This Layer
 
-The dual-reviewer pass (mandatory parallel Codex + Claude+Codex dialogue on `discuss-design` items) lives in `audit-review`, which runs deferred — surfaced by the `staged-review` SessionStart hook (`check-unaudited-commits.sh`, ≥3 unaudited threshold) or invoked manually via `Skill(audit-review) <range>`. Every commit eventually reaches the dual-reviewer pass either way — running it pre-commit AND post-merge is redundant work on the same code.
+The dual-reviewer pass (mandatory parallel Codex + Claude+Codex dialogue on `discuss-design` items) lives in `audit-review`, which runs deferred — surfaced by the `review` SessionStart hook (`check-unaudited-commits.sh`, ≥3 unaudited threshold) or invoked manually via `Skill(audit-review) <range>`. Every commit eventually reaches the dual-reviewer pass either way — running it pre-commit AND post-merge is redundant work on the same code.
 
 **The calibration to keep in mind:**
 

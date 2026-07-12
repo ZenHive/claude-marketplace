@@ -83,7 +83,7 @@ Same shape as the Codex flow with **broader eligibility** — Cursor's cloud env
 
 2. **Cursor picks it up.** Background Agent transitions `Todo` → `In Progress`, opens a non-draft PR, transitions to `In Review`. Status often stays at `In Progress` (partial-transition failure mode) — don't rely on `In Review` as the readiness signal; PR attachment is authoritative (`agent-pr-review.md` § "Polling for 'Ready for Review'"). **Canonical fix:** `linear-queue.md` § "Status Transitions". **Required:** Cursor's `gh pr create` should NOT use `--draft` — the AI-Guidance "PR opened non-draft → In Review" rule (`linear-queue.md` § "Status Transitions") only fires for non-draft PRs. State this in the issue body's `## Reviewer note`.
 
-   **Same step also wires up auto-merge.** Immediately after `gh pr create`, the agent runs `gh pr merge <N> --auto --squash --delete-branch`. GitHub queues the merge for when all required checks pass + no `[BLOCK-MERGE]` label. Pre-merge phase is zero-Claude / zero-cloud-agent (see `plugins/staged-review/templates/auto-merge.md`). State this in the issue body's `## Reviewer note`.
+   **Same step also wires up auto-merge.** Immediately after `gh pr create`, the agent runs `gh pr merge <N> --auto --squash --delete-branch`. GitHub queues the merge for when all required checks pass + no `[BLOCK-MERGE]` label. Pre-merge phase is zero-Claude / zero-cloud-agent (see `plugins/review/templates/auto-merge.md`). State this in the issue body's `## Reviewer note`.
 
 3. **Cursor self-validates** — `mix test.json --quiet`, `mix credo --strict`, `mix format --check-formatted`, targeted `mix test test/...`. PRs ship harness-green from Cursor's side. CI re-runs the same checks; `audit-review` (deferred, post-merge) does the 5+1-category audit + acceptance-criteria cross-reference. Pre-merge is zero-Claude.
 
@@ -165,7 +165,7 @@ If you find yourself reaching for the ad-hoc template repeatedly, that's a signa
 
 - **Full harness green at PR open** — `mix format --check-formatted`, `mix compile --warnings-as-errors`, `mix credo --strict` (TODO/FIXME exit-2 carve-out only), `mix sobelow --exit Low`, `mix doctor`, `mix test.json --quiet`, `mix test.json --cover --cover-threshold N` at the repo's coverage tier, `mix dialyzer` all clean. CI runs the same checks. A red harness on PR open is a blocking acceptance-criterion miss.
 
-**Audit-review owns the post-merge commit.** Auto-merge ends at branch cleanup; audit-review runs deferred. The `staged-review` SessionStart hook flags accumulated unaudited commits (≥3 threshold) next session; next session runs `Skill(audit-review) <range>` to batch-audit. The skill runs the 5+1-category audit, dispatches mandatory Codex second-opinion, auto-applies hygiene fixes (ROADMAP row → ✅ preserving `[CX]` / `[CSR]` marker, CHANGELOG entry under `## [Unreleased]`, README/CLAUDE.md drift, in-code `@doc`/`@spec` fixes), and writes one `.audit/<sha>.md` per audited commit. Lands as one `audit(<audit-sha>): N fixes — dual-reviewer pass` commit covering the whole range, on the repo's default branch.
+**Audit-review owns the post-merge commit.** Auto-merge ends at branch cleanup; audit-review runs deferred. The `review` SessionStart hook flags accumulated unaudited commits (≥3 threshold) next session; next session runs `Skill(audit-review) <range>` to batch-audit. The skill runs the 5+1-category audit, dispatches mandatory Codex second-opinion, auto-applies hygiene fixes (ROADMAP row → ✅ preserving `[CX]` / `[CSR]` marker, CHANGELOG entry under `## [Unreleased]`, README/CLAUDE.md drift, in-code `@doc`/`@spec` fixes), and writes one `.audit/<sha>.md` per audited commit. Lands as one `audit(<audit-sha>): N fixes — dual-reviewer pass` commit covering the whole range, on the repo's default branch.
 
 **`.sobelow-skips` exception:** for repos with sobelow line-fingerprint drift, the harness fails-loud-with-diff if drift is detected; audit-review applies the regen when the deferred pass runs, folded into the same `audit(...)` commit. Agent never touches the file.
 
@@ -256,7 +256,7 @@ Same shape as `critical-rules.md` § "NO EVASION — SIT WITH THE HARD THING": w
 - `flow-review.md` — merge-train mode for 2+ open cloud-agent PRs
 - `cloud-agent-environments.md` — per-agent env reference (hex.pm, mix tasks, Tidewave, HTTP)
 - `delegation-rules.md` § "DON'T STEAL CLOUD-AGENT-DELEGATED TASKS", § "DON'T AUTO-MERGE PRS"
-- `plugins/staged-review/templates/auto-merge.md` — GH-native auto-merge adoption guide (branch protection, `block-merge-gate.yml`, optional auto-undraft action); the canonical reference for the `gh pr merge --auto` step in the Cursor Delegation Flow
+- `plugins/review/templates/auto-merge.md` — GH-native auto-merge adoption guide (branch protection, `block-merge-gate.yml`, optional auto-undraft action); the canonical reference for the `gh pr merge --auto` step in the Cursor Delegation Flow
 - `task-writing.md` — body-as-prompt; plan-shape vs roadmap-shape distinction
 - `task-prioritization.md` § "Ceremony Floor" — review-time cost-benefit gate; § "Pre-Flight Conflict Detection" here is the delegation-time analogue
 - `critical-rules.md` § "NO EVASION — SIT WITH THE HARD THING" — the discipline Honest-Gap mirrors

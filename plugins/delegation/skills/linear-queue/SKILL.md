@@ -121,7 +121,7 @@ Cursor (and any other agent reading workspace guidance) picks this up. Codex's b
 **Drafts.** The "PR opened non-draft → In Review" guidance excludes drafts. If agents open PRs with `gh pr create --draft`, the transition doesn't fire until undrafted. Two complementary fixes:
 
 - Agents stop opening drafts (set in issue body's `## Reviewer note`; `agent-dispatch.md` Cursor Delegation Flow Step 2).
-- Optional `auto-undraft.yml` GH Action marks draft PRs ready when the check suite reports success — see `plugins/staged-review/templates/auto-merge.md` § 3.
+- Optional `auto-undraft.yml` GH Action marks draft PRs ready when the check suite reports success — see `plugins/review/templates/auto-merge.md` § 3.
 
 **Polling as safety net.** Both mechanisms can fail to fire (agent didn't read guidance; GH event arrived during a Linear outage). `agent-pr-review.md` § "Polling for 'Ready for Review'" treats the PR attachment as the authoritative signal — agnostic to status — and is the safety net for both.
 

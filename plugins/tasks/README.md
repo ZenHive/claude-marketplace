@@ -21,7 +21,7 @@ Roadmap-driven task execution workflow. Language-agnostic — works with any pro
 ## Relationship to Other Skills
 
 - **roadmap-planning** (elixir plugin) — defines the D/B scoring format. task-driver *consumes* that format.
-- **staged-review** — reviews staged files. task-driver implements and stages files.
+- **code-review** (review plugin) — reviews staged files. task-driver implements and stages files.
 
 ## Installation
 

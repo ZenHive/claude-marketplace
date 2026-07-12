@@ -23,7 +23,7 @@ Walk a commit range. Audit each commit. Auto-apply hygiene fixes. Write a `.audi
 |---|---|---|---|---|
 | Pre-commit (Phase 2 sub-phase) | `code-review` | `git diff --staged` | Implementer about to commit | One: exit-plan-to-apply |
 | Pre-merge (Phase 4) | none — GH-native | `gh pr merge --auto` set at PR open | Required checks green + no requested-changes + no `[BLOCK-MERGE]` | Zero (manual hold via `[BLOCK-MERGE]` label) |
-| Post-merge (Phase 5, this skill) | **`audit-review`** | `git log <range>` + each commit's PR + Linear context | Deferred — `staged-review` SessionStart hook surfaces unaudited tails (≥3 commits past last `audit(...)` ancestor); user invokes `/review:audit-status` or `Skill(audit-review) <range>` | **Zero** |
+| Post-merge (Phase 5, this skill) | **`audit-review`** | `git log <range>` + each commit's PR + Linear context | Deferred — `review` SessionStart hook surfaces unaudited tails (≥3 commits past last `audit(...)` ancestor); user invokes `/review:audit-status` or `Skill(audit-review) <range>` | **Zero** |
 
 `audit-review` shares Categories 1-6 and the Codex dispatch payload with `code-review`. The differences are:
 
@@ -749,7 +749,7 @@ Reasoning: typo fixes, formatting, doc-only commits don't earn a Codex dispatch 
 
 The skill runs deferred — it is NOT chained synchronously off any merge or PR-create. Two invocation paths, both user-driven:
 
-1. **SessionStart hook surfaces the tail.** The `staged-review` plugin's SessionStart hook (`check-unaudited-commits.sh`, ≥3 unaudited threshold) emits `additionalContext` recommending `/review:audit-status` (read-only snapshot) or `Skill(audit-review) <range>` (batched audit). User reads the prompt, invokes one.
+1. **SessionStart hook surfaces the tail.** The `review` plugin's SessionStart hook (`check-unaudited-commits.sh`, ≥3 unaudited threshold) emits `additionalContext` recommending `/review:audit-status` (read-only snapshot) or `Skill(audit-review) <range>` (batched audit). User reads the prompt, invokes one.
 
 2. **Manual** (`/audit-review`): user runs the slash command for catch-up audits, batch passes after a backfill, compliance asks, or the `agent-pr-review.md` § "Bundled Code-Revisions in Bookkeeping Commit" variant (one case where the audit fires on a specific merge SHA in the same session). Default range is HEAD..last-audit (exclusive); user can pass any commit or range.
 
@@ -778,19 +778,19 @@ The skill runs deferred — it is NOT chained synchronously off any merge or PR-
 | Re-fetching PR comments per commit when batch has multiple commits per PR | Step 4.5 caches by PR number. Rebase-merge can produce multiple commits per PR; squash-merge is 1:1 (no caching needed for squash) |
 | Re-litigating bot findings in Step 5a output | Cite-and-skip dedupe: when Claude agrees with a bot, surface ONE row with `also flagged by <bot>` attribution. Don't double-count |
 | Silently filing an unmet acceptance criterion without verifying first | Step 9's acceptance-criteria triage requires in-session verification. Real gap → fix per the Step 9 stake-gated ladder. Criterion was wrong (scope drift) → refine via `rmap status <id> done --implemented "criterion adjusted: ..."` on the delivering task. Genuine fork → STOP and ask user. Never silently file |
-| Pre-merge invocation of audit-review | Audit-review is post-merge only. Pre-merge phase is GH-native `gh pr merge --auto` + `[BLOCK-MERGE]` label for manual hold. See `plugins/staged-review/templates/auto-merge.md` |
+| Pre-merge invocation of audit-review | Audit-review is post-merge only. Pre-merge phase is GH-native `gh pr merge --auto` + `[BLOCK-MERGE]` label for manual hold. See `plugins/review/templates/auto-merge.md` |
 
 ## Cross-References
 
 Closely related includes and skills:
 
 - `review:code-review` — pre-commit local-work counterpart. Source of truth for Categories 1-6 prose, Codex dispatch payload, rating scale. Audit-review reuses these by reference; consult `code-review` SKILL.md when an edge case is unclear
-- `plugins/staged-review/templates/auto-merge.md` — GH-native pre-merge replacement (`gh pr merge --auto --squash --delete-branch` + `[BLOCK-MERGE]` label). Pre-merge phase carries zero Claude tokens; this skill absorbs the post-merge work (bot triage, Linear close-out, acceptance-criteria check)
+- `plugins/review/templates/auto-merge.md` — GH-native pre-merge replacement (`gh pr merge --auto --squash --delete-branch` + `[BLOCK-MERGE]` label). Pre-merge phase carries zero Claude tokens; this skill absorbs the post-merge work (bot triage, Linear close-out, acceptance-criteria check)
 - `~/.claude/includes/critical-rules.md` § GIT COMMIT / PUSH / PR-CREATE — `audit(...)` commits are auto-allowed inside tracked worktrees AND on `main` (post-merge audit lands on `main` by design, scoped to commits matching `^audit\(`)
 - `~/.claude/includes/critical-rules.md` § "🚨 FIX HOOK-FLAGGED ISSUES ON FILES YOU TOUCH" — pre-commit hook flags during the audit commit get fixed in a new commit, not bypassed
 - `~/.claude/includes/worktree-workflow.md` § "After PR Merge — `audit-review` Is Deferred" — the deferred trigger model
 - `~/.claude/includes/delegation-rules.md` § "DON'T AUTO-MERGE PRS" — auto-merge tail ends at branch cleanup; audit runs deferred
-- `plugins/staged-review/scripts/check-unaudited-commits.sh` — SessionStart hook that surfaces the unaudited tail (≥3 threshold)
+- `plugins/review/scripts/check-unaudited-commits.sh` — SessionStart hook that surfaces the unaudited tail (≥3 threshold)
 - `~/.claude/includes/task-prioritization.md` § "Ceremony Floor" — applied inline by audit-review (no `rmap new` follow-ups from the auto-apply path). Bug findings always surface and are verified + fixed in-session per the Step 9 stake-gated ladder; small cosmetic findings auto-apply or drop; new `rmap` tasks only on explicit user ask — see this skill's `rmap Status Updates` section
 - `~/.claude/includes/rmap.md` — the roadmap substrate; audit-review's only allowed rmap surface is `rmap status <id> done --delivered-by audit-<agent> --verified --implemented "..."` on tasks the audit refined (re-renders `ROADMAP.md`, never hand-edited). `rmap new` is reserved for the explicit-user-ask exception — see this skill's `rmap Status Updates` section
 - `feedback_autonomy_first.md` (memory) — the design lens: workflows default to less human-in-the-loop. This skill is the post-commit / post-merge half of the three-tier autonomous review architecture

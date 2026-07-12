@@ -266,20 +266,20 @@ Wait for the user to pick. Do NOT proceed without approval.
 
 Before entering plan mode, read the selected task's markers with `rmap show <id> --json` — markers are `cx` for Codex, `csr` for Cursor (see `agent-dispatch.md` § "Codex Delegation" / "Cursor Delegation Flow" and `cloud-agent-environments.md`):
 
-- **Task has a `cx` / `csr` marker and status `in_progress`** → already delegated; the cloud agent's PR is (or will be) open. The PR auto-merges via GitHub-native `gh pr merge --auto` once required checks pass + no `requested-changes` + no `[BLOCK-MERGE]` label (see `plugins/staged-review/templates/auto-merge.md`). To hold for manual review, `gh pr edit <N> --add-label "BLOCK-MERGE"`. Exit normally — do NOT proceed to plan mode (no local implementation).
+- **Task has a `cx` / `csr` marker and status `in_progress`** → already delegated; the cloud agent's PR is (or will be) open. The PR auto-merges via GitHub-native `gh pr merge --auto` once required checks pass + no `requested-changes` + no `[BLOCK-MERGE]` label (see `plugins/review/templates/auto-merge.md`). To hold for manual review, `gh pr edit <N> --add-label "BLOCK-MERGE"`. Exit normally — do NOT proceed to plan mode (no local implementation).
 
 - **Task has a `cx` marker and status `pending`** → not yet delegated. Halt. Per `critical-rules.md` § "DON'T STEAL CLOUD-AGENT-DELEGATED TASKS", Claude does not silently execute marker-labeled work locally. Ask the user:
 
   > "Task N is marked `cx`, queued for Codex. Want me to create the Linear issue and delegate (default path), or are you redirecting this one to local execution?"
 
-  - If "delegate" → use `mcp__linear-server__save_issue` with `delegate: "Codex"`, label `cx-eligible`, body = full prompt (`rmap delegate <id> --to codex` renders a paste-ready prompt). Then `rmap status <id> in_progress` so future sessions know it's queued. Stop — Codex picks it up, opens a PR, and wires GH-native auto-merge per `plugins/staged-review/templates/auto-merge.md`.
+  - If "delegate" → use `mcp__linear-server__save_issue` with `delegate: "Codex"`, label `cx-eligible`, body = full prompt (`rmap delegate <id> --to codex` renders a paste-ready prompt). Then `rmap status <id> in_progress` so future sessions know it's queued. Stop — Codex picks it up, opens a PR, and wires GH-native auto-merge per `plugins/review/templates/auto-merge.md`.
   - If "redirect to local" → `rmap mark <id> -cx` to drop the marker, then continue to Step 4 (plan mode).
 
 - **Task has a `csr` marker and status `pending`** → not yet delegated. Halt. Same rule. Ask the user:
 
   > "Task N is marked `csr`, queued for Cursor. Want me to create the Linear issue and delegate (default path), or are you redirecting this one to local execution?"
 
-  - If "delegate" → use `mcp__linear-server__save_issue` with `delegate: "Cursor"`, label `cursor-eligible`, body = full prompt (`rmap delegate <id> --to cursor`). Cursor's eligibility is broader than Codex (hex.pm, mix tasks, internet — see `cloud-agent-environments.md` § "Cursor Cloud" for what's reachable), so don't second-guess the marker. Then `rmap status <id> in_progress`. Stop — Cursor picks it up via Linear, opens a PR, and wires GH-native auto-merge per `plugins/staged-review/templates/auto-merge.md`.
+  - If "delegate" → use `mcp__linear-server__save_issue` with `delegate: "Cursor"`, label `cursor-eligible`, body = full prompt (`rmap delegate <id> --to cursor`). Cursor's eligibility is broader than Codex (hex.pm, mix tasks, internet — see `cloud-agent-environments.md` § "Cursor Cloud" for what's reachable), so don't second-guess the marker. Then `rmap status <id> in_progress`. Stop — Cursor picks it up via Linear, opens a PR, and wires GH-native auto-merge per `plugins/review/templates/auto-merge.md`.
   - If "redirect to local" → `rmap mark <id> -csr`, then continue to Step 4 (plan mode).
 
 - **Task has any other future cloud-agent marker** → halt. Same discipline shape — ask the user before silently executing locally. The marker convention is in flight (see `cloud-agent-environments.md` for the agents currently documented); when in doubt, treat any delegation-shaped marker on a task as a delegation signal and ask.
@@ -335,7 +335,7 @@ During implementation you WILL discover things that aren't the current task:
 ```
 
 - Use `TODO(Task N):` format where N is the rmap task id (assigned when you file it in Step 9)
-- If it's an upstream issue, use `FIXME(upstream):` instead (see staged-review skill)
+- If it's an upstream issue, use `FIXME(upstream):` instead (see code-review skill)
 - Include which task you were working on when you found it
 
 ### Step 8: Update All Documentation
