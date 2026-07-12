@@ -235,6 +235,7 @@
         "elixir-volt and elixir-workflows (no phxagents overlap)",
         "Retiring the phoenix plugin (task 5)"
       ],
+      "shipped_in": "2c0fe7a1116ae508315c88f684f50b86b701a88d",
       "body": "The `elixir` plugin's core dev-tooling layer overlaps phxagents on runtime/domain concerns (LiveView/Ecto/OTP conventions, Iron-Law-style rules) where phxagents goes deeper. Produce an explicit keep/drop decision per skill and per hook, then deprecate the overlapping ones at the canonical include source (edit `~/.claude/includes/*.md`, then run `scripts/sync-skills-from-includes.sh` — do NOT hand-edit generated SKILL.md bodies; the marketplace-hygiene block hook enforces this).\n\nKEEP (phxagents has no equivalent — these are zenhive-specific tooling, not domain rules):\n  - the JSON tool-flows: `dialyzer-json`, `ex-unit-json`, and the `prefer-dialyzer-json` / `prefer-test-json` hooks\n  - `elixir-ci-harness`, `tidewave-guide`\nEverything else in the core layer is a DROP CANDIDATE — evaluate each against phxagents coverage before removing; this task is the analysis + the safe removals, not a blind purge.\n\nScope note: this covers only the `elixir` plugin's core dev-tooling skills+hooks. The 23 elixir-vibe ecosystem libs are a separate audit (deliberately not created), and `elixir-volt` / `elixir-workflows` are orthogonal to phxagents (Volt/WASM/npm, workflow generator) — leave them alone.\n",
       "created_at": "2026-07-12",
       "started_at": "2026-07-12",

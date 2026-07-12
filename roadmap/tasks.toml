@@ -264,6 +264,7 @@ created_at = "2026-07-12"
 started_at = "2026-07-12"
 scored_at = "2026-07-12"
 done_at = "2026-07-12"
+shipped_in = "2c0fe7a1116ae508315c88f684f50b86b701a88d"
 
 [[task]]
 id = 7
