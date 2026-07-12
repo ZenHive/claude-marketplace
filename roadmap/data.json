@@ -302,6 +302,7 @@
         "Adding any new Iron-Law-style rule or hook (packaging only)",
         "Agent model-tiering (separate pattern from Task 7's spike, verdict was No-Go)"
       ],
+      "shipped_in": "0f0d51c",
       "body": "Task 7's spike (phxagents Iron-Laws evaluation) returned a Go on packaging our existing hook-enforced rules as a named/numbered catalog, modeled loosely on phxagents' 'Iron Laws' idea but scoped to packaging only — no new enforcement logic. zenhive already enforces rules via code-quality's single PreToolUse prompt (4 unnamed checks) and dev-discipline's 7 scripts (2 hard-deny, 5 soft-warn); none of them currently have a stable, addressable rule ID.\n\nGive each existing hard-deny (and optionally soft-warn) rule a short name and stable ID, have each hook's deny/warn message cite its ID, and write a short catalog document listing every rule ID with a one-line description so they're discoverable and citable (the way critical-rules.md's `§` sections already are for prose). Find the right place for the catalog doc given this repo's existing structure (no docs/ directory exists yet).",
       "created_at": "2026-07-12",
       "started_at": "2026-07-12",
