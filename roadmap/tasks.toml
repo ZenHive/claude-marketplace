@@ -42,6 +42,11 @@ phase = 2
 order = 2
 description = "Portfolio-wide developer-hygiene plugins shipped from the marketplace and enabled across the onchain-stack repos (dependency advisories, etc.)."
 
+[bundles.new-skills]
+phase = 2
+order = 3
+description = "Register newly-written canonical includes as auto-synced marketplace skills so they are reachable from the skills list, not only via CLAUDE.md pointers."
+
 # ----------------------------------------------------------------------------
 # Tasks
 # ----------------------------------------------------------------------------
@@ -99,3 +104,16 @@ The seven repos and their enablement live in onchain-workspace.md; enabling the 
 """
 created_at = "2026-06-24"
 scored_at = "2026-06-24"
+
+[[task]]
+id = 3
+phase = 2
+bundle = "new-skills"
+status = "pending"
+title = "Register himalaya.md as auto-synced skill"
+scores = { d = 2, b = 6, u = 7 }
+acceptance_criteria = ["A himalaya SKILL.md exists in a plugin with valid frontmatter (name, description with clear invocation trigger)", "scripts/skill-include-map.sh contains the new mapping entry", "sync-skills-from-includes.sh run is clean and the skill body matches ~/.claude/includes/himalaya.md", "block-skill-edits hook covers the new skill via the shared mapping"]
+out_of_scope = ["Editing the include content itself (canonical, already written)", "jmapcli as a separate skill (covered by a section in himalaya.md)"]
+body = "A canonical ~/.claude/includes/himalaya.md now exists (created 2026-07-10) capturing battle-tested himalaya CLI sharp edges: CLI flags must precede the search query, Gmail folder names differ per account locale ([Google Mail]/ vs [Gmail]/), per-folder IMAP ids, jq envelope object shapes, the non-interactive template reply/send flow, raw .eml export, Gmail Trash 30-day auto-delete rescue, and send-verification via Sent folder rather than exit code. The global CLAUDE.md email section was slimmed to guardrails + a pointer to the include. Consumer: every Claude session doing email work self-invokes the skill before running himalaya (per the Invoke-Skills rule); without a registered skill the include is only reachable via the CLAUDE.md pointer, not from the skills list. Task: create a himalaya skill (pick host plugin - a new email/tools plugin or workflow) with proper frontmatter, add the mapping entry to scripts/skill-include-map.sh, and run scripts/sync-skills-from-includes.sh."
+created_at = "2026-07-10"
+scored_at = "2026-07-10"

@@ -10,15 +10,17 @@ allowed-tools: Read, Bash, Grep, Glob
 
 GenServer-like RPC over Erlang external term format for BEAM-native control-plane channels that need narrow, auditable authority — not the broad trust of Erlang distribution.
 
-**Min version: `{:safe_rpc, "~> 0.1"}`.** Current release is v0.1.3, self-described as "early prototype."
+**Min version: `{:safe_rpc, "~> 0.1"}`.** Current release is **v0.1.14**.
 
 **Unix socket-first.** The only shipped transport is `SafeRPC.Transport.Unix` (`:gen_tcp` over `{:local, path}`). TCP/TLS/stdio are defined in the transport behaviour but not yet implemented.
 
-**Wire format is safe ETF.** Framing: `:gen_tcp` packet-4 (4-byte length prefix). All decoding uses `:erlang.binary_to_term(binary, [:safe])` — no code loading from the wire.
+**Wire format is safe ETF.** Framing: `:gen_tcp` packet-4 (4-byte length prefix). All decoding uses `:erlang.binary_to_term(binary, [:safe])` — no code loading from the wire. Request IDs are integers (v0.1.8/0.1.13) so one-shot replies decode safely across independent clients.
 
 **Two authorization layers stack independently:** `SafeRPC.Capability` (token + op allowlist, constant-time compare) and `SafeRPC.Authorizer` behaviour (custom policy). Both optional. Neither defines users, tenants, roles, or resources — those belong in your authorizer.
 
-**Caveat:** Early prototype. API surface is small and may change before a stable release. No TCP/TLS transport yet — both ends must share a filesystem path for the Unix socket.
+**Atom vocabulary preparation.** Safe ETF raises `ArgumentError` on atoms not yet in the atom table. Use `SafeRPC.prepare/2` before connecting to seed the client's atom table from the server's declared vocabulary (v0.1.10+; see section below).
+
+**Caveat:** No TCP/TLS transport yet — both ends must share a filesystem path for the Unix socket.
 
 **Does NOT cover:** Erlang distribution, cross-node fanout/multicall (planned but unimplemented), TCP/TLS transports, streaming responses, schema validation.
 
@@ -30,24 +32,65 @@ GenServer-like RPC over Erlang external term format for BEAM-native control-plan
 
 | Module | Role |
 |---|---|
-| `SafeRPC` | Top-level API: `call`, `cast`, `async`, `await`, `yield`, `cancel`, `shutdown` |
+| `SafeRPC` | Top-level API: `call`, `cast`, `async`, `await`, `yield`, `cancel`, `prepare`, `atoms`, `shutdown` |
 | `SafeRPC.Client` | GenServer holding a persistent Unix socket connection; also one-shot helpers |
 | `SafeRPC.ClientPool` | Sharded pool of `Client` processes, keyed by `:erlang.phash2/2` |
 | `SafeRPC.Server` | `use` macro + acceptor loop; spawns `Server.Connection` per accepted client |
+| `SafeRPC.Service` | Behaviour for `use SafeRPC, service: ..., version: ...` modules with `@rpc true` annotations |
+| `SafeRPC.Atoms` | Atom vocabulary preparation — collects boundary atoms for safe ETF clients (v0.1.10) |
+| `SafeRPC.Descriptor` | Service descriptor for introspection and vocabulary export |
+| `SafeRPC.Op` | Operation spec (boundary types, atoms) |
 | `SafeRPC.Capability` | Token/op allowlist struct; constant-time token comparison via `:crypto.hash_equals/2` |
 | `SafeRPC.Authorizer` | Behaviour for application-specific authorization (`authorize/2`) |
+| `SafeRPC.Authorizer.AllowAll` | Default authorizer — passes all requests through |
 | `SafeRPC.Protocol` | ETF encode/decode for requests, replies, and cancel frames |
 | `SafeRPC.Transport` | Behaviour — `connect/1`, `listen/1`, `accept/2`, `send/3`, `recv/2`, `close/1` |
 | `SafeRPC.Transport.Unix` | Sole shipped transport; `:gen_tcp` over Unix domain socket |
 | `SafeRPC.Adapter.Service` | Behaviour for framework-agnostic services (`init/1`, `call/4` with meta) |
-| `SafeRPC.Adapter.Server` | `use` macro wrapping a `Service` module into a full server |
+| `SafeRPC.Adapter.Server` | `use` macro wrapping a `Service` or `SafeRPC` module into a full server |
 | `SafeRPC.Adapter.Dispatcher` | Op-to-MFA routing table — keeps MFA off the wire |
 | `SafeRPC.Adapter.Plug` | Bridges Phoenix/Plug endpoints to adapter HTTP envelopes |
 | `SafeRPC.Task` | Struct for in-flight async requests: `%{client, id, op}` |
 
 ---
 
-### Server (define operations)
+### Service Module (preferred pattern, v0.1.10+)
+
+`use SafeRPC, service: :name, version: "N"` with `@rpc true` annotations is the primary service definition pattern. Functions become typed, discoverable operations; the macro derives the vocabulary for safe ETF preparation automatically.
+
+```elixir
+defmodule MyApp.AdminRPC do
+  use SafeRPC, service: :my_app, version: "1"
+
+  @rpc true
+  @spec status(map(), map(), keyword()) :: {:ok, :ready}
+  def status(_payload, _meta, _state), do: {:ok, :ready}
+
+  @rpc true
+  @spec ping(map(), map(), keyword()) :: {:ok, String.t()}
+  def ping(%{"msg" => msg}, _meta, _state), do: {:ok, "pong: #{msg}"}
+end
+
+defmodule MyApp.AdminRPCServer do
+  use SafeRPC.Adapter.Server, service: MyApp.AdminRPC
+end
+
+# Start under a supervisor — child_spec/1 generated automatically (v0.1.4)
+{:ok, _} = MyApp.AdminRPCServer.start_link(
+  socket: "/tmp/my-app.sock",
+  capability: cap,
+  socket_mode: 0o600  # optional Unix permission bits (v0.1.5)
+)
+
+# One-shot call — op is {Module, :function} tuple
+{:ok, :ready} = SafeRPC.call("/tmp/my-app.sock", {MyApp.AdminRPC, :status})
+```
+
+---
+
+### Server (lower-level handle_call/handle_cast)
+
+`use SafeRPC.Server` is still available for servers that need explicit state management and `handle_call/handle_cast` pattern:
 
 ```elixir
 defmodule MyBackend do
@@ -61,22 +104,23 @@ defmodule MyBackend do
     do: {:reply, {:ok, %{count: state.count}}, state}
 
   # handle_cast/3 — fire-and-forget; must return {:noreply, state}
-  # default no-op is injected by `use SafeRPC.Server` — override to handle
+  # default no-op injected by `use SafeRPC.Server` — override to handle
   def handle_cast(:inc, amount, state),
     do: {:noreply, %{state | count: state.count + amount}}
 end
 
-# Start under a supervisor or directly:
+# child_spec/1 is generated — usable directly in a Supervisor child list (v0.1.4)
 {:ok, _} = MyBackend.start_link(
   socket: "/tmp/mybackend.sock",  # required — Unix socket path
   capability: cap,                 # optional SafeRPC.Capability
   authorizer: MyAuthz,             # optional module implementing SafeRPC.Authorizer
   auth_context: %{env: :prod},    # passed as second arg to authorizer.authorize/2
-  recv_timeout: 10_000            # ms, default 5_000
+  recv_timeout: 10_000,           # ms, default 5_000
+  socket_mode: 0o660              # optional Unix permission bits on the socket file (v0.1.5)
 )
 ```
 
-**Server lifecycle:** on terminate, the loop closes the listen socket and removes the socket file via `File.rm/1`.
+**Server lifecycle:** on terminate, the loop closes the listen socket and removes the socket file via `File.rm/1`. Connection cleanup after sending replies was fixed in v0.1.6.
 
 ---
 
@@ -90,7 +134,7 @@ end
   timeout: 5_000                  # per-request default; overridable per call
 )
 
-# Synchronous call
+# Synchronous call — atom op (lower-level) or {Module, :function} tuple (service-style)
 {:ok, result}        = SafeRPC.call(client, :status, %{})
 {:ok, :noreply}      = SafeRPC.cast(client, :inc, 5)
 {:error, :timeout}   = SafeRPC.call(client, :slow_op, %{}, timeout: 500)
@@ -100,6 +144,36 @@ end
 
 ```elixir
 {:ok, result} = SafeRPC.call("/tmp/mybackend.sock", :status, %{}, cap: "my-secret-token")
+# Service-style op tuple:
+{:ok, :ready} = SafeRPC.call("/tmp/my-app.sock", {MyApp.AdminRPC, :status})
+```
+
+---
+
+### Atom Vocabulary Preparation (v0.1.10+)
+
+Safe ETF (`[:safe]` flag) raises `ArgumentError` if a decoded binary contains an atom not already in the local atom table. This is the correct BEAM security posture, but it means a freshly-started client process will fail on first reply if the server uses atoms the client hasn't seen yet.
+
+`SafeRPC.prepare/2` seeds the client's atom table by fetching the server's declared boundary vocabulary before any calls are made:
+
+```elixir
+# Seed atoms before establishing the persistent client
+:ok = SafeRPC.prepare("/tmp/my-app.sock", [MyApp.AdminRPC])
+
+{:ok, client} = SafeRPC.Client.start_link(socket: "/tmp/my-app.sock")
+# Now replies decode safely — server atoms are in the local table
+{:ok, :ready} = SafeRPC.call(client, {MyApp.AdminRPC, :status}, %{})
+```
+
+The vocabulary is derived automatically from `@rpc true` annotated functions — their `@spec` boundaries, literal struct types, and reply atoms are collected by `SafeRPC.Atoms` (v0.1.11/0.1.12/0.1.14). Protocol reply atoms are included in the vocabulary as of v0.1.14.
+
+For modules with `use SafeRPC, atoms: [...]` you can declare supplemental atoms manually:
+
+```elixir
+defmodule MyApp.AdminRPC do
+  use SafeRPC, service: :my_app, version: "1", atoms: [:custom_atom, :another]
+  # ...
+end
 ```
 
 ---
@@ -126,7 +200,7 @@ end
 :ok = SafeRPC.shutdown(task, 5_000)
 ```
 
-Multiple in-flight `async` calls on the same `client` PID are safe — each gets a unique `make_ref()` request ID and its own reply mailbox message.
+Multiple in-flight `async` calls on the same `client` PID are safe — each gets a unique integer request ID and its own reply mailbox message.
 
 ---
 
@@ -142,10 +216,10 @@ Shard count defaults to `System.schedulers_online()`. Key is hashed via `:erlang
 )
 
 # All Client functions available; key routes to a shard
-{:ok, result}  = SafeRPC.ClientPool.call(pool, {:tenant, :alice}, :status, %{})
+{:ok, result}   = SafeRPC.ClientPool.call(pool, {:tenant, :alice}, :status, %{})
 {:ok, :noreply} = SafeRPC.ClientPool.cast(pool, "conn-id-123", :inc, 1)
-task            = SafeRPC.ClientPool.async(pool, {:tenant, :bob}, :status, %{})
-{:ok, result}  = SafeRPC.await(task)
+task             = SafeRPC.ClientPool.async(pool, {:tenant, :bob}, :status, %{})
+{:ok, result}   = SafeRPC.await(task)
 
 # Fetch the shard PID for direct Client calls
 client_pid = SafeRPC.ClientPool.client(pool, some_key)
@@ -168,7 +242,7 @@ admin_cap = SafeRPC.Capability.new(token: "admin-secret")
 {:ok, _} = MyBackend.start_link(socket: "/tmp/mybackend.sock", capability: cap)
 
 # Client must pass matching token
-{:ok, _}             = SafeRPC.call(client, :status, %{}, cap: "agent-secret")
+{:ok, _}                = SafeRPC.call(client, :status, %{}, cap: "agent-secret")
 {:error, :unauthorized} = SafeRPC.call(client, :drop_table, %{}, cap: "agent-secret")
 ```
 
@@ -195,7 +269,7 @@ end
 )
 ```
 
-Request map passed to `authorize/2`: `%{id: ref, cap: token_string, kind: :call | :cast, op: atom, payload: term, meta: map}`.
+Request map passed to `authorize/2`: `%{id: integer, cap: token_string, kind: :call | :cast, op: atom | {module, atom}, payload: term, meta: map}`.
 
 Authorization runs: Capability check → Authorizer → handler. Either can short-circuit with `{:error, reason}`.
 
@@ -203,7 +277,7 @@ Authorization runs: Capability check → Authorizer → handler. Either can shor
 
 ### Adapter Layer (Service + Dispatcher)
 
-Use `SafeRPC.Adapter.Service` when you want to separate the operation implementation from the transport:
+Use `SafeRPC.Adapter.Service` when you want to separate the operation implementation from the transport without the `@rpc true` annotation style:
 
 ```elixir
 defmodule AgentService do
@@ -223,6 +297,7 @@ defmodule AgentServer do
   use SafeRPC.Adapter.Server, service: AgentService
 end
 
+# child_spec/1 available (v0.1.4)
 {:ok, _} = AgentServer.start_link(socket: "/tmp/agent.sock")
 
 # Callers can pass meta through the request
@@ -251,7 +326,7 @@ Reply:    {:safe_rpc_reply,  1, id, result}
 Cancel:   {:safe_rpc_cancel, 1, id}
 ```
 
-All terms encoded via `:erlang.term_to_binary/1`; decoded via `:erlang.binary_to_term(binary, [:safe])`. The `:safe` flag blocks atoms-from-binary and function references — terms with new atoms or funs will raise `ArgumentError`, caught and returned as `{:error, {:invalid_term, error}}`.
+`id` is an integer (v0.1.8/0.1.13) — integer IDs survive safe ETF decoding across independent clients where a `make_ref()` reference would not. All terms encoded via `:erlang.term_to_binary/1`; decoded via `:erlang.binary_to_term(binary, [:safe])`. The `:safe` flag blocks atoms-from-binary and function references — terms with new atoms or funs will raise `ArgumentError`, caught and returned as `{:error, {:invalid_term, error}}`. RPC operation specs are serialized as strings in descriptors so they remain safe ETF across clients (v0.1.7).
 
 Protocol version is hard-coded to `1`; mismatched version produces `{:error, {:invalid_request, term}}`.
 
@@ -264,10 +339,12 @@ Protocol version is hard-coded to `1`; mismatched version produces `{:error, {:i
 | `{:error, :enoent}` on connect | Socket file doesn't exist | Server not started or wrong path |
 | `{:error, :econnrefused}` | Server stopped but socket file lingered | Server manages cleanup on terminate; check if it crashed |
 | `{:error, :unauthorized}` | Token missing, wrong token, or op not in `ops` list | Pass `cap:` in call opts; check `Capability.new` ops list |
-| `{:error, {:invalid_term, _}}` | Binary contains atoms not yet in atom table or funs | Sender is not using `:safe`-compatible encoding — audit sender side |
+| `{:error, {:invalid_term, _}}` on reply | Atom in reply not yet in client atom table | Call `SafeRPC.prepare/2` before the first call (v0.1.10+) |
+| `{:error, {:invalid_term, _}}` on request | Binary contains funs or atoms not in table | Sender is not using `:safe`-compatible encoding — audit sender side |
 | `exit {:timeout, ...}` from `await` | Reply didn't arrive in timeout window | Raise timeout in `await/2`, or use `yield/2` to avoid exit |
 | Pool shard imbalance | Low-cardinality key space with few shards | Use a higher-cardinality key or increase `shards:` |
 | Socket file not cleaned up on crash | Server process exited abnormally (skipped `terminate`) | Wrap in a supervisor with restart strategy; server removes file on normal terminate |
+| Socket permission denied | Other OS user can't connect | Pass `socket_mode: 0o660` (or appropriate bits) to `start_link` (v0.1.5) |
 
 ---
 
@@ -280,6 +357,7 @@ Protocol version is hard-coded to `1`; mismatched version produces `{:error, {:i
 5. Call `SafeRPC.async/3` on a one-shot socket path string (binary); `async` requires a persistent client PID.
 6. Assume `shutdown/2` waits for the handler to finish — current impl is an alias for `cancel/1` (cancel frame, no drain).
 7. Use this as a cross-language transport — ETF is BEAM-native; payloads are opaque bytes on any other runtime.
+8. Skip `SafeRPC.prepare/2` when connecting to a fresh node — the first reply with novel atoms will raise `ArgumentError` under `[:safe]` decoding.
 
 ---
 
@@ -302,14 +380,27 @@ test "increments count", %{client: client} do
 end
 ```
 
-No sandbox or async isolation issues — each test gets its own socket path.
+No sandbox or async isolation issues — each test gets its own socket path. For service-style modules, call `SafeRPC.prepare/2` in `setup` before `start_link` if the service uses non-trivial atom vocabularies.
+
+---
+
+### Supervision
+
+`child_spec/1` is generated by `use SafeRPC.Server`, `use SafeRPC.Adapter.Server`, and `use SafeRPC` modules (v0.1.4) — add them directly to a supervisor child list:
+
+```elixir
+children = [
+  {MyApp.AdminRPCServer, socket: "/tmp/my-app.sock", capability: cap}
+]
+Supervisor.start_link(children, strategy: :one_for_one)
+```
 
 ---
 
 ### Dependencies
 
 ```elixir
-# mix.exs — safe_rpc only requires plug at runtime
+# mix.exs
 {:safe_rpc, "~> 0.1"}
 # Requires Elixir ~> 1.20
 # Transitive runtime dep: {:plug, "~> 1.18"} (for SafeRPC.Adapter.Plug)

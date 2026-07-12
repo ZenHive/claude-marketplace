@@ -10,15 +10,15 @@ allowed-tools: Read, Bash, Grep, Glob
 
 Structural code search, rewrite, and diff using plain Elixir syntax as patterns — no regex, no custom DSL. The backbone of `reach` smell checks, `ex_dna` clone indexing, and descripex's codemods.
 
-**Min version: `{:ex_ast, "~> 0.12", only: [:dev, :test], runtime: false}`.** Requires `sourceror ~> 1.7` (transitive dep). Ships `jason ~> 1.4` for `--json` CLI output.
+**Min version: `{:ex_ast, "~> 0.12.7", only: [:dev, :test], runtime: false}`.** Requires `sourceror ~> 1.7` (transitive dep). Ships `jason ~> 1.4` for `--json` CLI output.
 
-**Three mix tasks:** `mix ex_ast.search`, `mix ex_ast.replace`, `mix ex_ast.diff` — operate on files and globs.
+**Three mix tasks:** `mix ex_ast.search`, `mix ex_ast.replace`, `mix ex_ast.diff` — operate on files and globs; `.exs` files are included in all scans (directory, glob, and explicit-path forms).
 
 **Three API layers:** `ExAST` (file-level), `ExAST.Patcher` (source-string / AST / zipper), `ExAST.Rewriter` (plan-then-apply).
 
 **Pattern language is valid Elixir** — no quoting or escaping beyond what Elixir itself needs. `~p"..."` sigil parses patterns at compile time for zero-overhead hot paths.
 
-**Caveat:** Alias/import expansion is syntax-aware, not full macro-expanded. Struct/map patterns match partially; replacement formatting uses `Macro.to_string/1` — run `mix format` or pass `format: true` after rewrites.
+**Caveat:** Alias/import expansion is syntax-aware, not full macro-expanded. Bare imports (without `only:`) match conservatively — they no longer expand every local call of the imported name. `import Foo, only: [bar: 1, bar: 2]` resolves all listed arities. Struct/map patterns match partially; replacement formatting uses `Macro.to_string/1` — run `mix format` or pass `format: true` after rewrites.
 
 **Does NOT cover:** type analysis (→ Dialyzer), runtime call graphs (→ Reach), clone detection scoring (→ ExDNA).
 
@@ -70,7 +70,12 @@ ExAST.Patcher.find_all(source, "a = Repo.get!(_, _); Repo.delete(a)")
 ExAST.Patcher.find_all(source, "AshPhoenix.Form.for_update(_, _)")
 
 # Matches `from(...)` when `import Ecto.Query` is present
+# (bare imports match conservatively — only genuine Ecto.Query.from calls, not every local `from`)
 ExAST.Patcher.find_all(source, "Ecto.Query.from(_, _)")
+
+# Multi-arity only: imports resolve all listed arities
+# `import Foo, only: [bar: 1, bar: 2]` — both bar/1 and bar/2 local calls matched
+ExAST.Patcher.find_all(source, "Foo.bar(_, _)")
 ```
 
 **Module attribute names** are capturable:
@@ -123,12 +128,16 @@ ExAST.Patcher.find_all(ast, quote(do: IO.inspect(_)))  # quoted pattern also acc
 #   :captures — %{variable_name => AST_node}
 #   :source   — matched source text (nil for AST/zipper input)
 
+# find_all/3 keeps walking past each match — nested pipe stages are all reported.
+# E.g. both `b()` and `c()` are found in `a |> b() |> c()` when both match.
+
 # Run many patterns in one scan — efficient for analyzers
 ExAST.Patcher.find_many(source,
   get_env: "@_ Application.get_env(_, _)",   # tagged :get_env
   dbg_call: "dbg(expr)"                       # tagged :dbg_call
 )
-# Returns matches with :pattern field added to each match map
+# Returns matches with :pattern field added to each match map.
+# Single-step selectors with single-node patterns are batched in one traversal (0.12.1 perf).
 ```
 
 **Options for `find_all/3`:** `:inside` (ancestor filter), `:not_inside` (exclusion).
@@ -137,7 +146,7 @@ ExAST.Patcher.find_many(source,
 
 ### File-Level API — `ExAST`
 
-Operates on file paths and globs. Wraps `Patcher` with parallel file scanning.
+Operates on file paths and globs. Wraps `Patcher` with parallel file scanning. Includes `.exs` files in all scan forms.
 
 ```elixir
 # Search — returns list of match maps with :file field added
@@ -239,6 +248,7 @@ query =
 | `nth(n)` | nth sibling (1-based) |
 | `any([...])` | Any predicate in list matches |
 | `all([...])` | All predicates in list match |
+| `piped()` | Node is a pipe expression `\|>` (use `not piped()` for direct-call-only) |
 | `comment_before(text)` | Comment immediately before contains text |
 | `comment_after(text)` | Comment immediately after contains text |
 | `comment_inside(text)` | Comment inside range contains text |
@@ -250,7 +260,7 @@ Combine with `not`, `and`, `or`. Navigation: `find/2` (descendants), `find_child
 
 ### Diff
 
-Syntax-aware structural comparison — understands Elixir structure; moves are detected, rename/reorder reported separately.
+Syntax-aware structural comparison — understands Elixir structure; moves are detected, rename/reorder reported separately. Same-body function renames are treated as `:update` rather than delete+insert.
 
 ```elixir
 result = ExAST.diff_files("lib/old.ex", "lib/new.ex")
@@ -316,6 +326,7 @@ ExAST.Symbols.matches?(ref, "Enum.map/2")        #=> true
 ExAST.Symbols.matches?(ref, {Enum, :map, 2})     #=> true
 
 # Terms (lower-level stable index strings)
+# Candidate prefiltering covers literals: nil, small integers, true/false (0.12.3–0.12.4)
 ExAST.Index.Terms.from_source("Repo.transaction(fn -> :ok end)")
 ExAST.Index.Terms.from_ast(ast)
 ExAST.Index.Terms.from_pattern("def run(arg) do ... end")
@@ -324,6 +335,7 @@ ExAST.Index.Terms.from_pattern("def run(arg) do ... end")
 ExAST.Comments.extract(source)
 #=> [%ExAST.Comment{text: "# TODO", line: 12, column: 3}]
 ExAST.Comments.associated(source, range, :before)
+# :before | :after | :inside | :inline | :comment (aggregate)
 ```
 
 ---
@@ -367,8 +379,12 @@ All `search` relationship flags (`--inside`, `--not-inside`, `--contains`, `--no
 | "broad search" error on `from("_")` | Catch-all pattern refused project-wide | Pass `:limit` or `allow_broad: true` |
 | Repeated variable doesn't constrain | Typo — variable names must be identical | Use the exact same atom key at both positions |
 | Alias match fails | Alias not in scope at pattern parse time | ExAST IS alias-aware — verify the alias is explicit in the file (not just in the test source) |
+| Bare import matches too many calls | Old behavior (pre-0.12.5) expanded every local call of the imported name | Update to `~> 0.12.7`; bare imports now match conservatively |
+| Multi-arity import only matches one arity | Old behavior (pre-0.12.5) for `import Foo, only: [bar: 1, bar: 2]` | Update to `~> 0.12.7`; all listed arities now resolve |
+| Nested pipe stages not all reported | Old behavior (pre-0.12.2): `find_all/3` stopped walking after first match | Update to `~> 0.12.7`; walking continues past each match |
 | Multi-node pattern misses | Statements are not contiguous | Semi-colon syntax only matches adjacent statements in the same block |
 | `~p` sigil compile error | Pattern string not a literal | `~p` only works with compile-time string literals |
+| `.exs` files not searched | Pre-0.12.2 behavior | Update to `~> 0.12.7`; `.exs` files included in all scan forms |
 
 ---
 
@@ -387,7 +403,7 @@ All `search` relationship flags (`--inside`, `--not-inside`, `--contains`, `--no
 
 ```elixir
 # mix.exs — dev/test only
-{:ex_ast, "~> 0.12", only: [:dev, :test], runtime: false}
+{:ex_ast, "~> 0.12.7", only: [:dev, :test], runtime: false}
 # Transitive: sourceror ~> 1.7, jason ~> 1.4
 ```
 
