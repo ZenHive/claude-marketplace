@@ -21,6 +21,11 @@
       "order": 3,
       "description": "Register newly-written canonical includes as auto-synced marketplace skills so they are reachable from the skills list, not only via CLAUDE.md pointers."
     },
+    "phxagents-adoption": {
+      "phase": 2,
+      "order": 4,
+      "description": "Position the external phxagents.dev plugin (oliver-kriska/claude-elixir-phoenix — a deep Elixir/Phoenix vertical: 26 agents, 51 skills, 31 hooks, 26 Iron Laws) as the recommended runtime/domain layer, and sort out the marketplace's own thin/overlapping Phoenix+Elixir surface accordingly. zenhive keeps orchestration/workflow; phxagents owns Phoenix domain knowledge (LiveView/Ecto/Oban/OTP/Ash)."
+    },
     "skill-ref-hygiene": {
       "phase": 2,
       "order": 1,
@@ -134,6 +139,132 @@
       "body": "A canonical ~/.claude/includes/himalaya.md now exists (created 2026-07-10) capturing battle-tested himalaya CLI sharp edges: CLI flags must precede the search query, Gmail folder names differ per account locale ([Google Mail]/ vs [Gmail]/), per-folder IMAP ids, jq envelope object shapes, the non-interactive template reply/send flow, raw .eml export, Gmail Trash 30-day auto-delete rescue, and send-verification via Sent folder rather than exit code. The global CLAUDE.md email section was slimmed to guardrails + a pointer to the include. Consumer: every Claude session doing email work self-invokes the skill before running himalaya (per the Invoke-Skills rule); without a registered skill the include is only reachable via the CLAUDE.md pointer, not from the skills list. Task: create a himalaya skill (pick host plugin - a new email/tools plugin or workflow) with proper frontmatter, add the mapping entry to scripts/skill-include-map.sh, and run scripts/sync-skills-from-includes.sh.",
       "created_at": "2026-07-10",
       "scored_at": "2026-07-10",
+      "cross_repo": []
+    },
+    {
+      "id": 4,
+      "phase": 2,
+      "bundle": "phxagents-adoption",
+      "status": "pending",
+      "title": "Document phxagents.dev as the recommended upstream Phoenix/Elixir runtime+domain layer (don't fork/vendor)",
+      "scores": {
+        "d": 4,
+        "b": 5,
+        "u": 4
+      },
+      "eff": 1.13,
+      "dep_layer": 0,
+      "unlocks": 0,
+      "markers": [],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "README.md names phxagents.dev / oliver-kriska/claude-elixir-phoenix as an optional recommended companion for Phoenix repos, with the /plugin marketplace add install line",
+        "The zenhive (orchestration) vs phxagents (Phoenix domain) boundary is stated so a reader knows they compose rather than overlap",
+        "CHANGELOG.md records the recommendation; MIT attribution correct",
+        "No code from phxagents is copied, vendored, or submoduled; nothing is auto-installed"
+      ],
+      "out_of_scope": [
+        "Forking or vendoring phxagents",
+        "Bundling/auto-installing it via zenhive's marketplace.json",
+        "The internal phoenix-plugin retirement (task 4) and elixir-core slimming (task 5)"
+      ],
+      "body": "Position `oliver-kriska/claude-elixir-phoenix` (site phxagents.dev, MIT, plugin v2.14.1, ~478 stars, actively maintained) as a recommended external companion for repos that use the Elixir Phoenix web framework — NOT as something we fork or vendor. It is itself a native Claude Code plugin marketplace, self-gated on `mix.exs` presence, so it is safe to enable globally and installs via the standard `/plugin marketplace add oliver-kriska/claude-elixir-phoenix` + `/plugin install elixir-phoenix`.\n\nThe strategic finding from the phxagents analysis: it is a deep Phoenix vertical (26 agents, 51 skills, 31 hooks, 26 compile-halting \"Iron Laws\", Tidewave MCP runtime integration) and is strongest exactly where zenhive is thinnest — Phoenix runtime, LiveView, Ecto, Oban, OTP, Ash. It has nothing comparable to zenhive's orchestration layer. So the two compose: zenhive = \"how we work/organize\" (harness, workflow, tasks, review, delegation, discipline), phxagents = \"Phoenix domain knowledge\".\n\nAdd a short section to README.md (and a CHANGELOG note) that: names phxagents as an optional recommended add-on for Phoenix projects, gives the install line, and draws the who-does-what boundary so users understand it is complementary, not a competitor. Keep it to prose/links — no code copied, no submodule, no auto-install.\n",
+      "created_at": "2026-07-12",
+      "scored_at": "2026-07-12",
+      "cross_repo": []
+    },
+    {
+      "id": 5,
+      "phase": 2,
+      "bundle": "phxagents-adoption",
+      "status": "pending",
+      "title": "Retire the thin `phoenix` plugin (phxagents covers Phoenix/LiveView far deeper)",
+      "scores": {
+        "d": 3,
+        "b": 4,
+        "u": 5
+      },
+      "eff": 1.5,
+      "dep_layer": 0,
+      "unlocks": 0,
+      "markers": [],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "plugins/phoenix removed (or reduced to only a rescued nexus-template) and de-registered from .claude-plugin/marketplace.json",
+        "skill-include-map.sh and SKILLS.md updated; no dangling phoenix plugin/skill references anywhere",
+        "claude plugin validate --strict passes",
+        "Decision on nexus-template recorded (rescued into which plugin, or intentionally dropped)"
+      ],
+      "out_of_scope": [
+        "The elixir-plugin core slimming (task 6)",
+        "Recommending phxagents itself (task 4)",
+        "The elixir-vibe ecosystem skills (not part of this task)"
+      ],
+      "body": "The in-repo `phoenix` plugin (`plugins/phoenix/`) ships only two skills — `phoenix-setup` (phx.gen.auth, Sobelow, LiveDebugger, `--live`) and `nexus-template` (a Nexus admin dashboard template). Against phxagents' Phoenix/LiveView coverage this is negligible and duplicative, so retire the plugin.\n\nBefore deleting: judge `nexus-template` on its own merits — it is an org/template-specific artifact that phxagents does NOT cover, so if it is still wanted, rescue it as a single skill in a more fitting plugin (e.g. an elixir/scaffolding home) rather than losing it with the plugin. `phoenix-setup` overlaps phxagents and can go.\n\nWind down consistently across every place the plugin is registered: `.claude-plugin/marketplace.json`, `plugins/phoenix/`, `scripts/skill-include-map.sh` (drop the mapped entries), `SKILLS.md` (catalog), and any prose/keyword references. Run `claude plugin validate --strict` and confirm no dangling `phoenix@zenhive` / `phoenix:<skill>` references remain.\n",
+      "created_at": "2026-07-12",
+      "scored_at": "2026-07-12",
+      "cross_repo": []
+    },
+    {
+      "id": 6,
+      "phase": 2,
+      "bundle": "phxagents-adoption",
+      "status": "pending",
+      "title": "Slim the `elixir` plugin core to what phxagents does NOT cover",
+      "scores": {
+        "d": 3,
+        "b": 4,
+        "u": 6
+      },
+      "eff": 1.67,
+      "dep_layer": 0,
+      "unlocks": 0,
+      "markers": [],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "A written keep/drop table covering every core elixir skill + hook, each drop justified by 'covered deeper by phxagents'",
+        "KEEP set preserved: dialyzer-json, ex-unit-json, prefer-*-json hooks, elixir-ci-harness, tidewave-guide",
+        "Drops applied at the include source and re-synced via sync-skills-from-includes.sh (no hand-edited SKILL.md bodies); skill-include-map.sh + SKILLS.md consistent",
+        "claude plugin validate --strict passes; no dangling references"
+      ],
+      "out_of_scope": [
+        "The 23 elixir-vibe ecosystem skills (systemdkit, gatehouse, exograph, theoria, quackdb, ...) — separate audit, not this task",
+        "elixir-volt and elixir-workflows (no phxagents overlap)",
+        "Retiring the phoenix plugin (task 5)"
+      ],
+      "body": "The `elixir` plugin's core dev-tooling layer overlaps phxagents on runtime/domain concerns (LiveView/Ecto/OTP conventions, Iron-Law-style rules) where phxagents goes deeper. Produce an explicit keep/drop decision per skill and per hook, then deprecate the overlapping ones at the canonical include source (edit `~/.claude/includes/*.md`, then run `scripts/sync-skills-from-includes.sh` — do NOT hand-edit generated SKILL.md bodies; the marketplace-hygiene block hook enforces this).\n\nKEEP (phxagents has no equivalent — these are zenhive-specific tooling, not domain rules):\n  - the JSON tool-flows: `dialyzer-json`, `ex-unit-json`, and the `prefer-dialyzer-json` / `prefer-test-json` hooks\n  - `elixir-ci-harness`, `tidewave-guide`\nEverything else in the core layer is a DROP CANDIDATE — evaluate each against phxagents coverage before removing; this task is the analysis + the safe removals, not a blind purge.\n\nScope note: this covers only the `elixir` plugin's core dev-tooling skills+hooks. The 23 elixir-vibe ecosystem libs are a separate audit (deliberately not created), and `elixir-volt` / `elixir-workflows` are orthogonal to phxagents (Volt/WASM/npm, workflow generator) — leave them alone.\n",
+      "created_at": "2026-07-12",
+      "scored_at": "2026-07-12",
+      "cross_repo": []
+    },
+    {
+      "id": 7,
+      "phase": 2,
+      "bundle": "phxagents-adoption",
+      "status": "pending",
+      "title": "Spike: evaluate phxagents' Iron-Laws + agent model-tiering patterns for our hooks (concept only)",
+      "scores": {
+        "d": 3,
+        "b": 4,
+        "u": 7
+      },
+      "eff": 1.83,
+      "dep_layer": 0,
+      "unlocks": 0,
+      "markers": [],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "A written evaluation with an explicit Go/No-Go verdict for (a) the Iron-Laws catalog pattern and (b) agent model-tiering, each with rationale and rough cost",
+        "For any Go verdict, a concrete follow-up task is proposed (title + one-line scope)",
+        "No code changes and no new hooks land under this task"
+      ],
+      "out_of_scope": [
+        "Implementing any Iron Law or tiering change (follow-up tasks only)",
+        "Copying phxagents hook scripts verbatim"
+      ],
+      "body": "phxagents leans on two patterns worth studying for zenhive's own hook-driven plugins: (1) \"Iron Laws\" — hard, hook-enforced domain rules that can halt compilation on violation (they ship 26, wired via 31 hooks), and (2) model-tiering of agents (opus orchestrators / sonnet domain experts / haiku lightweight).\n\nzenhive already has a hook-enforcement muscle in `code-quality` (PreToolUse quality gate) and `dev-discipline` (pause-and-pick + tasks.toml integrity guards). The question this spike answers: which, if any, of the Iron-Laws packaging (a named catalog of hard rules with clear violation output + escape hatch) and the tiering idea are worth adopting into those plugins — and what would each cost.\n\nDeliver a short written Go/No-Go per pattern with rationale, and, for any Go, a proposed follow-up task (do not implement here). Concept/evaluation only — no code, no new hooks in this task.\n",
+      "created_at": "2026-07-12",
+      "scored_at": "2026-07-12",
       "cross_repo": []
     }
   ]
