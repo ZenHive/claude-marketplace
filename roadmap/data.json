@@ -265,6 +265,7 @@
         "Implementing any Iron Law or tiering change (follow-up tasks only)",
         "Copying phxagents hook scripts verbatim"
       ],
+      "shipped_in": "1749405",
       "body": "phxagents leans on two patterns worth studying for zenhive's own hook-driven plugins: (1) \"Iron Laws\" — hard, hook-enforced domain rules that can halt compilation on violation (they ship 26, wired via 31 hooks), and (2) model-tiering of agents (opus orchestrators / sonnet domain experts / haiku lightweight).\n\nzenhive already has a hook-enforcement muscle in `code-quality` (PreToolUse quality gate) and `dev-discipline` (pause-and-pick + tasks.toml integrity guards). The question this spike answers: which, if any, of the Iron-Laws packaging (a named catalog of hard rules with clear violation output + escape hatch) and the tiering idea are worth adopting into those plugins — and what would each cost.\n\nDeliver a short written Go/No-Go per pattern with rationale, and, for any Go, a proposed follow-up task (do not implement here). Concept/evaluation only — no code, no new hooks in this task.\n",
       "created_at": "2026-07-12",
       "done_at": "2026-07-12",

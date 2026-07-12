@@ -255,6 +255,7 @@ No code, hooks, or catalog implemented under this task per its own scope."""
 created_at = "2026-07-12"
 scored_at = "2026-07-12"
 done_at = "2026-07-12"
+shipped_in = "1749405"
 
 [[task]]
 id = 8
