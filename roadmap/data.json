@@ -244,7 +244,7 @@
       "id": 7,
       "phase": 2,
       "bundle": "phxagents-adoption",
-      "status": "pending",
+      "status": "done",
       "title": "Spike: evaluate phxagents' Iron-Laws + agent model-tiering patterns for our hooks (concept only)",
       "scores": {
         "d": 3,
@@ -253,7 +253,7 @@
       },
       "eff": 1.83,
       "dep_layer": 0,
-      "unlocks": 0,
+      "unlocks": 1,
       "markers": [],
       "depends_on": [],
       "acceptance_criteria": [
@@ -266,6 +266,42 @@
         "Copying phxagents hook scripts verbatim"
       ],
       "body": "phxagents leans on two patterns worth studying for zenhive's own hook-driven plugins: (1) \"Iron Laws\" — hard, hook-enforced domain rules that can halt compilation on violation (they ship 26, wired via 31 hooks), and (2) model-tiering of agents (opus orchestrators / sonnet domain experts / haiku lightweight).\n\nzenhive already has a hook-enforcement muscle in `code-quality` (PreToolUse quality gate) and `dev-discipline` (pause-and-pick + tasks.toml integrity guards). The question this spike answers: which, if any, of the Iron-Laws packaging (a named catalog of hard rules with clear violation output + escape hatch) and the tiering idea are worth adopting into those plugins — and what would each cost.\n\nDeliver a short written Go/No-Go per pattern with rationale, and, for any Go, a proposed follow-up task (do not implement here). Concept/evaluation only — no code, no new hooks in this task.\n",
+      "created_at": "2026-07-12",
+      "done_at": "2026-07-12",
+      "scored_at": "2026-07-12",
+      "implemented": "Go/No-Go evaluation (research: 2 Explore agents over this repo + live GitHub fetch of oliver-kriska/claude-elixir-phoenix, 479 stars, MIT, pushed 2026-07-11).\n\nphxagents Iron Laws: 26 named hard rules (LiveView/Ecto/Oban/security/OTP/style, e.g. \"never use :float for money\", \"authorize every handle_event\"), detected by a dedicated Sonnet-tier iron-law-judge agent (pattern-matching, read-only) wired into 31 hooks. Violation = hard block, no escape hatch.\n\nphxagents model tiering: Opus (4 orchestrators) / Sonnet (~13 domain specialists) / Haiku (4 mechanical) — opus for high-stakes orchestration/security, sonnet for near-opus judgment cheaper, haiku for deterministic/compression work.\n\nzenhive's current state: code-quality = 1 PreToolUse LLM-prompt hook enforcing 4 unnamed checks (A-D), hard deny. dev-discipline = 7 shell-script hooks (2 hard-deny: human-assignee, stale-model; 5 soft-warn). marketplace-hygiene adds 1 more hard-deny (skill-edit block). No named/numbered rule catalog exists anywhere — every hook is ad hoc. The only \"named catalog\" precedent is prose (critical-rules.md's addressable sections), not a machine-readable registry.\n\nzenhive model-tiering state: ~/.claude/settings.json sets CLAUDE_CODE_SUBAGENT_MODEL=sonnet — a documented, deliberate blanket override (highest precedence) forcing every local subagent to Sonnet, with explicit rationale and an explicit reversal path. The only tiering artifact (haiku/sonnet templates in elixir-workflows:workflow-generator, for scaffolding consumer-project subagents) would itself be flattened under the standing override.\n\nVERDICT (a) Iron-Laws catalog packaging: GO, narrow scope. zenhive already has the enforcement muscle (3 plugins, 3 hard-deny hooks + 5 soft-warns); missing piece is just naming/numbering + a discoverable index — packaging, not new capability. Rough cost: small (~D3, a few hours). Follow-up task filed: \"Catalog zenhive's existing hard-enforced hook rules as a named/numbered registry\" (phxagents-adoption bundle).\n\nVERDICT (b) Agent model-tiering: NO-GO. Adopting phxagents' 3-tier scheme repo-wide would conflict with the existing, deliberate CLAUDE_CODE_SUBAGENT_MODEL=sonnet blanket policy, which already made this tradeoff with stated rationale and a reversal path. Reversing that standing decision isn't this spike's call. No follow-up filed.\n\nNo code, hooks, or catalog implemented under this task per its own scope.",
+      "cross_repo": []
+    },
+    {
+      "id": 8,
+      "phase": 2,
+      "bundle": "phxagents-adoption",
+      "status": "pending",
+      "title": "Catalog zenhive's existing hard-enforced hook rules as a named/numbered registry",
+      "scores": {
+        "d": 3,
+        "b": 4,
+        "u": 5
+      },
+      "eff": 1.5,
+      "dep_layer": 1,
+      "unlocks": 0,
+      "markers": [],
+      "depends_on": [
+        7
+      ],
+      "assignee": "codex",
+      "model": "gpt-5.5",
+      "acceptance_criteria": [
+        "Every existing hard-deny hook (code-quality's 4 checks, dev-discipline's human-assignee + stale-model, marketplace-hygiene's skill-edit block) cites a stable rule ID in its violation message",
+        "A short catalog document lists all rule IDs with a one-line description each",
+        "claude plugin validate --strict passes"
+      ],
+      "out_of_scope": [
+        "Adding any new Iron-Law-style rule or hook (packaging only)",
+        "Agent model-tiering (separate pattern from Task 7's spike, verdict was No-Go)"
+      ],
+      "body": "Task 7's spike (phxagents Iron-Laws evaluation) returned a Go on packaging our existing hook-enforced rules as a named/numbered catalog, modeled loosely on phxagents' 'Iron Laws' idea but scoped to packaging only — no new enforcement logic. zenhive already enforces rules via code-quality's single PreToolUse prompt (4 unnamed checks) and dev-discipline's 7 scripts (2 hard-deny, 5 soft-warn); none of them currently have a stable, addressable rule ID.\n\nGive each existing hard-deny (and optionally soft-warn) rule a short name and stable ID, have each hook's deny/warn message cite its ID, and write a short catalog document listing every rule ID with a one-line description so they're discoverable and citable (the way critical-rules.md's `§` sections already are for prose). Find the right place for the catalog doc given this repo's existing structure (no docs/ directory exists yet).",
       "created_at": "2026-07-12",
       "scored_at": "2026-07-12",
       "cross_repo": []
