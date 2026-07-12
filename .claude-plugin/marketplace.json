@@ -106,6 +106,13 @@
       "description": "Workflow-generator plugin — scaffolds project-agnostic research / planning / implementation / QA workflows and the commands that drive them. Skill: workflow-generator. Command: /elixir-workflows:workflow-generator.",
       "repository": "https://github.com/ZenHive/claude-marketplace",
       "license": "MIT"
+    },
+    {
+      "name": "tools",
+      "source": "./plugins/tools",
+      "description": "Personal/utility CLI-usage reference skills — not tied to a dev-lifecycle process or a specific language. Skill: himalaya.",
+      "repository": "https://github.com/ZenHive/claude-marketplace",
+      "license": "MIT"
     }
   ]
 }

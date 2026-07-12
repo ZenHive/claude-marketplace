@@ -88,4 +88,7 @@ MAPPINGS=(
   "plugins/elixir/skills/ttycast/SKILL.md:ttycast.md"
   "plugins/elixir/skills/theoria/SKILL.md:theoria.md"
   "plugins/elixir/skills/vibe-actions/SKILL.md:vibe-actions.md"
+
+  # --- tools (personal/utility CLI-usage skills) ---
+  "plugins/tools/skills/himalaya/SKILL.md:himalaya.md"
 )

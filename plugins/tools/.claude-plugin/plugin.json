@@ -1,0 +1,12 @@
+{
+  "name": "tools",
+  "version": "0.1.0",
+  "description": "Personal/utility CLI-usage reference skills — not tied to a dev-lifecycle process or a specific language. Skills: himalaya.",
+  "author": {
+    "name": "ZenHive",
+    "url": "https://github.com/ZenHive"
+  },
+  "repository": "https://github.com/ZenHive/claude-marketplace",
+  "license": "MIT",
+  "keywords": ["tools", "cli", "email", "utilities"]
+}

@@ -26,7 +26,7 @@
 |------|--------|-------|
 | Task 1 | ⬜ | 🎁 **skill-ref-hygiene** · Sweep bare `staged-review` plugin-name and path references after staged-review→review rename [D:3/B:4/U:5 → Eff:1.5?] 🚀 |
 | Task 2 | ⬜ | 🎁 **stack-hygiene** · Add ecosystem-detecting dependency-advisory SessionStart hook (stack-wide, one shared plugin) [D:4/B:6/U:6 → Eff:1.5] 🚀 |
-| Task 3 | ⬜ | 🎁 **new-skills** · Register himalaya.md as auto-synced skill [D:2/B:6/U:7 → Eff:3.25] 🎯 |
+| Task 3 | ✅ | 🎁 **new-skills** · Register himalaya.md as auto-synced skill [D:2/B:6/U:7 → Eff:3.25] 🎯 |
 | Task 4 | ⬜ | 🎁 **phxagents-adoption** · Document phxagents.dev as the recommended upstream Phoenix/Elixir runtime+domain layer (don't fork/vendor) [D:4/B:5/U:4 → Eff:1.12] 📋 |
 | Task 5 | ⬜ | 🎁 **phxagents-adoption** · Retire the thin `phoenix` plugin (phxagents covers Phoenix/LiveView far deeper) [D:3/B:4/U:5 → Eff:1.5] 🚀 |
 | Task 6 | ⬜ | 🎁 **phxagents-adoption** · Slim the `elixir` plugin core to what phxagents does NOT cover [D:3/B:4/U:6 → Eff:1.67] 🚀 |

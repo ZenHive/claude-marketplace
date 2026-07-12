@@ -6,6 +6,12 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 
 ## [Unreleased]
 
+### Added
+
+- **`tools`** (new plugin) — personal/utility CLI-usage reference skills.
+  Skill: `himalaya` (synced ← himalaya.md), registering the existing
+  `~/.claude/includes/himalaya.md` include as a self-invocable skill.
+
 ### Changed
 
 - **`dev-discipline` 0.2.0 → 0.3.0** — added a fourth `roadmap/tasks.toml`

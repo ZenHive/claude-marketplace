@@ -46,6 +46,11 @@ Every skill shipped by a `zenhive` plugin, grouped by plugin. Invoke as
 ### portfolio
 - `portfolio-strategy` (synced ← portfolio-strategy.md)
 
+## Personal tooling
+
+### tools
+- `himalaya` (synced ← himalaya.md)
+
 ## Per-language dev tooling
 
 ### elixir
