@@ -38,7 +38,7 @@ esac
 
 if ! JQ_ERR=$(jq -e . "$FILE" 2>&1 >/dev/null); then
   # jq parse failure: stderr captured in JQ_ERR, surface it.
-  emit_context "Invalid JSON in $BASENAME" "jq could not parse $FILE after this edit. The marketplace will fail to load until this is fixed.
+  emit_context "[MH-2] Invalid JSON in $BASENAME" "jq could not parse $FILE after this edit. The marketplace will fail to load until this is fixed.
 
 jq error:
 $JQ_ERR"

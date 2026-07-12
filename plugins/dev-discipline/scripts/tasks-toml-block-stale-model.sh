@@ -62,9 +62,9 @@ esac
 echo "$NEW_TEXT" | grep -qE 'model[[:space:]]*=[[:space:]]*"gpt-5-codex"' || emit_suppress
 
 emit_deny \
-"\`model = \"gpt-5-codex\"\` is a DEAD model pin — it is not in the codex catalog and is operator-blocked (unsupported on ChatGPT/subscription Codex accounts; requires a metered API account).
+"[DD-2] \`model = \"gpt-5-codex\"\` is a DEAD model pin — it is not in the codex catalog and is operator-blocked (unsupported on ChatGPT/subscription Codex accounts; requires a metered API account).
 
 A per-task \`model\` pin overrides \`agent_model.codex\`, so this silently breaks dispatch: codex routing fails with \"unavailable\", and a claude-adapter dispatch fails with \"invalid_model_for_adapter\".
 
 Fix: use a valid codex model — \`model = \"gpt-5.5\"\` (catalog: gpt-5.5 | gpt-5.4 | gpt-5.4-mini | gpt-5.3-codex-spark) — then re-apply." \
-"dev-discipline: model = \"gpt-5-codex\" in tasks.toml is a dead/blocked model — use gpt-5.5"
+"dev-discipline [DD-2]: model = \"gpt-5-codex\" in tasks.toml is a dead/blocked model — use gpt-5.5"

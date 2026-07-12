@@ -1,16 +1,21 @@
 # dev-discipline
 
 Pause-and-pick hooks for the moments where Claude tends to choose ceremony over
-inline fix — plus three `roadmap/tasks.toml` integrity guards.
+inline fix — plus four `roadmap/tasks.toml` integrity guards.
 
-Six PreToolUse hooks. **Five are soft reminders** (emit `additionalContext`,
-exit 0). **One blocks** — `tasks-toml-block-human-assignee.sh` denies an edit
-that masks dispatchable work as human-assigned; masking is costly and the deny
-is cheaply recoverable (add a `# human:` line, re-apply).
+Seven PreToolUse hooks. **Five are soft reminders** (emit `additionalContext`,
+exit 0). **Two block** — `tasks-toml-block-human-assignee.sh` and
+`tasks-toml-block-stale-model.sh`; both mask a guaranteed-costly dispatch
+failure behind an otherwise-valid-looking edit, and both are cheaply
+recoverable in place.
+
+Every hook cites a stable rule ID (`DD-1`..`DD-7`) in its message — see
+[`HOOK-RULES.md`](../../HOOK-RULES.md) at the repo root for the full
+cross-plugin catalog.
 
 ## Hooks
 
-### `rmap-new-pause.sh`
+### `rmap-new-pause.sh` — DD-3
 
 **Fires:** PreToolUse:Bash when the command contains `rmap new` (any form —
 `rmap new`, `rmap new --from-stdin`, `... && rmap new ...`).
@@ -20,7 +25,7 @@ is cheaply recoverable (add a `# human:` line, re-apply).
 - In-scope / fits current commit → fix inline, don't file.
 - Same-PR follow-up → push back or amend, don't file.
 
-### `tasks-toml-new-task-pause.sh`
+### `tasks-toml-new-task-pause.sh` — DD-5
 
 **Fires:** PreToolUse:Edit/Write/MultiEdit when the target is
 `*/roadmap/tasks.toml` AND the edit adds a `[[task]]` block (header count
@@ -32,7 +37,7 @@ Bash matcher can be bypassed by directly editing the TOML.
 Silent on status flips, marker toggles, body/score edits, and edits to
 non-`tasks.toml` files.
 
-### `polling-warn.sh`
+### `polling-warn.sh` — DD-4
 
 **Fires:** PreToolUse:Bash on `sleep N` where N ≥ 10, or `until/while ...;
 do ... sleep ...` polling loops.
@@ -45,7 +50,7 @@ a fixed-length sleep.
 
 Silent on short bridge sleeps (`sleep 1..9`).
 
-### `tasks-toml-block-human-assignee.sh` — the one blocking hook
+### `tasks-toml-block-human-assignee.sh` — DD-1, blocking
 
 **Fires:** PreToolUse:Edit/Write/MultiEdit when the target is
 `*/roadmap/tasks.toml` AND the new text sets `assignee = "human"` without a
@@ -63,7 +68,22 @@ operator, and the delivery pipeline never picks it up. A dispatch hint (e.g.
 Silent on any other assignee, on a human assignee that carries its `# human:`
 line, and on non-`tasks.toml` files.
 
-### `tasks-toml-warn-demand-hedging.sh`
+### `tasks-toml-block-stale-model.sh` — DD-2, blocking
+
+**Fires:** PreToolUse:Edit/Write/MultiEdit when the target is
+`*/roadmap/tasks.toml` AND the new text introduces `model = "gpt-5-codex"`.
+
+**Blocks** (`permissionDecision: deny`). `gpt-5-codex` is not in the codex
+catalog and is operator-blocked (requires a metered API account, unsupported
+on ChatGPT/subscription Codex accounts). A per-task `model` pin overrides
+`agent_model.codex`, so this dead pin silently breaks dispatch — codex routing
+fails with "unavailable", a claude-adapter dispatch fails with
+"invalid_model_for_adapter". Fix: `model = "gpt-5.5"` (catalog: gpt-5.5 |
+gpt-5.4 | gpt-5.4-mini | gpt-5.3-codex-spark).
+
+Silent on any other model id and on non-`tasks.toml` files.
+
+### `tasks-toml-warn-demand-hedging.sh` — DD-6
 
 **Fires:** PreToolUse:Edit/Write/MultiEdit when the new text in a
 `*/roadmap/tasks.toml` matches demand-hedge phrasing (`wait until`, `unproven
@@ -75,7 +95,7 @@ signal. A task may only be gated on a NAMED technical / legal / market-scope
 dependency with a concrete unblock path, never on speculated demand. Soft —
 ignore it when the phrase names a real market-scope trigger.
 
-### `tasks-toml-warn-evidenceless-done.sh`
+### `tasks-toml-warn-evidenceless-done.sh` — DD-7
 
 **Fires:** PreToolUse:Edit/Write/MultiEdit when the new text in a
 `*/roadmap/tasks.toml` sets `status = "done"` with no `implemented` /
@@ -111,10 +131,11 @@ configuration needed.
 If you want to silence one hook locally (e.g. during a long marketplace
 audit pass where rmap new IS the work), unregister or replace at the user
 or project settings level. The five soft reminders are informational noise
-you can ignore at worst; the one blocking hook
-(`tasks-toml-block-human-assignee.sh`) is always recoverable in place — add
-the `# human:` blocker line, or give the task a dispatchable assignee — so
-it never strands an edit.
+you can ignore at worst; the two blocking hooks (`tasks-toml-block-human-
+assignee.sh` [DD-1], `tasks-toml-block-stale-model.sh` [DD-2]) are always
+recoverable in place — add the `# human:` blocker line / swap to a valid
+model, or give the task a dispatchable assignee — so neither ever strands
+an edit.
 
 The three `tasks.toml` integrity guards (`block-human-assignee`,
 `warn-demand-hedging`, `warn-evidenceless-done`) were promoted from per-repo

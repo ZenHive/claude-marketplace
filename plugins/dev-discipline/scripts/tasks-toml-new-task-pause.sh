@@ -63,7 +63,7 @@ case "$TOOL_NAME" in
     ;;
 esac
 
-MESSAGE="🪝 tasks.toml new-task gate — pause and pick.
+MESSAGE="🪝 [DD-5] tasks.toml new-task gate — pause and pick.
 
 About to add a [[task]] block via direct edit. Same question as
 rmap-new-pause:

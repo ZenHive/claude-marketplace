@@ -56,6 +56,13 @@ headers. Native (hand-authored) skills are copied directly, not synced.
 | `clear-cache.sh` | Clear zenhive plugin cache + stale registry entries (also sweeps legacy deltahedge/claude-code-elixir). |
 | `migrate-repos-deltahedge-to-zenhive.sh` | Rename `@deltahedge` → `@zenhive` in a repo's `.claude/settings.json` (dry-run by default). |
 
+## Hook rule catalog
+
+Every hard-deny and soft-warn rule enforced by `code-quality`, `dev-discipline`,
+and `marketplace-hygiene` is named and numbered (`CQ-*`, `DD-*`, `MH-*`) in
+[`HOOK-RULES.md`](HOOK-RULES.md) — each hook's deny/warn message cites its ID.
+Add new rules there in the same change that adds the hook/check.
+
 ## Roadmap
 
 This repo uses `rmap` — `roadmap/tasks.toml` is canonical, `ROADMAP.md` +

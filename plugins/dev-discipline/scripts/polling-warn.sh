@@ -27,7 +27,7 @@ else
   emit_suppress
 fi
 
-MESSAGE="🪝 No polling. Wait for the event.
+MESSAGE="🪝 [DD-4] No polling. Wait for the event.
 
 Detected: $TRIGGER.
 

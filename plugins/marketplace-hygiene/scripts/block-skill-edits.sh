@@ -59,14 +59,14 @@ for entry in "${MAPPINGS[@]}"; do
   include="${entry##*:}"
   if [[ "$REL" == "$skill_path" ]]; then
     emit_deny \
-      "This SKILL.md is auto-synced from ~/.claude/includes/$include — direct edits will be overwritten by ./scripts/sync-skills-from-includes.sh on the next run.
+      "[MH-1] This SKILL.md is auto-synced from ~/.claude/includes/$include — direct edits will be overwritten by ./scripts/sync-skills-from-includes.sh on the next run.
 
 Edit the canonical include instead:
   ~/.claude/includes/$include
 
 Then run the sync script to regenerate the SKILL.md body:
   ./scripts/sync-skills-from-includes.sh" \
-      "marketplace-hygiene: SKILL.md is auto-synced from ~/.claude/includes/$include"
+      "marketplace-hygiene [MH-1]: SKILL.md is auto-synced from ~/.claude/includes/$include"
   fi
 done
 

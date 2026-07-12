@@ -37,7 +37,7 @@ esac
 HEDGE='wait until|unproven demand|is this widely needed|table[ -]stakes|buyers expect|increasingly standard|once a customer|first paying'
 echo "$NEW_TEXT" | grep -qiE "$HEDGE" || emit_suppress
 
-MESSAGE="🪝 Demand-hedge phrasing in a roadmap task.
+MESSAGE="🪝 [DD-6] Demand-hedge phrasing in a roadmap task.
 
 Critical-rules § NO PSEUDO-RIGOROUS HEDGING: you have no consumer telemetry —
 the developer IS the demand signal. \"Wait until someone asks\", \"unproven

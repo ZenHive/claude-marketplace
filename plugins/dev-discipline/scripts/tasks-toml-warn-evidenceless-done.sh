@@ -37,7 +37,7 @@ esac
 echo "$NEW_TEXT" | grep -qE 'status[[:space:]]*=[[:space:]]*"done"' || emit_suppress
 echo "$NEW_TEXT" | grep -qE 'implemented|shipped_in|delivered_by' && emit_suppress
 
-MESSAGE="🪝 Task flipped to \`status = \"done\"\` with no shipping evidence in this edit.
+MESSAGE="🪝 [DD-7] Task flipped to \`status = \"done\"\` with no shipping evidence in this edit.
 
 A \`done\` with no \`implemented\` / \`shipped_in\` / \`delivered_by\` is often a
 decision-only \"done\" burying a deferred build under \`done\`, where it drops out

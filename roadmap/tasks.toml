@@ -261,7 +261,7 @@ shipped_in = "1749405"
 id = 8
 phase = 2
 bundle = "phxagents-adoption"
-status = "pending"
+status = "done"
 title = "Catalog zenhive's existing hard-enforced hook rules as a named/numbered registry"
 scores = { d = 3, b = 4, u = 5 }
 depends_on = [7]
@@ -273,5 +273,8 @@ body = """
 Task 7's spike (phxagents Iron-Laws evaluation) returned a Go on packaging our existing hook-enforced rules as a named/numbered catalog, modeled loosely on phxagents' 'Iron Laws' idea but scoped to packaging only — no new enforcement logic. zenhive already enforces rules via code-quality's single PreToolUse prompt (4 unnamed checks) and dev-discipline's 7 scripts (2 hard-deny, 5 soft-warn); none of them currently have a stable, addressable rule ID.
 
 Give each existing hard-deny (and optionally soft-warn) rule a short name and stable ID, have each hook's deny/warn message cite its ID, and write a short catalog document listing every rule ID with a one-line description so they're discoverable and citable (the way critical-rules.md's `§` sections already are for prose). Find the right place for the catalog doc given this repo's existing structure (no docs/ directory exists yet)."""
+implemented = "Named/numbered every existing hard-enforced and soft-warn hook rule: CQ-1..CQ-4 (code-quality's 4 checks A-D, in the single PreToolUse prompt hook), DD-1..DD-7 (dev-discipline's 2 hard-deny + 5 soft-warn scripts), MH-1..MH-2 (marketplace-hygiene's block + validate hooks). Each hook's deny/warn message now cites its rule ID inline. Wrote HOOK-RULES.md at repo root (no docs/ dir exists) as the discoverable catalog listing every ID, tier (hard/soft), plugin, script, and one-line description, plus an 'adding a rule' convention (never renumber/reuse a retired ID). Cross-linked from CLAUDE.md and both dev-discipline/README.md and marketplace-hygiene/README.md. Also fixed dev-discipline/README.md drift found while touching it: it predated tasks-toml-block-stale-model.sh entirely (said 'six hooks, one blocks' — actually seven hooks, two block); added the missing section and corrected the counts. Packaging only — no new rules, no new hooks, no enforcement-logic changes. Verified: bash -n + shellcheck clean on all touched scripts; jq -e validates all three hooks.json; smoke-tested DD-1/DD-2/MH-1 fire with their rule IDs in the deny reason; claude plugin validate --strict passes."
 created_at = "2026-07-12"
+started_at = "2026-07-12"
 scored_at = "2026-07-12"
+done_at = "2026-07-12"

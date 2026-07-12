@@ -59,11 +59,11 @@ echo "$NEW_TEXT" | grep -qE 'assignee[[:space:]]*=[[:space:]]*"human"' || emit_s
 echo "$NEW_TEXT" | grep -q '# human:' && emit_suppress
 
 emit_deny \
-"\`assignee = \"human\"\` with no \`# human:\` blocker line — this masks dispatchable work as human-assigned, where it drops off the delivery pipeline.
+"[DD-1] \`assignee = \"human\"\` with no \`# human:\` blocker line — this masks dispatchable work as human-assigned, where it drops off the delivery pipeline.
 
 \`human\` is RESERVED. It is legitimate only when no agent can do the work from a sandbox, and you must name the concrete blocker on a \`# human:\` comment line immediately above \`assignee = \"human\"\` — external account / network vantage, business or legal sign-off, or a genuine product/architecture decision spike.
 
 Fix one of two ways:
   1. The work IS dispatchable → give it a real dispatch assignee + model per the project's routing ledger. If parking it, use \`status = \"blocked\"\` + \`blocked_reason = \"<unblock trigger>\"\` — a parked engineering task keeps its dispatchable assignee/model. A dispatch hint (e.g. handbuild) is never an assignee.
   2. It genuinely needs a human → add a \`# human: <concrete external/legal/decision blocker>\` line right above \`assignee = \"human\"\`, then re-apply." \
-"dev-discipline: assignee = \"human\" in tasks.toml needs a # human: blocker line"
+"dev-discipline [DD-1]: assignee = \"human\" in tasks.toml needs a # human: blocker line"

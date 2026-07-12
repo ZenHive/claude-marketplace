@@ -2,9 +2,13 @@
 
 Two marketplace-integrity hooks for the `deltahedge` plugin marketplace. Self-contained — no plugin-internal dependencies, no shared-lib sourcing.
 
+Each hook cites a stable rule ID (`MH-1`, `MH-2`) in its message — see
+[`HOOK-RULES.md`](../../HOOK-RULES.md) at the repo root for the full
+cross-plugin catalog.
+
 ## Hooks
 
-### `block-skill-edits.sh` (PreToolUse / Edit|Write|MultiEdit)
+### `block-skill-edits.sh` — MH-1 (PreToolUse / Edit|Write|MultiEdit, blocking)
 
 Denies any direct edit to a `plugins/*/skills/*/SKILL.md` file that is registered in `scripts/skill-include-map.sh`. Those bodies are auto-synced from `~/.claude/includes/<name>.md` and would be overwritten on the next `./scripts/sync-skills-from-includes.sh` run.
 
@@ -22,7 +26,7 @@ Then run the sync script to regenerate the SKILL.md body:
   ./scripts/sync-skills-from-includes.sh
 ```
 
-### `validate-marketplace-json.sh` (PostToolUse / Edit|Write|MultiEdit)
+### `validate-marketplace-json.sh` — MH-2 (PostToolUse / Edit|Write|MultiEdit, soft)
 
 After an edit to any file basenamed `marketplace.json`, `plugin.json`, or `hooks.json`, runs `jq -e . "$FILE" >/dev/null` and surfaces parse errors as `additionalContext`. Replaces the manual `cat … | jq .` step documented in CLAUDE.md.
 

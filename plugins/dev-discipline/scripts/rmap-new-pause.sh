@@ -25,7 +25,7 @@ CMD=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 echo "$CMD" | grep -qE '(^|[[:space:]]|;|&|\|)rmap[[:space:]]+new([[:space:]]|$)' \
   || emit_suppress
 
-MESSAGE="🪝 rmap new gate — pause and pick.
+MESSAGE="🪝 [DD-3] rmap new gate — pause and pick.
 
 Cross-session or cross-repo work → file the task.
 In-scope finding that fits the current commit → fix inline, don't file.
