@@ -27,6 +27,7 @@ MAPPINGS=(
   "plugins/elixir/skills/api-toolkit/SKILL.md:api-toolkit.md"
   "plugins/elixir/skills/code-style/SKILL.md:code-style.md"
   "plugins/elixir/skills/development-philosophy/SKILL.md:development-philosophy.md"
+  "plugins/elixir/skills/nexus-template/SKILL.md:nexus-template.md"
 
   # --- elixir-volt (JS-on-BEAM stack, extracted from elixir) ---
   "plugins/elixir-volt/skills/oxc/SKILL.md:oxc.md"
@@ -35,10 +36,6 @@ MAPPINGS=(
   "plugins/elixir-volt/skills/npm-ci-verify/SKILL.md:npm-ci-verify.md"
   "plugins/elixir-volt/skills/npm-security-audit/SKILL.md:npm-security-audit.md"
   "plugins/elixir-volt/skills/npm-dep-analysis/SKILL.md:npm-dep-analysis.md"
-
-  # --- phoenix ---
-  "plugins/phoenix/skills/phoenix-setup/SKILL.md:phoenix-setup.md"
-  "plugins/phoenix/skills/nexus-template/SKILL.md:nexus-template.md"
 
   # --- tasks (rename of task-driver; roadmap-planning moved in from elixir) ---
   "plugins/tasks/skills/rmap/SKILL.md:rmap.md"

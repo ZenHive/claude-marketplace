@@ -82,7 +82,7 @@
     {
       "name": "elixir",
       "source": "./plugins/elixir",
-      "description": "Essential Elixir/OTP development support — per-edit check hooks (format, compile, test.json, credo, dialyzer.json, sobelow, doctor) plus core skills: code-style, development-commands/philosophy, dialyzer-json, ex-unit-json, elixir-setup, elixir-ci-harness, integration-testing, usage-rules, hex-docs-search, reach, tidewave-guide, web-command, agent-economy, api-toolkit, zen-websocket.",
+      "description": "Essential Elixir/OTP development support — per-edit check hooks (format, compile, test.json, credo, dialyzer.json, sobelow, doctor) plus core skills: code-style, development-commands/philosophy, dialyzer-json, ex-unit-json, elixir-setup, elixir-ci-harness, integration-testing, usage-rules, hex-docs-search, reach, tidewave-guide, web-command, agent-economy, api-toolkit, zen-websocket, nexus-template.",
       "repository": "https://github.com/ZenHive/claude-marketplace",
       "license": "MIT"
     },
@@ -90,13 +90,6 @@
       "name": "elixir-volt",
       "source": "./plugins/elixir-volt",
       "description": "JS-on-BEAM stack support — the Volt/Phoenix client-side toolchain and its npm hygiene. Skills: elixir-volt, oxc, quickbeam, popcorn, npm-ci-verify, npm-dep-analysis, npm-security-audit. Skills only, no hooks.",
-      "repository": "https://github.com/ZenHive/claude-marketplace",
-      "license": "MIT"
-    },
-    {
-      "name": "phoenix",
-      "source": "./plugins/phoenix",
-      "description": "Phoenix-specific setup and template skills (phx.gen.auth, Nexus admin template). Skills: phoenix-setup, nexus-template.",
       "repository": "https://github.com/ZenHive/claude-marketplace",
       "license": "MIT"
     },

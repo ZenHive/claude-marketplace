@@ -56,7 +56,8 @@ Every skill shipped by a `zenhive` plugin, grouped by plugin. Invoke as
 ### elixir
 - synced ← includes: `code-style`, `development-commands`,
   `development-philosophy`, `dialyzer-json`, `ex-unit-json`, `elixir-setup`,
-  `reach`, `web-command`, `agent-economy`, `api-toolkit`, `zen-websocket`
+  `reach`, `web-command`, `agent-economy`, `api-toolkit`, `zen-websocket`,
+  `nexus-template`
 - native: `elixir-ci-harness`, `hex-docs-search`, `integration-testing`,
   `tidewave-guide`, `usage-rules`
 
@@ -64,10 +65,6 @@ Every skill shipped by a `zenhive` plugin, grouped by plugin. Invoke as
 - synced ← includes: `oxc`, `quickbeam`, `elixir-volt`, `npm-ci-verify`,
   `npm-security-audit`, `npm-dep-analysis`
 - native: `popcorn`
-
-### phoenix
-- `phoenix-setup` (synced ← phoenix-setup.md)
-- `nexus-template` (synced ← nexus-template.md)
 
 ### elixir-workflows
 - `workflow-generator` (native)

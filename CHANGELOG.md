@@ -23,6 +23,16 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
   breaks dispatch (codex → "unavailable", claude adapter →
   "invalid_model_for_adapter"). The deny message points to the valid
   `gpt-5.5`. Distributes to every repo that enables the plugin.
+- **`elixir` 0.2.5 → 0.2.6** — rescued the `nexus-template` skill from the
+  retired `phoenix` plugin (org/template-specific artifact not covered by
+  phxagents.dev).
+
+### Removed
+
+- **`phoenix` plugin** — retired. phxagents.dev covers Phoenix/LiveView setup
+  (phx.gen.auth, Sobelow, LiveDebugger, formatter) far deeper than
+  `phoenix-setup` did; that skill is dropped. `nexus-template` (a Nexus admin
+  dashboard template phxagents does not cover) survives as `elixir:nexus-template`.
 
 ## [0.1.0] — 2026-06-08
 
