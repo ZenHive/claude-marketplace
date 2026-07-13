@@ -27,5 +27,5 @@ Roadmap-driven task execution workflow. Language-agnostic — works with any pro
 
 ```bash
 /plugin marketplace add ZenHive/claude-marketplace-elixir
-/plugin install task-driver@deltahedge
+/plugin install task-driver@zenhive
 ```

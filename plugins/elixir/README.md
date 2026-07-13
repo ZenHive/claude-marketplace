@@ -6,7 +6,7 @@ Essential Elixir development support plugin for Claude Code.
 
 ```bash
 claude
-/plugin install elixir@deltahedge
+/plugin install elixir@zenhive
 ```
 
 ### Cursor hooks (Agent)

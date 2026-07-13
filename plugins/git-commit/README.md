@@ -8,13 +8,13 @@ Intelligent git commit workflow automation for Claude Code marketplace.
 
 ```bash
 /plugin marketplace add ZenHive/claude-marketplace-elixir
-/plugin install git@deltahedge
+/plugin install git@zenhive
 ```
 
 ### From Local Directory (development)
 
 ```bash
-/plugin install git@deltahedge
+/plugin install git@zenhive
 ```
 
 ## Features

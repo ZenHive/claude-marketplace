@@ -24,7 +24,7 @@ Instead of creating workflow commands manually for each Elixir project, the elix
 
 ```bash
 /plugin marketplace add ZenHive/claude-marketplace-elixir
-/plugin install elixir-workflows@deltahedge
+/plugin install elixir-workflows@zenhive
 ```
 
 ## Usage
@@ -139,7 +139,7 @@ Validate implementation quality:
 
 ```bash
 # Install elixir-workflows plugin
-/plugin install elixir-workflows@deltahedge
+/plugin install elixir-workflows@zenhive
 
 # Generate workflow commands
 /workflow-generator
@@ -221,7 +221,7 @@ Then reference it in your customized commands.
 The workflow-generator skill is discovered automatically by Claude Code:
 - Location: `plugins/elixir-meta/skills/workflow-generator/SKILL.md`
 - No JSON registration required
-- Available as `workflow-generator@deltahedge`
+- Available as `workflow-generator@zenhive`
 
 ### Generic Core + Project Specifics
 

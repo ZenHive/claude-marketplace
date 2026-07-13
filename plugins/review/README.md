@@ -112,5 +112,5 @@ This plugin provides the **workflow** (what to check, in what order, with what o
 
 ```bash
 /plugin marketplace add ZenHive/claude-marketplace-elixir
-/plugin install review@deltahedge
+/plugin install review@zenhive
 ```

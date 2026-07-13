@@ -371,7 +371,7 @@ shipped_in = "0f0d51c"
 id = 9
 phase = 2
 bundle = "skill-ref-hygiene"
-status = "pending"
+status = "done"
 title = "Sweep stale `@deltahedge` marketplace-name refs in plugin README install blocks"
 scores = { d = 2, b = 3, u = 4 }
 acceptance_criteria = ["grep -rn '@deltahedge' plugins/*/README.md returns no live install-instruction hits", "claude plugin validate --strict passes"]
@@ -379,5 +379,24 @@ out_of_scope = ["Root-level marketplace.json or other non-README references", "P
 assignee = "codex"
 model = "gpt-5.5"
 body = "Nearly every plugin README's Installation section still shows `/plugin install <name>@deltahedge` — the marketplace was renamed deltahedge -> zenhive. Only plugins/harness/README.md already says `@zenhive`. Sweep every plugins/*/README.md install block to `@zenhive`, judging each occurrence (skip any deliberate historical/example reference)."
+implemented = """
+Swept every plugins/*/README.md install block from `@deltahedge` to `@zenhive` (marketplace was renamed deltahedge -> zenhive; plugins/harness/README.md was already correct and needed no change).
+
+Full authoritative list via `grep -rn '@deltahedge' plugins/*/README.md` (10 occurrences across 7 files, all live install instructions, none historical/example):
+- plugins/elixir-workflows/README.md (3: two `/plugin install` lines + one "Available as `workflow-generator@deltahedge`" prose line)
+- plugins/elixir/README.md (1)
+- plugins/git-commit/README.md (2)
+- plugins/marketplace-hygiene/README.md (1)
+- plugins/phoenix/README.md (1)
+- plugins/tasks/README.md (1 — `task-driver@deltahedge` -> `task-driver@zenhive`; per out_of_scope, the plugin-name staleness `task-driver` itself was NOT touched, only the marketplace suffix)
+- plugins/review/README.md (1 — this line was touched in Task 1's commit to read `review@deltahedge`; now fixed to `review@zenhive`)
+
+Deliberately left out of scope (per task's own out_of_scope field):
+- Root-level marketplace.json / non-README references
+- Plugin/skill NAME renames (task-driver, git, workflow-generator names left as-is — only the `@deltahedge`->`@zenhive` suffix changed)
+
+Verification: `grep -rn '@deltahedge' plugins/*/README.md` now returns zero hits; `claude plugin validate --strict .` passes."""
 created_at = "2026-07-12"
+started_at = "2026-07-13"
 scored_at = "2026-07-12"
+done_at = "2026-07-13"

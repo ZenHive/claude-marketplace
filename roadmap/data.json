@@ -323,7 +323,7 @@
       "id": 9,
       "phase": 2,
       "bundle": "skill-ref-hygiene",
-      "status": "pending",
+      "status": "done",
       "title": "Sweep stale `@deltahedge` marketplace-name refs in plugin README install blocks",
       "scores": {
         "d": 2,
@@ -347,7 +347,10 @@
       ],
       "body": "Nearly every plugin README's Installation section still shows `/plugin install <name>@deltahedge` — the marketplace was renamed deltahedge -> zenhive. Only plugins/harness/README.md already says `@zenhive`. Sweep every plugins/*/README.md install block to `@zenhive`, judging each occurrence (skip any deliberate historical/example reference).",
       "created_at": "2026-07-12",
+      "started_at": "2026-07-13",
+      "done_at": "2026-07-13",
       "scored_at": "2026-07-12",
+      "implemented": "Swept every plugins/*/README.md install block from `@deltahedge` to `@zenhive` (marketplace was renamed deltahedge -> zenhive; plugins/harness/README.md was already correct and needed no change).\n\nFull authoritative list via `grep -rn '@deltahedge' plugins/*/README.md` (10 occurrences across 7 files, all live install instructions, none historical/example):\n- plugins/elixir-workflows/README.md (3: two `/plugin install` lines + one \"Available as `workflow-generator@deltahedge`\" prose line)\n- plugins/elixir/README.md (1)\n- plugins/git-commit/README.md (2)\n- plugins/marketplace-hygiene/README.md (1)\n- plugins/phoenix/README.md (1)\n- plugins/tasks/README.md (1 — `task-driver@deltahedge` -> `task-driver@zenhive`; per out_of_scope, the plugin-name staleness `task-driver` itself was NOT touched, only the marketplace suffix)\n- plugins/review/README.md (1 — this line was touched in Task 1's commit to read `review@deltahedge`; now fixed to `review@zenhive`)\n\nDeliberately left out of scope (per task's own out_of_scope field):\n- Root-level marketplace.json / non-README references\n- Plugin/skill NAME renames (task-driver, git, workflow-generator names left as-is — only the `@deltahedge`->`@zenhive` suffix changed)\n\nVerification: `grep -rn '@deltahedge' plugins/*/README.md` now returns zero hits; `claude plugin validate --strict .` passes.",
       "cross_repo": []
     }
   ]

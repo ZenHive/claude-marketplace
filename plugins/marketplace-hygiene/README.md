@@ -45,7 +45,7 @@ Silent on valid JSON and on non-matching files.
 ## Install
 
 ```
-/plugin install marketplace-hygiene@deltahedge
+/plugin install marketplace-hygiene@zenhive
 ```
 
 ## Tests

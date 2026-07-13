@@ -12,7 +12,7 @@ Phoenix-specific setup and template skills for Claude Code.
 ## Installation
 
 ```bash
-/plugin install phoenix@deltahedge
+/plugin install phoenix@zenhive
 ```
 
 ## Usage
