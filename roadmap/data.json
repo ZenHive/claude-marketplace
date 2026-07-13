@@ -345,6 +345,7 @@
         "Root-level marketplace.json or other non-README references",
         "Plugin/skill NAME renames themselves (that's a separate concern from the marketplace name)"
       ],
+      "shipped_in": "7beed772ea9b8b9aee069ff637fa689688eceef6",
       "body": "Nearly every plugin README's Installation section still shows `/plugin install <name>@deltahedge` — the marketplace was renamed deltahedge -> zenhive. Only plugins/harness/README.md already says `@zenhive`. Sweep every plugins/*/README.md install block to `@zenhive`, judging each occurrence (skip any deliberate historical/example reference).",
       "created_at": "2026-07-12",
       "started_at": "2026-07-13",
