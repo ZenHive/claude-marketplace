@@ -11,6 +11,11 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 - **`tools`** (new plugin) — personal/utility CLI-usage reference skills.
   Skill: `himalaya` (synced ← himalaya.md), registering the existing
   `~/.claude/includes/himalaya.md` include as a self-invocable skill.
+- **README** — recommends [phxagents.dev](https://phxagents.dev)
+  (`oliver-kriska/claude-elixir-phoenix`, MIT) as an optional companion
+  marketplace for Phoenix repos, with the boundary stated: zenhive is
+  orchestration/workflow, phxagents is Phoenix domain knowledge. Not
+  forked, vendored, or bundled — install separately per repo.
 
 ### Changed
 

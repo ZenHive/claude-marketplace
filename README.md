@@ -30,6 +30,17 @@ This marketplace supersedes the older `deltahedge` marketplace (`ZenHive/claude-
 
 - **`harness`** — orchestration surface for the harness OTP engine. Two skills (`harness-driver` = API/MCP contract, `harness-workflow` = the loop) plus a SessionStart stale-base guard hook. See `plugins/harness/README.md`.
 
+## Recommended companion for Phoenix repos: phxagents.dev
+
+zenhive is deliberately thin on Phoenix/LiveView/Ecto/Oban domain knowledge — the `elixir` plugin covers generic Elixir/OTP dev tooling, not the web framework itself. For repos built on Phoenix, [phxagents.dev](https://phxagents.dev) (`oliver-kriska/claude-elixir-phoenix`, MIT) is a recommended external companion: a deep Phoenix vertical (LiveView, Ecto, Oban, Ash, Tidewave, a Phoenix-specific "Iron Laws" rule set) that goes further into the framework than zenhive does or intends to.
+
+The two compose rather than overlap: **zenhive** is "how we work" — harness orchestration, roadmap/task management, review, delegation, cross-cutting dev discipline, language-agnostic. **phxagents** is "Phoenix domain knowledge" — the runtime and framework layer. Nothing from phxagents is forked, vendored, or auto-installed here; it's a separate marketplace you opt into per repo:
+
+```
+/plugin marketplace add oliver-kriska/claude-elixir-phoenix
+/plugin install elixir-phoenix
+```
+
 ## Local development
 
 ```
