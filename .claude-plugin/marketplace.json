@@ -113,6 +113,13 @@
       "description": "Personal/utility CLI-usage reference skills — not tied to a dev-lifecycle process or a specific language. Skill: himalaya.",
       "repository": "https://github.com/ZenHive/claude-marketplace",
       "license": "MIT"
+    },
+    {
+      "name": "dep-audit",
+      "source": "./plugins/dep-audit",
+      "description": "Ecosystem-detecting dependency-advisory nag — one shared SessionStart hook that checks a repo's pinned deps (Hex/mix.lock, Rust/Cargo.toml under native/, npm/package.json or npm_ex/npm.lock) for known advisories. Watermark-gated, non-blocking, silent when clean or when tooling is absent.",
+      "repository": "https://github.com/ZenHive/claude-marketplace",
+      "license": "MIT"
     }
   ]
 }

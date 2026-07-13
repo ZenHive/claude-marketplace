@@ -1,0 +1,12 @@
+{
+  "name": "dep-audit",
+  "version": "0.1.0",
+  "description": "Ecosystem-detecting dependency-advisory nag — a single shared SessionStart hook that checks a repo's pinned dependencies (Hex/mix.lock, Rust/Cargo.toml under native/, npm/package.json or npm_ex/npm.lock) for known security advisories and surfaces a watermark-gated, non-blocking reminder. Never blocks a session; silent when clean, when tooling is absent, or when the last check is still fresh.",
+  "author": {
+    "name": "ZenHive",
+    "url": "https://github.com/ZenHive"
+  },
+  "repository": "https://github.com/ZenHive/claude-marketplace",
+  "license": "MIT",
+  "keywords": ["dependency-audit", "security", "advisories", "session-start", "hygiene"]
+}

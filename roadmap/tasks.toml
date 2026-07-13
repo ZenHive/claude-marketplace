@@ -120,7 +120,7 @@ shipped_in = "94a76a8a661a950fa2cf4328271ccee1a0f4fdf1"
 id = 2
 phase = 2
 bundle = "stack-hygiene"
-status = "pending"
+status = "done"
 title = "Add ecosystem-detecting dependency-advisory SessionStart hook (stack-wide, one shared plugin)"
 scores = { d = 4, b = 6, u = 6 }
 acceptance_criteria = ["A single shared script (one source of truth) ships in a marketplace plugin and is invoked via SessionStart hooks.json using ${CLAUDE_PLUGIN_ROOT}, mirroring plugins/review's hook wiring", "Script detects ecosystem per repo: mix.lock -> mix_audit + hex.audit; native/**/Cargo.toml -> cargo audit; package.json -> npm audit", "Hook is non-blocking and silent when no advisories, when tooling is missing, and when the watermark is fresh — never errors or stalls a session", "Watermark-gated so the nag is periodic, not every-session, following mpp's .sdk-watch.json checked_at pattern", "On findings, output suggests a triage flow that files sanitized rmap tasks per the repo's disclosure policy (no exploit detail in committed files)", "Install path documented: mix_audit added where expected; cargo-audit prerequisite noted; hook no-ops cleanly pre-install"]
@@ -141,8 +141,37 @@ Tooling is NOT yet present: `mix_audit` is not a dep in any repo, and `cargo-aud
 
 The seven repos and their enablement live in onchain-workspace.md; enabling the owning plugin in each repo's `.claude/settings.json` (same `enabledPlugins` shape mpp uses for `elixir@zenhive`) is how the one hook reaches all seven.
 """
+implemented = """
+Shipped a new marketplace plugin, `plugins/dep-audit/`, one shared SessionStart hook detecting per-repo ecosystem and nagging on dependency advisories (never blocks, watermark-gated, silent when clean/tooling-missing/fresh).
+
+Files:
+- `plugins/dep-audit/.claude-plugin/plugin.json`
+- `plugins/dep-audit/hooks/hooks.json` — SessionStart -> `${CLAUDE_PLUGIN_ROOT}/scripts/dep-audit-check.sh`, mirroring `plugins/review`'s hook wiring
+- `plugins/dep-audit/scripts/dep-audit-check.sh` — ecosystem detector + watermark gate
+- `plugins/dep-audit/README.md` — install path per repo
+- `.claude-plugin/marketplace.json` — registered the new plugin entry
+
+Detection logic (one script, adapts per repo):
+- `mix.lock` present -> `mix hex.audit` (retired packages; runs with zero extra deps) + `mix mix_audit` (Hex CVEs; only if the `:mix_audit` dep is installed — silently skipped otherwise) — the uniform layer across all seven onchain-stack repos.
+- `native/*/Cargo.toml` present -> `cargo audit` (RustSec), only if `cargo-audit` is installed — onchain_evm only, silently skipped without the binary.
+- `package.json` present -> `npm audit`, only if `npm` is on PATH — generic Node case (none of the seven repos have this today).
+- `npm.lock` present -> `mix npm.audit`, only if the npm_ex mix task is available. **Deviation from the task body's literal "package.json / npm.lock -> npm audit"**: onchain_js has no `package.json` and never will under its current architecture — it manages JS deps entirely through the `npm_ex` Hex package (`{:npm, "~> 0.7"}`), whose own lockfile is `npm.lock` (confirmed against `deps/npm/lib/npm/lockfile.ex` — `@default_path "npm.lock"`), audited via `mix npm.audit` (a mix task, not the Node CLI). Wired the npm.lock branch to the correct real command rather than the literal "npm audit" CLI, which would never fire in onchain_js as written.
+
+Watermark: `.dep-audit-watch.json` at repo root, `{"checked_at": "YYYY-MM-DD"}`, 7-day threshold, mirroring mpp's `.sdk-watch.json` pattern exactly (same `date -j -f` staleness check). Deleting the state file forces a re-check.
+
+Verified end-to-end (each test run's created `.dep-audit-watch.json` was removed afterward, leaving those repos untouched):
+- `onchain_js` (mix.lock only, no cargo-audit/mix_audit installed): correctly surfaced a real `hex.audit` finding (`plug 1.20.1` retired — "Accidental breaking change on Plug.Conn.upgrade") on first run, then `{"suppressOutput": true}` on the immediate second run (watermark fresh).
+- `onchain_evm` (mix.lock + native/*/Cargo.toml, cargo-audit not installed): mix.lock branch fired the same way; Rust branch silently skipped (tool absent), confirming graceful degradation.
+- `claude-marketplace` itself (no mix.lock/Cargo.toml/package.json/npm.lock): fully silent, confirming the no-manifest / not-an-onchain-repo case is a clean no-op.
+
+Install path (documented in `plugins/dep-audit/README.md`, not executed here — this task ships the detector, not the per-repo rollout): enable via `enabledPlugins: {"dep-audit@zenhive": true}` in each of the seven repos' `.claude/settings.json`; add `{:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false}` where Hex CVE scanning is wanted; `cargo install cargo-audit` once for onchain_evm. Actually enabling the plugin across the seven onchain repos is separate cross-repo rollout work, not filed as a new task here (each repo already runs its own rmap/roadmap; enabling is a one-line settings.json change per repo when that repo's owner is ready).
+
+Out of scope (per task): no mpp refs-pull/parity-diff machinery copied; no per-repo duplicate scripts (one shared plugin source); no specific-advisory triage/fix; no Zig-dependency audit tooling researched (onchain_js's Zig NIFs have no manifest-based advisory feed today — noted, not pursued).
+
+Validation: `jq -e .` on all three new JSON files, `claude plugin validate --strict .` passes. HOOK-RULES.md's rule-ID catalog is explicitly scoped to `code-quality`/`dev-discipline`/`marketplace-hygiene` only (confirmed by reading its header) — this SessionStart nag doesn't need a rule ID, matching `review`'s own unaudited-commits hook precedent."""
 created_at = "2026-06-24"
 scored_at = "2026-06-24"
+done_at = "2026-07-13"
 
 [[task]]
 id = 3
