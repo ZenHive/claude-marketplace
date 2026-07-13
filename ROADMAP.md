@@ -33,4 +33,5 @@
 | Task 7 | ✅ | 🎁 **phxagents-adoption** · Spike: evaluate phxagents' Iron-Laws + agent model-tiering patterns for our hooks (concept only) [D:3/B:4/U:7 → Eff:1.83] 🚀 |
 | Task 8 | ✅ | 🎁 **phxagents-adoption** · Catalog zenhive's existing hard-enforced hook rules as a named/numbered registry [D:3/B:4/U:5 → Eff:1.5] 🚀 |
 | Task 9 | ✅ | 🎁 **skill-ref-hygiene** · Sweep stale `@deltahedge` marketplace-name refs in plugin README install blocks [D:2/B:3/U:4 → Eff:1.75] 🚀 |
+| Task 10 | ⬜ | 🎁 **stack-hygiene** · Enable dep-audit@zenhive across the seven onchain-stack repos [D:3/B:5/U:6 → Eff:1.83] 🚀 |
 <!-- TASKS:END -->
