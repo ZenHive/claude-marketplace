@@ -1,6 +1,6 @@
 ---
 name: task-writing
-description: Writing roadmap task descriptions as prompts. Use when authoring a roadmap/tasks.toml task (rmap new), writing a cross-instance handoff doc, or justifying a task's score — covers the 5-question pre-creation gate (anchor to a first consumer, baseline-before-optimization, one-session=one-task merge rule, milestone-fit, no pseudo-rigorous hedging), task-as-prompt vs over-specification, and the tasks.toml field set (body, acceptance_criteria, out_of_scope, scores).
+description: Writing roadmap task descriptions as prompts. Use when authoring a roadmap/tasks.toml task (rmap new), writing a cross-instance handoff doc, or justifying a task's score — covers the 4-question pre-creation gate (baseline-before-optimization, one-session=one-task merge rule, milestone-fit, no pseudo-rigorous hedging), task-as-prompt vs over-specification, and the tasks.toml field set (body, acceptance_criteria, out_of_scope, scores).
 allowed-tools: Read, Bash
 ---
 
@@ -22,37 +22,45 @@ Applies to **`roadmap/tasks.toml`, task lists, cross-instance docs**. Does NOT a
 
 Task descriptions in cross-instance documents are **prompts for Claude Code to implement**, not implementation specs. Claude adapts to current codebase state.
 
+### Observable Results and Reality Contracts
+
+`acceptance_criteria` are the contract a fresh QA/reviewer session verifies. Write observable outcomes, not implementation steps or self-reports. A live task explicitly assigned to a non-human agent must carry at least one non-blank criterion; rmap enforces that mechanical floor, while the author/reviewer judges quality.
+
+For work against an external API or service, the task must name the authoritative reality source and required evidence in `body` or `acceptance_criteria`:
+
+- Authority order: **live API / observed traffic > official docs > existing code > assumptions**.
+- Require at least one real success call and one relevant real error call before implementation.
+- Require an integration test that pins the observed request, response, and error semantics.
+- Mocks and fixtures may be derived only after observing reality and never replace the live test.
+- Missing credentials must fail loudly with exact setup instructions; they never silently skip.
+- Verify domain meaning, not merely shape (`is_map`, non-empty body, or HTTP 200 alone is weak evidence).
+- For stateful APIs, require isolated setup/cleanup and idempotency where the operation can be retried.
+
+Do not create a separate research task for this observation when the same implementer will build from it in one session; reality discovery is part of the implementation task.
+
 ### Pre-Creation Gate
 
-Run all 5 before `rmap new`. Any fail → defer / merge / rewrite. Do not create the task.
+Run all 4 before `rmap new`. Any fail → defer / merge / rewrite. Do not create the task.
 
-**1. Anchor.** `body` MUST name the first consumer (sibling task in same bundle, user-visible feature, regulator inquiry, incident class).
-- Consumer ≤2 tasks away in same bundle → merge into consumer.
-- Consumer unscheduled or in later phase → do not create yet.
-- No named consumer → U = low; do not create.
-- Disallowed phrases: "for future use", "so we have it", "upfront because cheaper later".
-
-**2. Baseline before optimization.** Quality / normalization / fuzzy-match / ML / multi-variant / observability-depth tasks score U:low until BOTH:
-- (a) raw single-path version is shipped, AND
-- (b) ≥1 specific user has complained about the thing this task fixes.
+**1. Baseline before optimization.** Quality / normalization / fuzzy-match / ML / multi-variant / observability-depth tasks score U:low until the raw single-path version is shipped.
 - "Cheaper to build now than retrofit" is not a valid score input.
-- Disallowed: branching/variants before users, seed taxonomies before raw data, embeddings before raw search.
+- Disallowed: seed taxonomies before raw data, embeddings before raw search, speculative multi-variant branching before a single working path.
 
-**3. One session = one task.** If implementing agent lands this task AND an adjacent task in one Claude session / one PR / one branch → merge. No exceptions for "logical separation".
+**2. One session = one task.** If implementing agent lands this task AND an adjacent task in one Claude session / one PR / one branch → merge. No exceptions for "logical separation".
 - Test: predicted PR count = 1 → write 1 task.
 - Always-merge patterns: install-X + use-X; define-resource + CRUD-LiveView-for-resource; adjacent sibling features in same bundle with no dependency split.
 - Full rule: `task-prioritization.md` § Refine, Merge, Don't Duplicate.
 
-**4. Milestone-fit.** Milestone `description` MUST state a hypothesis (`rmap.md` § Milestones). For each pinned task, classify:
+**3. Milestone-fit.** Milestone `description` MUST state a hypothesis (`rmap.md` § Milestones). For each pinned task, classify:
 - Tests hypothesis → pin.
 - Assumes hypothesis true, builds on top → unpin; move to next milestone.
 - No classification possible → milestone description is broken; fix it first.
 
-**5. No hedging in justification** (`critical-rules.md` § NO PSEUDO-RIGOROUS HEDGING). Disallowed phrases in `body` as load-bearing reason for B/U: "table-stakes", "increasingly expected", "now standard", "buyers expect", "competitors are starting to", "modern apps all do".
-- Required instead: named partner asked, named competitor lever, measured conversion uplift, OR honest low score.
+**4. No hedging in justification** (`critical-rules.md` § NO PSEUDO-RIGOROUS HEDGING). Disallowed phrases in `body` as load-bearing reason for B/U: "table-stakes", "increasingly expected", "now standard", "buyers expect", "competitors are starting to", "modern apps all do".
+- Required instead: a concrete named reason — the user asked for it (the developer IS the demand signal), a named technical/legal trigger, a named competitor lever — OR an honest low score.
 - Test: remove the hedge phrase. If `body` no longer justifies the score → demote.
 
-Pass all 5 → write body (next section).
+Pass all 4 → write body (next section).
 
 ### 🚨 Re-Generalize an Agent's Decomposition Before Filing
 
@@ -112,7 +120,7 @@ A task's prose lives in two `rmap` schema fields; the rest is structured metadat
 
 - `title` — one-line imperative summary
 - `body` — the prompt: WHAT to accomplish, in prose (the "Task as Prompt" content above)
-- `acceptance_criteria` — bullet list a fresh QA session can verify
+- `acceptance_criteria` — observable results a fresh QA session can verify; external-boundary tasks include live success/error evidence
 - `out_of_scope` — what the task explicitly does NOT do
 - `files_to_modify` — anchor paths **only when specificity is warranted** (see above); omit for prompt-style tasks
 - `scores = { d, b, u }`, `markers`, `depends_on`, `phase`, `bundle` — structured metadata, not prose

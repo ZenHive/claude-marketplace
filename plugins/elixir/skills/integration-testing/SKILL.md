@@ -28,6 +28,39 @@ WHAT THIS SKILL DOES NOT DO:
 - Setting up integration test infrastructure
 - Handling environment-specific test configuration
 
+## Reality-First Workflow
+
+External behavior is not inferred. Use this authority order:
+
+1. Live API call or observed real traffic
+2. Official documentation
+3. Existing client code
+4. Assumptions
+
+Before implementing a parser, signer, or client behavior:
+
+1. Call the real sandbox/testnet endpoint.
+2. Record the endpoint/API version and observation date without secrets.
+3. Observe one successful response and one relevant error response.
+4. Implement against those observed semantics.
+5. Pin them with a tagged integration test.
+6. Only then derive narrow fixtures/mocks for fast unit tests.
+
+Mocks and documentation never replace the live integration test. If reality cannot be reached, report the blocker and let the test fail loudly; do not manufacture a green proxy.
+
+## Assert Meaning, Not Merely Shape
+
+Weak assertions such as HTTP 200, `is_map(response)`, or a non-empty body can pass while the contract is wrong. Assert the fields and values consumed by the product, plus the concrete observed error classification.
+
+For stateful APIs:
+
+- Use sandbox/testnet resources.
+- Create unique test-owned state and clean it up.
+- Assert retry/idempotency behavior when the operation can be repeated.
+- Never mutate production accounts or depend on pre-existing shared state.
+
+Keep a durable evidence pointer when the workflow provides one (harness run id, CI URL, or review artifact). The implementer's statement that a call worked is not independent verification.
+
 ## Core Principle: Never Skip Silently
 
 **Tests that skip silently are worse than no tests.** A test suite showing "0 failures" with "0 tests run" is lying.

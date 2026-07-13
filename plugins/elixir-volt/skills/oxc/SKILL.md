@@ -10,7 +10,7 @@ allowed-tools: Read, Bash, Grep, Glob
 
 Rust NIF bindings for the [OXC](https://oxc.rs) toolchain. Parses, transforms, minifies, and bundles JS/TS on the BEAM — no Node.js.
 
-**Min version: `{:oxc, "~> 0.17"}`.** The atom-keyed AST contract: `:type`/`:kind` values are snake_case atoms (`:import_declaration`, not `"ImportDeclaration"`); error tuples are `{:error, [%{message: String.t()}]}`; bang functions raise `OXC.Error`. Source-taking APIs accept `iodata()` across parse / transform / minify / collect_imports / lint / format / patch_string / virtual bundle inputs. Surface includes `OXC.codegen/1,!`, `OXC.bind/2`/`splice/3` (placeholder templating), `OXC.transform_many/2` (parallel via rayon), `OXC.Format` (oxfmt as a separate Rust NIF — Prettier-compatible, ~30× faster, ships `:sort_imports` and `:sort_tailwindcss` plugins), `OXC.Lint` (oxlint's 650+ rules, custom Elixir rules via `OXC.Lint.Rule`, and `tsgolint`-backed type-aware mode), the full Rolldown (1.1+) bundle option surface (`:external`, `:exports`, `:preserve_entry_signatures`, `:conditions`, `:main_fields`, `:modules`, `:module_types`, `:cwd`), and `OXC.Bundle` (composable pipeline for multi-entry builds returning all chunks and assets via `OXC.Bundle.Result`). `OXC.bundle/2` accepts either a filesystem entry path (string) or a virtual `[{filename, source}]` project (single-entry convenience). `OXC.select/3` extracts lightweight parser events (8 selector atoms — `:import_sources`, `:asset_urls`, `:workers`, `:glob_imports`, `:require_calls`, and more) without allocating a full AST. The low-level `OXC.Native` NIF surface is public (rarely needed — use the `OXC` wrapper).
+**Min version: `{:oxc, "~> 0.17"}` (accurate through 0.17.2).** The atom-keyed AST contract: `:type`/`:kind` values are snake_case atoms (`:import_declaration`, not `"ImportDeclaration"`); error tuples are `{:error, [%{message: String.t()}]}`; bang functions raise `OXC.Error`. Source-taking APIs accept `iodata()` across parse / transform / minify / collect_imports / lint / format / patch_string / virtual bundle inputs. Surface includes `OXC.codegen/1,!`, `OXC.bind/2`/`splice/3` (placeholder templating), `OXC.transform_many/2` (parallel via rayon), `OXC.Format` (oxfmt as a separate Rust NIF — Prettier-compatible, ~30× faster, ships `:sort_imports` and `:sort_tailwindcss` plugins), `OXC.Lint` (oxlint's 650+ rules, custom Elixir rules via `OXC.Lint.Rule`, and `tsgolint`-backed type-aware mode), the full Rolldown (1.1+) bundle option surface (`:external`, `:exports`, `:preserve_entry_signatures`, `:conditions`, `:main_fields`, `:modules`, `:module_types`, `:cwd`), and `OXC.Bundle` (composable pipeline for multi-entry builds returning all chunks and assets via `OXC.Bundle.Result`). `OXC.bundle/2` accepts either a filesystem entry path (string) or a virtual `[{filename, source}]` project (single-entry convenience). `OXC.select/3` extracts lightweight parser events (8 selector atoms — `:import_sources`, `:asset_urls`, `:workers`, `:glob_imports`, `:require_calls`, and more) without allocating a full AST. The low-level `OXC.Native` NIF surface is public (rarely needed — use the `OXC` wrapper).
 
 **Does NOT cover:** runtime JS execution (→ QuickBEAM), installing npm packages (→ `mix npm.install`), frontend build + HMR (→ Volt).
 
@@ -231,8 +231,12 @@ js = OXC.bundle!("priv/js/app.ts", cwd: File.cwd!())   # bang — raises OXC.Err
 
 # Each output is %OXC.Bundle.Output{} with fields:
 #   :code, :file_name, :path, :name, :type, :source,
-#   :sourcemap, :exports, :imports, :dynamic_imports
+#   :sourcemap, :exports, :imports, :dynamic_imports,
+#   :module_ids  ← (0.17.2) list of source module IDs that contributed to this chunk
 Enum.each(outputs, fn out -> File.write!(out.path, out.code) end)
+
+# Use :module_ids to map emitted chunks back to their source modules:
+chunk_map = Map.new(outputs, fn out -> {out.file_name, out.module_ids} end)
 ```
 
 **Builder functions:** `new/1`, `entry/2`, `entries/2`, `file/2`, `files/2`, `cwd/2`, `outdir/2`, `format/2`, `minify/2`, `treeshake/2`, `output/2`, `resolve/2`, `transform/2`. All return the updated `OXC.Bundle.t()` struct for piping; `run/1` executes and returns `{:ok, Result.t()} | {:error, [map()]}`.

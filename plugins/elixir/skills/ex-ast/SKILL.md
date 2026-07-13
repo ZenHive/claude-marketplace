@@ -10,7 +10,7 @@ allowed-tools: Read, Bash, Grep, Glob
 
 Structural code search, rewrite, and diff using plain Elixir syntax as patterns — no regex, no custom DSL. The backbone of `reach` smell checks, `ex_dna` clone indexing, and descripex's codemods.
 
-**Min version: `{:ex_ast, "~> 0.12.7", only: [:dev, :test], runtime: false}`.** Requires `sourceror ~> 1.7` (transitive dep). Ships `jason ~> 1.4` for `--json` CLI output.
+**Min version: `{:ex_ast, "~> 0.12.9", only: [:dev, :test], runtime: false}`.** Requires `sourceror ~> 1.7` (transitive dep). Ships `jason ~> 1.4` for `--json` CLI output.
 
 **Three mix tasks:** `mix ex_ast.search`, `mix ex_ast.replace`, `mix ex_ast.diff` — operate on files and globs; `.exs` files are included in all scans (directory, glob, and explicit-path forms).
 
@@ -326,7 +326,10 @@ ExAST.Symbols.matches?(ref, "Enum.map/2")        #=> true
 ExAST.Symbols.matches?(ref, {Enum, :map, 2})     #=> true
 
 # Terms (lower-level stable index strings)
-# Candidate prefiltering covers literals: nil, small integers, true/false (0.12.3–0.12.4)
+# 0.12.3–0.12.4: literal prefiltering for nil, small integers, true/false
+# 0.12.8–0.12.9: pipe-equivalent call arities indexed; pipe operator itself indexed;
+#   Sourceror-wrapped integer literals in args recognized; keyword literal arg terms indexed;
+#   impossible pipe same-argument terms and literal wildcard def names no longer emitted
 ExAST.Index.Terms.from_source("Repo.transaction(fn -> :ok end)")
 ExAST.Index.Terms.from_ast(ast)
 ExAST.Index.Terms.from_pattern("def run(arg) do ... end")
@@ -379,12 +382,13 @@ All `search` relationship flags (`--inside`, `--not-inside`, `--contains`, `--no
 | "broad search" error on `from("_")` | Catch-all pattern refused project-wide | Pass `:limit` or `allow_broad: true` |
 | Repeated variable doesn't constrain | Typo — variable names must be identical | Use the exact same atom key at both positions |
 | Alias match fails | Alias not in scope at pattern parse time | ExAST IS alias-aware — verify the alias is explicit in the file (not just in the test source) |
-| Bare import matches too many calls | Old behavior (pre-0.12.5) expanded every local call of the imported name | Update to `~> 0.12.7`; bare imports now match conservatively |
-| Multi-arity import only matches one arity | Old behavior (pre-0.12.5) for `import Foo, only: [bar: 1, bar: 2]` | Update to `~> 0.12.7`; all listed arities now resolve |
-| Nested pipe stages not all reported | Old behavior (pre-0.12.2): `find_all/3` stopped walking after first match | Update to `~> 0.12.7`; walking continues past each match |
+| Bare import matches too many calls | Old behavior (pre-0.12.5) expanded every local call of the imported name | Update to `~> 0.12.9`; bare imports now match conservatively |
+| Multi-arity import only matches one arity | Old behavior (pre-0.12.5) for `import Foo, only: [bar: 1, bar: 2]` | Update to `~> 0.12.9`; all listed arities now resolve |
+| Nested pipe stages not all reported | Old behavior (pre-0.12.2): `find_all/3` stopped walking after first match | Update to `~> 0.12.9`; walking continues past each match |
 | Multi-node pattern misses | Statements are not contiguous | Semi-colon syntax only matches adjacent statements in the same block |
 | `~p` sigil compile error | Pattern string not a literal | `~p` only works with compile-time string literals |
-| `.exs` files not searched | Pre-0.12.2 behavior | Update to `~> 0.12.7`; `.exs` files included in all scan forms |
+| `.exs` files not searched | Pre-0.12.2 behavior | Update to `~> 0.12.9`; `.exs` files included in all scan forms |
+| External index returns wrong candidates for pipe patterns | Pre-0.12.8 index term extraction missed pipe-equivalent arities | Update to `~> 0.12.9`; piped-call candidate retrieval is now correct |
 
 ---
 
@@ -403,7 +407,7 @@ All `search` relationship flags (`--inside`, `--not-inside`, `--contains`, `--no
 
 ```elixir
 # mix.exs — dev/test only
-{:ex_ast, "~> 0.12.7", only: [:dev, :test], runtime: false}
+{:ex_ast, "~> 0.12.9", only: [:dev, :test], runtime: false}
 # Transitive: sourceror ~> 1.7, jason ~> 1.4
 ```
 

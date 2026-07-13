@@ -114,7 +114,7 @@ In doubt → edit or merge.
 
 **One-session test (merge rule).** Before writing the second task in a sequence, ask: predicted PR count for this + adjacent task = 1? Yes → one task with combined `acceptance_criteria`. Each split doubles ceremony (status × 2, branch × 2, PR × 2, audit × 2) for zero work-isolation gain. Always-merge patterns: install-X + use-X; define-resource + CRUD-LiveView-for-resource; adjacent sibling features in same bundle with no dependency split.
 
-Full pre-creation gate (5 questions, this is #3): `task-writing.md` § Pre-Creation Gate.
+Full pre-creation gate (4 questions, this is #2): `task-writing.md` § Pre-Creation Gate.
 
 ### Task Descriptions as Prompts
 
