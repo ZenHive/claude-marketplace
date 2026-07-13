@@ -194,16 +194,9 @@ done_at = "2026-07-12"
 id = 4
 phase = 2
 bundle = "phxagents-adoption"
-status = "pending"
+status = "done"
 title = "Document phxagents.dev as the recommended upstream Phoenix/Elixir runtime+domain layer (don't fork/vendor)"
 scores = { d = 4, b = 5, u = 4 }
-body = """
-Position `oliver-kriska/claude-elixir-phoenix` (site phxagents.dev, MIT, plugin v2.14.1, ~478 stars, actively maintained) as a recommended external companion for repos that use the Elixir Phoenix web framework — NOT as something we fork or vendor. It is itself a native Claude Code plugin marketplace, self-gated on `mix.exs` presence, so it is safe to enable globally and installs via the standard `/plugin marketplace add oliver-kriska/claude-elixir-phoenix` + `/plugin install elixir-phoenix`.
-
-The strategic finding from the phxagents analysis: it is a deep Phoenix vertical (26 agents, 51 skills, 31 hooks, 26 compile-halting "Iron Laws", Tidewave MCP runtime integration) and is strongest exactly where zenhive is thinnest — Phoenix runtime, LiveView, Ecto, Oban, OTP, Ash. It has nothing comparable to zenhive's orchestration layer. So the two compose: zenhive = "how we work/organize" (harness, workflow, tasks, review, delegation, discipline), phxagents = "Phoenix domain knowledge".
-
-Add a short section to README.md (and a CHANGELOG note) that: names phxagents as an optional recommended add-on for Phoenix projects, gives the install line, and draws the who-does-what boundary so users understand it is complementary, not a competitor. Keep it to prose/links — no code copied, no submodule, no auto-install.
-"""
 acceptance_criteria = [
   "README.md names phxagents.dev / oliver-kriska/claude-elixir-phoenix as an optional recommended companion for Phoenix repos, with the /plugin marketplace add install line",
   "The zenhive (orchestration) vs phxagents (Phoenix domain) boundary is stated so a reader knows they compose rather than overlap",
@@ -215,8 +208,18 @@ out_of_scope = [
   "Bundling/auto-installing it via zenhive's marketplace.json",
   "The internal phoenix-plugin retirement (task 4) and elixir-core slimming (task 5)",
 ]
+body = """
+Position `oliver-kriska/claude-elixir-phoenix` (site phxagents.dev, MIT, plugin v2.14.1, ~478 stars, actively maintained) as a recommended external companion for repos that use the Elixir Phoenix web framework — NOT as something we fork or vendor. It is itself a native Claude Code plugin marketplace, self-gated on `mix.exs` presence, so it is safe to enable globally and installs via the standard `/plugin marketplace add oliver-kriska/claude-elixir-phoenix` + `/plugin install elixir-phoenix`.
+
+The strategic finding from the phxagents analysis: it is a deep Phoenix vertical (26 agents, 51 skills, 31 hooks, 26 compile-halting "Iron Laws", Tidewave MCP runtime integration) and is strongest exactly where zenhive is thinnest — Phoenix runtime, LiveView, Ecto, Oban, OTP, Ash. It has nothing comparable to zenhive's orchestration layer. So the two compose: zenhive = "how we work/organize" (harness, workflow, tasks, review, delegation, discipline), phxagents = "Phoenix domain knowledge".
+
+Add a short section to README.md (and a CHANGELOG note) that: names phxagents as an optional recommended add-on for Phoenix projects, gives the install line, and draws the who-does-what boundary so users understand it is complementary, not a competitor. Keep it to prose/links — no code copied, no submodule, no auto-install.
+"""
+implemented = "Added a README.md section 'Recommended companion for Phoenix repos: phxagents.dev' naming oliver-kriska/claude-elixir-phoenix (MIT) as an optional external companion marketplace for Phoenix repos, stating the zenhive (orchestration/workflow) vs phxagents (Phoenix domain: LiveView/Ecto/Oban/Ash/Tidewave/Iron Laws) boundary, with the install line (/plugin marketplace add + /plugin install elixir-phoenix). CHANGELOG.md records the recommendation under Unreleased/Added with MIT attribution. No code copied/vendored/submoduled; nothing auto-installed via marketplace.json. Commit b30c030."
 created_at = "2026-07-12"
+started_at = "2026-07-13"
 scored_at = "2026-07-12"
+done_at = "2026-07-13"
 
 [[task]]
 id = 5
