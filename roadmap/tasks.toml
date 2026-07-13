@@ -222,16 +222,9 @@ scored_at = "2026-07-12"
 id = 5
 phase = 2
 bundle = "phxagents-adoption"
-status = "pending"
+status = "done"
 title = "Retire the thin `phoenix` plugin (phxagents covers Phoenix/LiveView far deeper)"
 scores = { d = 3, b = 4, u = 5 }
-body = """
-The in-repo `phoenix` plugin (`plugins/phoenix/`) ships only two skills — `phoenix-setup` (phx.gen.auth, Sobelow, LiveDebugger, `--live`) and `nexus-template` (a Nexus admin dashboard template). Against phxagents' Phoenix/LiveView coverage this is negligible and duplicative, so retire the plugin.
-
-Before deleting: judge `nexus-template` on its own merits — it is an org/template-specific artifact that phxagents does NOT cover, so if it is still wanted, rescue it as a single skill in a more fitting plugin (e.g. an elixir/scaffolding home) rather than losing it with the plugin. `phoenix-setup` overlaps phxagents and can go.
-
-Wind down consistently across every place the plugin is registered: `.claude-plugin/marketplace.json`, `plugins/phoenix/`, `scripts/skill-include-map.sh` (drop the mapped entries), `SKILLS.md` (catalog), and any prose/keyword references. Run `claude plugin validate --strict` and confirm no dangling `phoenix@zenhive` / `phoenix:<skill>` references remain.
-"""
 acceptance_criteria = [
   "plugins/phoenix removed (or reduced to only a rescued nexus-template) and de-registered from .claude-plugin/marketplace.json",
   "skill-include-map.sh and SKILLS.md updated; no dangling phoenix plugin/skill references anywhere",
@@ -243,8 +236,34 @@ out_of_scope = [
   "Recommending phxagents itself (task 4)",
   "The elixir-vibe ecosystem skills (not part of this task)",
 ]
+body = """
+The in-repo `phoenix` plugin (`plugins/phoenix/`) ships only two skills — `phoenix-setup` (phx.gen.auth, Sobelow, LiveDebugger, `--live`) and `nexus-template` (a Nexus admin dashboard template). Against phxagents' Phoenix/LiveView coverage this is negligible and duplicative, so retire the plugin.
+
+Before deleting: judge `nexus-template` on its own merits — it is an org/template-specific artifact that phxagents does NOT cover, so if it is still wanted, rescue it as a single skill in a more fitting plugin (e.g. an elixir/scaffolding home) rather than losing it with the plugin. `phoenix-setup` overlaps phxagents and can go.
+
+Wind down consistently across every place the plugin is registered: `.claude-plugin/marketplace.json`, `plugins/phoenix/`, `scripts/skill-include-map.sh` (drop the mapped entries), `SKILLS.md` (catalog), and any prose/keyword references. Run `claude plugin validate --strict` and confirm no dangling `phoenix@zenhive` / `phoenix:<skill>` references remain.
+"""
+implemented = """
+Retired the `phoenix` plugin. Rescued `nexus-template` into `elixir` (org/template-specific, phxagents doesn't cover it); dropped `phoenix-setup` (overlaps phxagents' Phoenix/LiveView setup coverage).
+
+Changes:
+- `git mv plugins/phoenix/skills/nexus-template -> plugins/elixir/skills/nexus-template`; `git rm -r plugins/phoenix` (deletes phoenix-setup skill, plugin.json, README).
+- `.claude-plugin/marketplace.json` — removed the `phoenix` plugin entry; `elixir` entry's description gained `, nexus-template`.
+- `plugins/elixir/.claude-plugin/plugin.json` — version 0.2.5 -> 0.2.6, description gained `nexus-template`.
+- `scripts/skill-include-map.sh` — dropped the `phoenix-setup.md` mapping; moved the `nexus-template.md` mapping into the elixir block (`plugins/elixir/skills/nexus-template/SKILL.md:nexus-template.md`), so the auto-sync (`sync-skills-from-includes.sh`) and the marketplace-hygiene edit-block hook both track the skill at its new path.
+- `SKILLS.md` — removed the `### phoenix` section; added `nexus-template` to elixir's synced list.
+- `CHANGELOG.md` — `[Unreleased]` gained a `### Removed` entry for the `phoenix` plugin retirement and a `### Changed` entry for `elixir` 0.2.5 -> 0.2.6.
+- `~/.claude/setup-guide.md` (global, outside this repo) — updated the "Phoenix Application" row: `phoenix-setup.md` is now direct-`@`-import-only (no skill wraps it), `nexus-template` is now `elixir:nexus-template`.
+
+Verification:
+- `grep -rn "plugins/phoenix|phoenix@zenhive|phoenix:phoenix-setup|phoenix:nexus-template"` across `*.md/*.json/*.sh` returns zero hits outside historical task-body prose in `roadmap/data.json` (this task's own body/acceptance-criteria text, superseded by this record).
+- `claude plugin validate --strict .` passes.
+- Decision on `nexus-template`: rescued into `elixir` (not dropped) — it's an org/template-specific Nexus admin-dashboard skill phxagents.dev does not cover, whereas `phoenix-setup` (phx.gen.auth/Sobelow/LiveDebugger) is squarely inside phxagents' coverage and was dropped per the task body's own guidance."""
 created_at = "2026-07-12"
+started_at = "2026-07-13"
 scored_at = "2026-07-12"
+done_at = "2026-07-13"
+shipped_in = "dd67fef716c11aeaa79d17ad31ebd67ee1396b4b"
 
 [[task]]
 id = 6
