@@ -26,6 +26,13 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 - **`elixir` 0.2.5 → 0.2.6** — rescued the `nexus-template` skill from the
   retired `phoenix` plugin (org/template-specific artifact not covered by
   phxagents.dev).
+- **`elixir` 0.2.6 → 0.2.7**, **`elixir-volt` 0.1.1 → 0.1.2**, **`harness`
+  0.2.5 → 0.2.6**, **`tasks` 0.1.5 → 0.1.6** — skill-include sync: upstream
+  version bumps (`ex-ast`, `npm-security-audit`, `oxc`) plus content updates
+  (`integration-testing` reality-first workflow, `harness-workflow` reviewer-
+  owned external-evidence judgment, `rmap`/`task-writing`/`roadmap-planning`
+  verified-by/verification-ref provenance fields) and the stale `--verified`
+  example fix.
 
 ### Removed
 
