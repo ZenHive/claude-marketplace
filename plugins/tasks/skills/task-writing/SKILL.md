@@ -38,6 +38,8 @@ For work against an external API or service, the task must name the authoritativ
 
 Do not create a separate research task for this observation when the same implementer will build from it in one session; reality discovery is part of the implementation task.
 
+**Encode clarification answers into the task, not the chat** (inspired by spec-kit's `/speckit.clarify`): when the user answers a scoping or clarifying question, fold the answer into `body` / `acceptance_criteria` / `out_of_scope` before filing. An answer that lives only in the conversation is invisible to every future session and to the dispatched implementer — the task file is the only channel that survives.
+
 ### Pre-Creation Gate
 
 Run all 4 before `rmap new`. Any fail → defer / merge / rewrite. Do not create the task.
