@@ -42,7 +42,7 @@ Do not create a separate research task for this observation when the same implem
 
 ### Pre-Creation Gate
 
-Run all 4 before `rmap new`. Any fail → defer / merge / rewrite. Do not create the task.
+Run all 5 before `rmap new`. Any fail → defer / merge / rewrite. Do not create the task.
 
 **1. Baseline before optimization.** Quality / normalization / fuzzy-match / ML / multi-variant / observability-depth tasks score U:low until the raw single-path version is shipped.
 - "Cheaper to build now than retrofit" is not a valid score input.
@@ -62,7 +62,11 @@ Run all 4 before `rmap new`. Any fail → defer / merge / rewrite. Do not create
 - Required instead: a concrete named reason — the user asked for it (the developer IS the demand signal), a named technical/legal trigger, a named competitor lever — OR an honest low score.
 - Test: remove the hedge phrase. If `body` no longer justifies the score → demote.
 
-Pass all 4 → write body (next section).
+**5. Premises verified — or marked as hypotheses.** Any claim in `body` about *current* behavior ("the outer assertion still catches it, so there is no false green"; "X already handles this"; "the venue rejects that anyway") must either name its evidence (a run, a test, a live call, a read of the specific code) or be explicitly tagged `premise unverified — confirm before building on it`, with a confirming step in `acceptance_criteria`.
+- An asserted-but-wrong premise steers both implementer AND reviewer wrong: it reads as established fact in the prompt, so nobody re-checks it (observed: a task asserting "no false green" was disproven in review — an `assert {:error, %CCXT.Error{}}` outer match was satisfied by the swallowed failure, and a test had been green on a wrong request).
+- Test: for each factual claim in the body, ask "what would I cite if challenged?" No citation and no hypothesis tag → rewrite before filing.
+
+Pass all 5 → write body (next section).
 
 ### 🚨 Re-Generalize an Agent's Decomposition Before Filing
 
