@@ -19,6 +19,9 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 
 ### Changed
 
+- **`harness` 0.2.6 → 0.2.7** — routes bounded local work inline by default
+  and reserves the full implement→review→land cycle for tasks with a positive
+  safety, evidence, or parallelism reason.
 - **`dev-discipline` 0.2.0 → 0.3.0** — added a fourth `roadmap/tasks.toml`
   integrity guard: `tasks-toml-block-stale-model.sh` (PreToolUse
   Edit/Write/MultiEdit) **blocks** any edit introducing `model = "gpt-5-codex"`
