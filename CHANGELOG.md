@@ -19,6 +19,9 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 
 ### Changed
 
+- **`harness` 0.2.7 → 0.2.8** — aligns the driver and dogfooding contracts
+  with portfolio-wide inline routing while preserving the reviewer's intentional
+  fix-and-approve role for dispatched work.
 - **`harness` 0.2.6 → 0.2.7** — routes bounded local work inline by default
   and reserves the full implement→review→land cycle for tasks with a positive
   safety, evidence, or parallelism reason.
