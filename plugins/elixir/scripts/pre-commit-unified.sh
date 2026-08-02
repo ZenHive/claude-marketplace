@@ -166,7 +166,12 @@ fi
 # -----------------------------------------------------------------------------
 
 if has_mix_dependency "mix_audit" "$PROJECT_ROOT"; then
-  AUDIT_OUTPUT=$(mix deps.audit 2>&1)
+  AUDIT_ARGS=()
+  if [ -f "$PROJECT_ROOT/.mix_audit_ignore" ]; then
+    AUDIT_ARGS=(--ignore-file "$PROJECT_ROOT/.mix_audit_ignore")
+  fi
+
+  AUDIT_OUTPUT=$(mix deps.audit "${AUDIT_ARGS[@]}" 2>&1)
   if [ $? -ne 0 ]; then
     AUDIT_LOG=$(save_check_output "mix-audit" "$AUDIT_OUTPUT")
     AUDIT_OUTPUT=$(truncate_output "$AUDIT_OUTPUT" 20 "mix deps.audit")
