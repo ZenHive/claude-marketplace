@@ -7,9 +7,16 @@
 #      exist. GitHub matches nothing, the workflow never fires on push/PR, and
 #      nothing warns. Renaming a default branch leaves these behind.
 #   2. NEVER RAN           a repo with workflow files and zero runs, ever.
-#   3. TESTS THAT NEVER RUN  `:integration`-tagged tests that no workflow
-#      executes. They are excluded by default in test_helper.exs and only ever
-#      run when a human types `--include integration` locally — i.e. never.
+#   3. TESTS THAT NEVER RUN  tests carrying a tag that test_helper.exs excludes
+#      by default, which no workflow re-includes. They only ever run when a
+#      human types `--include <tag>` locally — i.e. never.
+#
+#      The tag is NOT always `:integration`. Observed across the portfolio:
+#      :external, :network, :external_network, :differential, :cross_validation,
+#      :stability, :rate_limit. So this reads each repo's own exclusion list
+#      instead of grepping for one hardcoded tag — checking only :integration
+#      underreports (tapakly reserves :integration for LLM calls and puts its
+#      credential-free public-API tests under :external).
 #
 # Class 3 is the expensive one. Integration tests against a live service are the
 # only evidence a mock cannot fake; written-but-never-executed they are worse
@@ -101,8 +108,8 @@ PY
 echo
 
 # ---------------------------------------------------------------- classes 2+3
-echo "--- Workflows that never ran, and integration tests no CI executes"
-printf '  %-22s %-8s %-10s %-8s %s\n' REPO WF RUNS/GREEN ITESTS "CI runs them"
+echo "--- Workflows that never ran, and excluded tests no CI re-includes"
+printf '  %-22s %-6s %-10s %s\n' REPO WF RUNS/GREEN "excluded tags: files / re-included by CI"
 
 for d in "$ROOT"/*/; do
   repo="${d%/}"
@@ -115,10 +122,35 @@ for d in "$ROOT"/*/; do
   nwf=0
   [ -d "$repo/.github/workflows" ] && nwf=$(find "$repo/.github/workflows" -maxdepth 1 \( -name '*.yml' -o -name '*.yaml' \) | wc -l | tr -d ' ')
 
-  # :integration-tagged test files, and whether any workflow actually runs them
-  itest=0
-  [ -d "$repo/test" ] && itest=$(rg -lI --no-messages ':integration' "$repo/test" 2>/dev/null | wc -l | tr -d ' ')
-  ici=$(rg -lI --no-messages -- '--include[ =]integration' "$repo/.github/workflows" 2>/dev/null | wc -l | tr -d ' ')
+  # Which tags does this repo exclude by default? Then: how many test files
+  # carry each, and does any workflow re-include it?
+  # Exclusions live in three places depending on repo convention:
+  # test_helper.exs (ExUnit.configure), config/*.exs (config :ex_unit), and
+  # mix.exs aliases (`--exclude <tag>` baked into the check alias).
+  tags=$(
+    {
+      rg -oI 'exclude:\s*\[([^]]*)\]' -r '$1' \
+        "$repo/test/test_helper.exs" "$repo/config" 2>/dev/null \
+        | tr ',' '\n' | rg -o ':([a-z_]+)' -r '$1'
+      rg -oI -- '--exclude[ =]([a-z_]+)' -r '$1' "$repo/mix.exs" 2>/dev/null
+    } 2>/dev/null | sed 's/[[:space:]]//g' | grep -v '^$' | sort -u
+  )
+
+  itest=0 ici=0 detail=""
+  for t in $tags; do
+    n=0
+    [ -d "$repo/test" ] && n=$(rg -lI --no-messages ":$t\b" "$repo/test" 2>/dev/null | wc -l | tr -d ' ')
+    [ "$n" = "0" ] && continue
+    inci=0
+    [ "$nwf" != "0" ] && inci=$(rg -lI --no-messages -- "--include[ =]$t" "$repo/.github/workflows" 2>/dev/null | wc -l | tr -d ' ')
+    itest=$((itest + n))
+    [ "$inci" != "0" ] && ici=$((ici + 1))
+    if [ "$inci" = "0" ]; then
+      detail="$detail :$t=$n(NO)"
+    else
+      detail="$detail :$t=$n(ci)"
+    fi
+  done
 
   runs="-" green="-"
   if [ "$have_gh" = 1 ]; then
@@ -137,10 +169,10 @@ for d in "$ROOT"/*/; do
   flag=""
   [ "$nwf" = "0" ] && [ "$itest" != "0" ] && flag="  <- NO WORKFLOWS AT ALL"
   [ "$nwf" != "0" ] && [ "$runs" = "0" ] && flag="  <- NEVER RAN"
-  [ "$itest" != "0" ] && [ "$ici" = "0" ] && flag="$flag  <- $itest integration files, no CI runs them"
+  case "$detail" in *"(NO)"*) flag="$flag  <- tests never execute" ;; esac
   [ -z "$flag" ] && continue
 
-  printf '  %-22s %-8s %-10s %-8s %s%s\n' "$name" "$nwf" "$runs/$green" "$itest" "$ici" "$flag"
+  printf '  %-22s %-6s %-10s %s%s\n' "$name" "$nwf" "$runs/$green" "${detail# }" "$flag"
 done
 
 echo
