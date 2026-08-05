@@ -10,13 +10,13 @@ allowed-tools: Read, Bash, Grep, Glob
 
 Connects the pi agent to a running Elixir/OTP system: stateful IEx-style eval, ExAST structural search/rewrite, supervised BEAM sessions, and Tidewave autodiscovery.
 
-**Not on Hex — install from npm + pin the BEAM bridge to match.**
-**Min install: `pi install npm:pi-elixir` (npm side) + `{:pi_bridge, "== 0.6.21", only: :dev}` (Mix side).** Exact version pinning is deliberate — the TypeScript extension and BEAM bridge speak a versioned stdio protocol; they must match.
+**Not on Hex — install from npm only.**
+**Min install: `pi install npm:pi-elixir` — no `mix.exs` change required.** As of v0.8.0 the bundled bridge starts in an isolated control VM; the target project no longer needs `pi_bridge` as a Mix dependency. Do not add it.
 **Two packages ship together:** `packages/extension/` (TypeScript, pi tool registration, transport) and `packages/bridge/` (Elixir, `Pi.*` modules, eval runtime). Clone from `github.com/elixir-vibe/pi-elixir`.
-**Requires Elixir `~> 1.16` and OTP 27+** for new projects; Elixir 1.20+ recommended.
-**ExAST `~> 0.12` is a hard dep** (pulled automatically via `pi_bridge`); supplies all AST pattern matching.
+**Requires Elixir `~> 1.16` and OTP 27+** for target projects; Elixir 1.20+ recommended.
+**ExAST `~> 0.12` is a hard dep** (pulled automatically by the bundled bridge); supplies all AST pattern matching.
 
-**Caveat:** docs are split across `packages/bridge/README.md`, `packages/extension/README.md`, `AGENTS.md`, and `packages/bridge/docs/protocol.md` — no single canonical hexdocs page.
+**Caveat:** docs are split across `packages/bridge/README.md`, `packages/extension/README.md`, `AGENTS.md`, and `packages/bridge/docs/protocol.md` — no single canonical hexdocs page. The four eval targets (below) are the primary architectural fact missing from pre-v0.8 documentation.
 
 **Does NOT cover:** static analysis, architecture gates, smell checks (→ Reach), dependency security (→ Sobelow), clone detection (→ ExDNA), test running (→ ExUnit tools).
 
@@ -24,38 +24,58 @@ Connects the pi agent to a running Elixir/OTP system: stateful IEx-style eval, E
 
 ---
 
-### Installation (from source)
+### Installation
 
 ```bash
-# 1. Add pi-elixir to the pi agent
+# Install the npm extension (no mix.exs change needed)
 pi install npm:pi-elixir
 
-# 2. Add the BEAM bridge to your Mix project (dev only)
-#    Run this from inside the Mix project, or use the slash command:
-/elixir:install
-# Adds to mix.exs: {:pi_bridge, "== 0.6.21", only: :dev}
-
-# 3. Local dev / pin-to-clone
+# Local dev / pin-to-clone
 git clone https://github.com/elixir-vibe/pi-elixir
 cd pi-elixir
 pnpm install
-cd packages/bridge && mix deps.get && cd ../..
 pi install "$PWD"    # installs from local clone instead of npm
 ```
 
-Version mismatch symptom: `pi_bridge version mismatch` — update the Mix dep to match the npm version.
+The bundled bridge manages its own Elixir VM. There is no version-matching ceremony between an npm pin and a Mix dep — that was removed in v0.8.0.
 
 ---
 
-### Connection Model (three tiers, resolved in order)
+### Connection Model
 
-| Tier | Mechanism | When it fires |
-|------|-----------|---------------|
-| 1 | `PI_MCP_URL` env var | Manual HTTP MCP endpoint |
-| 2 | Discovered HTTP MCP | Probes `localhost:4000–4009`; matches `project_name` against `mix.exs` `app:` — this is the **Tidewave path** |
-| 3 | Embedded stdio | Default fallback; spawns a Mix child process |
+| Mechanism | When it fires |
+|-----------|---------------|
+| `PI_MCP_URL` env var | Manual HTTP MCP endpoint override |
+| Discovered HTTP MCP | Probes `localhost:4000–4009`; matches `project_name` against `mix.exs` `app:` — the **Tidewave / runtime target** path |
+| Bundled stdio bridge | Default; starts an isolated control VM, then spawns the appropriate eval target |
 
-Status bar shows `⬡ BEAM` when tier 2 connects to an external/Tidewave endpoint. Check with `/elixir:status`; full diagnostics via `/elixir:doctor`.
+Status bar shows `⬡ BEAM` when connected. Check with `/elixir:status`; full diagnostics via `/elixir:doctor`.
+
+---
+
+### Four Eval Targets (new in v0.8.0)
+
+Every `elixir_eval` call runs in one of four targets, selected by passing `target:` in the tool call:
+
+| Target | How to select | What it is |
+|--------|--------------|------------|
+| `project` | default | Persistent dependencyless VM; loads source without starting the app. Best for pure module/function work. |
+| `application` | `target: "application"` | Managed application startup — starts your supervision tree. Use when you need live processes, Repo, PubSub, etc. |
+| `runtime` | `target: "runtime"` + `PI_ELIXIR_NODE` | Attach to an existing distributed BEAM node (e.g. a running `iex --sname` session). |
+| `bridge` | `target: "bridge"` | Isolated bridge helpers — `AST`, `CodeMap`, `Pi.*` APIs only. No project code. |
+
+```elixir
+# Default project target — no application startup
+Enum.map([1, 2, 3], &(&1 * 2))
+
+# Application target — Repo and supervision tree available
+alias MyApp.Repo; Repo.all(MyApp.User) |> length()
+
+# Runtime attach — set PI_ELIXIR_NODE=myapp@localhost in env
+Node.list()
+```
+
+Eval output carries Lumis scope metadata with rainbow brackets for syntax highlighting (added v0.7.0).
 
 ---
 
@@ -63,7 +83,7 @@ Status bar shows `⬡ BEAM` when tier 2 connects to an external/Tidewave endpoin
 
 | Tool | Label in pi | What it does |
 |------|------------|--------------|
-| `elixir_eval` | `iex` | Stateful trusted eval inside the running app |
+| `elixir_eval` | `iex` | Stateful trusted eval inside the running app (see eval targets above) |
 | `elixir_ast_search` | `ast grep` | ExAST structural search over source files |
 | `elixir_ast_replace` | `ast edit` | ExAST structural rewrite with dry-run diffs |
 
@@ -71,7 +91,7 @@ Status bar shows `⬡ BEAM` when tier 2 connects to an external/Tidewave endpoin
 
 ### elixir_eval — Stateful IEx-Style Eval
 
-Bindings, aliases, imports, and requires persist across eval calls (Livebook-style cells). Errors preserve the previous good state. State is snapshotted to sidecar files alongside the pi session JSONL.
+Bindings, aliases, imports, and requires persist across eval calls (Livebook-style cells). Errors preserve the previous good state — the last-good bindings and compiled artifacts are retained after failed edits (v0.8.0). State is snapshotted to sidecar files alongside the pi session JSONL.
 
 ```elixir
 # iex: first call — alias persists
@@ -108,7 +128,7 @@ Pi.Eval.sandbox(code)    # untrusted snippet; requires optional {:dune, "~> 0.3"
 
 ### elixir_ast_search / elixir_ast_replace — ExAST Patterns
 
-Patterns are **plain Elixir syntax** — not regex, not a custom DSL. The ExAST engine matches on AST structure; pipe forms are normalized.
+Patterns are **plain Elixir syntax** — not regex, not a custom DSL. The ExAST engine matches on AST structure; pipe forms are normalized. As of v0.8.2 the tools explicitly reject invalid patterns with guidance rather than silently misbehaving.
 
 **Pattern language:**
 
@@ -152,7 +172,7 @@ ast edit 'dbg(expr)' 'expr' lib/
 # Find all matches in a source string
 ExAST.Patcher.find_all(source, "Enum.take(_, -_)")
 
-# Named batch: find multiple patterns at once
+# Named batch: find multiple patterns at once (uses bounded labels, not atoms — v0.8.0)
 ExAST.Patcher.find_many(source,
   get_env: "@_ Application.get_env(_, _)",
   dbg_call: "dbg(expr)"
@@ -291,13 +311,14 @@ Pi.Plugin.Event.emit(:my_event, %{data: "..."})
 
 | Command | Purpose |
 |---------|---------|
-| `/elixir:install` | Add `pi_bridge` dep to `mix.exs` and fetch |
 | `/elixir:status` | Concise bridge connection summary |
 | `/elixir:doctor` | Full setup diagnostics |
 | `/elixir:debug` | Writes snapshot to `~/.pi/agent/pi-elixir-debug.log` |
 | `/elixir:sessions.cancel` | Cancel running BEAM sessions |
 | `/elixir:sessions.rerun` | Rerun last session |
 | `/elixir:restart` | Restart the embedded BEAM bridge |
+
+Note: `/elixir:install` was removed in v0.8.0 — no Mix dep to install.
 
 ---
 
@@ -313,6 +334,7 @@ Pi.Plugin.Event.emit(:my_event, %{data: "..."})
 | `PI_ELIXIR_SKILLS=0` | on | Disable executable Elixir skill discovery |
 | `PI_ELIXIR_MIRROR=0` | on | Disable QuackDB/DuckDB event mirror |
 | `PI_ELIXIR_COMPACT_EVAL_PREVIEW=1` | off | Force single-line eval previews |
+| `PI_ELIXIR_NODE` | unset | Distributed node name for `target: "runtime"` attach |
 
 ---
 
@@ -322,23 +344,25 @@ Pi.Plugin.Event.emit(:my_event, %{data: "..."})
 |---------|-------|-----|
 | `Mix cwd: not found` | pi not started from a Mix project directory | Start pi from inside the project root |
 | `Elixir is not installed` | Elixir/Mix not on `PATH` | Install Elixir, verify `mix --version` |
-| `pi_bridge dependency: missing` | Bridge not added to `mix.exs` | Run `/elixir:install` |
-| Embedded BEAM exited before ready | Mix compile error | Fix the error; run `/elixir:restart` |
-| `pi_bridge version mismatch` | npm version ≠ Mix dep version | Update `{:pi_bridge, "== <new>"}` in `mix.exs` |
 | `Cannot find module 'dedent'` | Stale npm install (pre-v0.6.20) | `pi install npm:pi-elixir` to upgrade |
+| Embedded BEAM exited before ready | Mix compile error in bundled bridge | Fix the error; run `/elixir:restart` |
+| `project` target can't see Repo / PubSub | App not started in `project` mode | Switch to `target: "application"` |
+| `runtime` target connection refused | `PI_ELIXIR_NODE` not set or node unreachable | Set `PI_ELIXIR_NODE=myapp@localhost`; verify `epmd -names` |
 | Eval state stale after branch switch | Sidecar from a previous session loaded | `Pi.Eval.reset()` to clear |
+| QuackDB mirror not connecting | QuackDB init deferred until first use (v0.8.2) | First mirror event triggers init; wait for first eval output |
 
 ---
 
 ### DO NOT
 
-1. Pin `pi_bridge` to a version range (`~>`). The bridge and npm extension must be **identical versions** — use `"== <version>"` only.
-2. Add `pi_bridge` outside `:dev` only — it starts a stdio server process and has no prod purpose.
+1. Add `{:pi_bridge, ...}` to `mix.exs` — the bundled bridge is self-contained since v0.8.0; adding the Mix dep creates a conflict and serves no purpose.
+2. Add `pi_bridge` outside `:dev` only — if somehow added, it must be `:dev` only; the module starts a stdio server process with no prod purpose.
 3. Call `ExAST.rewrite_plan` and apply changes without dry-running `ast edit ... --dry-run` first — the plan may have conflicts.
-4. Mix `elixir_ast_search` patterns with regex syntax — patterns are plain Elixir AST nodes, not regexes.
+4. Mix `elixir_ast_search` patterns with regex syntax — patterns are plain Elixir AST nodes, not regexes. The tool now rejects invalid syntax explicitly (v0.8.2).
 5. Call `Pi.Eval.reset()` mid-session without capturing the bindings you need — state is lost immediately.
 6. Assume eval state survives a bridge restart (`/elixir:restart`) — sidecar snapshots reload, but the live binding map is rebuilt from them.
 7. Use `PI_ELIXIR_LLM=0` while relying on `Pi.ReqLLM.install()` — they share the same flag path.
+8. Rely on the `project` eval target for code that requires a running supervision tree — use `target: "application"` for Repo/PubSub/GenServer access.
 
 ---
 
@@ -362,10 +386,10 @@ pnpm run pack:check      # validates npm publish artifact
 ### Dependencies
 
 ```elixir
-# mix.exs — exact pin, dev only
-{:pi_bridge, "== 0.6.21", only: :dev}
+# No mix.exs entry needed — bundled bridge is self-contained since v0.8.0
+# The npm package bundles everything required for the control VM.
 ```
 
-`pi_bridge` pulls in: `jason ~> 1.4`, `json_codec ~> 0.1.5`, `ex_ast ~> 0.12`, `req ~> 0.5`, `quackdb ~> 0.5.4`, `ecto_sql ~> 3.13`, `bandit ~> 1.8`, `plug ~> 1.18`.
+The bundled bridge pulls in: `jason ~> 1.4`, `json_codec ~> 0.1.5`, `ex_ast ~> 0.12`, `req ~> 0.5`, `quackdb ~> 0.5.15`, `ecto_sql ~> 3.13`, `bandit ~> 1.8`, `plug ~> 1.18`.
 
-Optional: `{:req_llm, "~> 1.6"}` for BEAM-side LLM calls; `{:dune, "~> 0.3"}` for sandboxed eval (`Pi.Eval.sandbox/1`).
+Optional (in the target project if you use them from eval): `{:req_llm, "~> 1.6"}` for BEAM-side LLM calls; `{:dune, "~> 0.3"}` for sandboxed eval (`Pi.Eval.sandbox/1`).

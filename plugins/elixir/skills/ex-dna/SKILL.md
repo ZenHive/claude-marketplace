@@ -10,7 +10,7 @@ allowed-tools: Read, Bash, Grep, Glob
 
 Finds code duplication by analyzing abstract syntax trees rather than text — `fn(a, b) -> a + b end` and `fn(x, y) -> x + y end` are the same code. Three clone types: exact (I), renamed-variable/changed-literal (II), near-miss structural (III). Ships a Credo plugin, Mix compiler hook, and LSP server.
 
-**Min version: `{:ex_dna, "~> 1.5", only: [:dev, :test], runtime: false}`.** Pinned at v1.5.3.
+**Min version: `{:ex_dna, "~> 1.5", only: [:dev, :test], runtime: false}`.** Pinned at v1.5.4.
 
 **The PostToolUse hook runs `mix ex_dna` bare — Type I (exact) detection, default mass 30, console output, exits 1 on any clone.**
 
@@ -242,4 +242,4 @@ Suggestions are named after the dominant struct, call, or pattern (`build_change
 {:ex_dna, "~> 1.5", only: [:dev, :test], runtime: false}
 ```
 
-No additional runtime deps beyond the BEAM. Optional: `{:credo, "~> 1.7"}` for Credo integration (ExDNA reuses Credo's parsed ASTs when both are present).
+No additional runtime deps beyond the BEAM. Requires Elixir 1.18+. Optional: `{:credo, "~> 1.7"}` for Credo integration (ExDNA reuses Credo's parsed ASTs when both are present).

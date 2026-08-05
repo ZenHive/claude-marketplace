@@ -26,9 +26,10 @@ Task descriptions in cross-instance documents are **prompts for Claude Code to i
 
 `acceptance_criteria` are the contract a fresh QA/reviewer session verifies. Write observable outcomes, not implementation steps or self-reports. A live task explicitly assigned to a non-human agent must carry at least one non-blank criterion; rmap enforces that mechanical floor, while the author/reviewer judges quality.
 
-For work against an external API or service, the task must name the authoritative reality source and required evidence in `body` or `acceptance_criteria`:
+For work against an external API or service, the task must name the provider-owned authority and required evidence in `body` or `acceptance_criteria`:
 
-- Authority order: **live API / observed traffic > official docs > existing code > assumptions**.
+- Authority boundary: **live API / observed traffic + the provider's official docs/specs/SDKs > existing code > assumptions**.
+- Third-party clients, aggregators, wrappers, and reference implementations — including CCXT — are compatibility/reference material only. They cannot define semantic correctness or override the provider-owned contract.
 - Require at least one real success call and one relevant real error call before implementation.
 - Require an integration test that pins the observed request, response, and error semantics.
 - Mocks and fixtures may be derived only after observing reality and never replace the live test.
@@ -42,7 +43,7 @@ Do not create a separate research task for this observation when the same implem
 
 ### Pre-Creation Gate
 
-Run all 5 before `rmap new`. Any fail → defer / merge / rewrite. Do not create the task.
+Run all 6 before `rmap new`. Any fail → defer / merge / rewrite. Do not create the task.
 
 **1. Baseline before optimization.** Quality / normalization / fuzzy-match / ML / multi-variant / observability-depth tasks score U:low until the raw single-path version is shipped.
 - "Cheaper to build now than retrofit" is not a valid score input.
@@ -66,7 +67,11 @@ Run all 5 before `rmap new`. Any fail → defer / merge / rewrite. Do not create
 - An asserted-but-wrong premise steers both implementer AND reviewer wrong: it reads as established fact in the prompt, so nobody re-checks it (observed: a task asserting "no false green" was disproven in review — an `assert {:error, %CCXT.Error{}}` outer match was satisfied by the swallowed failure, and a test had been green on a wrong request).
 - Test: for each factual claim in the body, ask "what would I cite if challenged?" No citation and no hypothesis tag → rewrite before filing.
 
-Pass all 5 → write body (next section).
+**6. Routing earned — inline is the default.** `assignee` is a ROUTING DECISION, not metadata: rmap freezes it (plus `model`) at creation, and every later session reads an agent assignee as "routing already decided" — the dispatch gate never re-fires. Default `assignee = "human"` (next session works it inline); set an agent assignee ONLY when a positive dispatch trigger (`harness-workflow.md` § "When to Dispatch vs Hand-Build") is named in the body: signing/money/security surface, public contract or schema change, CI/check infrastructure or repo-wide invariant, live external-system evidence, or genuine parallel throughput. Bounded-and-local work (typically D≤4, ≤100 LOC, ≤5 files, no trigger) stays human/inline.
+- Reviewer/audit `proposed_tasks` carry NO routing authority — they arrive dispatch-shaped (suggested scores/markers), but the filer re-routes each one through this question instead of inheriting dispatchability from the proposal's shape (observed: ccxt_client task 470, a D2 one-file test-helper fix filed with an agent assignee and dispatched, because the proposal arrived pre-shaped).
+- Test: for an agent assignee, point to the trigger sentence in `body`. Can't point → `assignee = "human"`.
+
+Pass all 6 → write body (next section).
 
 ### 🚨 Re-Generalize an Agent's Decomposition Before Filing
 

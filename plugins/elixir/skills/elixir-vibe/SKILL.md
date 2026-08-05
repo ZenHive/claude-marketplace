@@ -1,6 +1,6 @@
 ---
 name: elixir-vibe
-description: elixir-vibe — roster and adopt/skip verdicts for the whole elixir-vibe org. Use when deciding whether to reach for any elixir-vibe library (systemdkit, ex_slop, ex_ast, ex_dna, exograph, host_kit, gatehouse, quackdb, phoenix_replay, vibe, pi-elixir, and more) or to find which per-lib include to load. The cheap always-on map: every lib with version, maturity, and an adopt/spike/watch/skip verdict.
+description: elixir-vibe — roster and adopt/skip verdicts for the whole elixir-vibe org. Use when deciding whether to reach for any elixir-vibe library (systemdkit, ex_slop, ex_ast, ex_dna, exograph, host_kit, quackdb, phoenix_replay, vibe, pi-elixir, and more) or to find which per-lib include to load. The cheap always-on map: every lib with version, maturity, and an adopt/spike/watch/skip verdict.
 allowed-tools: Read
 ---
 
@@ -38,7 +38,6 @@ Does NOT cover: any API. Follow the include link.
 | **host_kit** | `host-kit.md` | 0.1.0-beta.4 | beta (API churn) | **spike** | Generalizes your `recipes/base/` host-config library; trial before committing |
 | **exograph** | `exograph.md` | 0.8.0 (Hex) | early | **spike** | CodeQL-style structural search for a harness reviewer step; heavy stack (DuckDB backend) |
 | **pi-elixir** | `pi-elixir.md` | 0.6.21 (npm+bridge) | early | **spike** | Agent↔BEAM AST-edit bridge via Tidewave; candidate harness Pi adapter |
-| **gatehouse** | `gatehouse.md` | placeholder / clone | early | **watch** | OTP edge proxy + blue-green + ACME; target for servernodes_rpc edge. Hex is a name placeholder — clone, don't pin |
 | **safe_rpc** | `safe-rpc.md` | 0.1.3 | prototype | **watch** | Capability-scoped RPC over safe ETF; Unix transport only so far |
 | **program_facts** | `program-facts.md` | 0.2.1 (Hex) | early | **watch** | Oracle-fact program generation for testing analyzers (descripex) |
 | **vibe** | `vibe.md` | 0.2.4 (escript) | early | **watch** | BEAM-native coding-agent substrate; overlaps your own harness — evaluate as complement |
@@ -63,7 +62,7 @@ Does NOT cover: any API. Follow the include link.
 
 ### DO NOT
 
-1. **Don't pin `gatehouse` or `hex-playground` from Hex** — the Hex entries are placeholders/absent; clone the repo (see their includes).
+1. **Don't pin `hex-playground` from Hex** — the Hex entry is a placeholder/absent; clone the repo (see its include).
 2. **Don't assume a 0.x version is stable across a minor bump** — single maintainer, fast iteration. Re-check the version before adopting.
 3. **Don't reach for `cringe`, `unitctl`, or `vibe_kit`** — each is already covered by something you own (`drafter`, `systemdkit`, `elixir-setup`).
 4. **Don't treat a `skip` as permanent** — re-evaluate when the portfolio gains the matching need (e.g. `quackdb`/`fsst` if a candle pipeline lands).

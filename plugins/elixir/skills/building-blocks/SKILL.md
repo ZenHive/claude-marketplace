@@ -40,14 +40,14 @@ The boundaries are the enemy: every seam (design vs code, client vs server, buil
 | Quality | Machine-checked generation | `ex_slop` (AI-aware linters), `ex_dna` | `ex-slop.md`, `ex-dna.md` |
 | Knowledge | Search ecosystem by *shape* | `exograph` (structural search) | `exograph.md` |
 | Agent | Supervised worker systems | `pi-elixir` / `vibe` (agents inside the running app) | `pi-elixir.md`, `vibe.md` |
-| Deploy | Supervised Linux deployment | `systemdkit` / `host_kit` / `gatehouse` | `systemdkit.md`, `host-kit.md`, `gatehouse.md` |
+| Deploy | Supervised Linux deployment | `systemdkit` / `host_kit` | `systemdkit.md`, `host-kit.md` |
 | Surface | Unified queryable operational state | (emerging) | — |
 
 "Settled vs draft" lives per-file in the upstream `layers/*.md` — don't assume any layer is final. The **Quality**, **Causality**, and **Deploy** layers are the most lib-backed (and the ones this portfolio already touches); **Surface** and **One Program** are the most speculative.
 
 ### Portfolio fit (where you already implement this thesis)
 
-You're building the org's thesis from the other direction — bare-metal up. **Deploy layer:** `servernodes`/`ethnode` hand-roll exactly what `systemdkit`+`host_kit`+`gatehouse` formalize (the single highest-fit cluster). **Quality + Causality layers:** `harness`/`descripex` already dev-dep `reach`/`ex_ast`/`ex_dna` and run `ex_dna` via a PostToolUse hook — `ex_slop` and `exograph` are the natural next adoptions. **Agent layer:** `harness`/`rmap` are your supervised-worker substrate, the same niche as `pi-elixir`/`vibe`.
+You're building the org's thesis from the other direction — bare-metal up. **Deploy layer:** `servernodes`/`ethnode` hand-roll exactly what `systemdkit`+`host_kit` formalize (the single highest-fit cluster). **Quality + Causality layers:** `harness`/`descripex` already dev-dep `reach`/`ex_ast`/`ex_dna` and run `ex_dna` via a PostToolUse hook — `ex_slop` and `exograph` are the natural next adoptions. **Agent layer:** `harness`/`rmap` are your supervised-worker substrate, the same niche as `pi-elixir`/`vibe`.
 
 ### DO NOT
 

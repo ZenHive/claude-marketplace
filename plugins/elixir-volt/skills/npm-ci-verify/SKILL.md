@@ -8,7 +8,7 @@ allowed-tools: Read, Bash
 
 ## npm_ex CI/CD & Installation Verification
 
-**Min version: `{:npm, "~> 0.7.4"}`.**
+**Min version: `{:npm, "~> 0.7.6"}`.**
 
 Reproducible builds. The tools form a pipeline — each checks a different layer.
 
@@ -35,6 +35,7 @@ mix npm.verify     # node_modules ↔ lockfile
 ### Programmatic API
 
 ```elixir
+# NPM.Install.CI — all take optional project_dir \\ "."
 :ok = NPM.Install.CI.preflight()        # lockfile + package.json exist?
 :ok = NPM.Install.CI.validate()         # full CI validation
 true = NPM.Install.CI.needs_clean?()    # needs rebuild?
@@ -42,6 +43,10 @@ true = NPM.Install.CI.needs_clean?()    # needs rebuild?
 {:ok, lockfile} = NPM.Lockfile.read()
 [] = NPM.Verify.check("node_modules", lockfile)     # (path, lockfile) — path first
 true = NPM.Verify.clean?("node_modules", lockfile)
+
+# Verify aggregates
+issues = NPM.Verify.check("node_modules", lockfile)
+%{total: 0, missing: 0, mismatched: 0, extraneous: 0} = NPM.Verify.summary(issues)
 
 # Convenience — path-based (reads lockfile internally)
 NPM.Lockfile.has_package?("ccxt")
@@ -59,6 +64,7 @@ NPM.Lockfile.has_package?("ccxt", "path/to/npm.lock")
 - `mix npm.run` / `mix npm.exec` propagate non-zero exit codes — don't wrap them expecting silent failure.
 - `npm.lock` records the dependency security policy; `--frozen` fails on locks written under a weaker policy. Policy-less lockfiles (no policy section at all) install cleanly.
 - `--frozen` checks `optionalDependencies` for drift alongside regular deps.
+- Lockfiles written under v0.7.5+ include nested dependency subtrees. Frozen installs from pre-0.7.5 lockfiles that omitted nested entries may reinstall cleanly but lose the nested subtree — regenerate the lockfile with `mix npm.install` if nested scoped packages misbehave after a version upgrade.
 
 ### npm.lock vs npm-shrinkwrap.json
 

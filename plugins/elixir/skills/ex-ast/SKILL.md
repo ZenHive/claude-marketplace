@@ -10,7 +10,7 @@ allowed-tools: Read, Bash, Grep, Glob
 
 Structural code search, rewrite, and diff using plain Elixir syntax as patterns — no regex, no custom DSL. The backbone of `reach` smell checks, `ex_dna` clone indexing, and descripex's codemods.
 
-**Min version: `{:ex_ast, "~> 0.12.9", only: [:dev, :test], runtime: false}`.** Requires `sourceror ~> 1.7` (transitive dep). Ships `jason ~> 1.4` for `--json` CLI output.
+**Min version: `{:ex_ast, "~> 0.13.1", only: [:dev, :test], runtime: false}`.** Requires `sourceror ~> 1.7` (transitive dep). Ships `jason ~> 1.4` for `--json` CLI output. Requires Elixir 1.18+ (0.13.0 accidentally dropped 1.18; 0.13.1 restores it).
 
 **Three mix tasks:** `mix ex_ast.search`, `mix ex_ast.replace`, `mix ex_ast.diff` — operate on files and globs; `.exs` files are included in all scans (directory, glob, and explicit-path forms).
 
@@ -18,7 +18,7 @@ Structural code search, rewrite, and diff using plain Elixir syntax as patterns 
 
 **Pattern language is valid Elixir** — no quoting or escaping beyond what Elixir itself needs. `~p"..."` sigil parses patterns at compile time for zero-overhead hot paths.
 
-**Caveat:** Alias/import expansion is syntax-aware, not full macro-expanded. Bare imports (without `only:`) match conservatively — they no longer expand every local call of the imported name. `import Foo, only: [bar: 1, bar: 2]` resolves all listed arities. Struct/map patterns match partially; replacement formatting uses `Macro.to_string/1` — run `mix format` or pass `format: true` after rewrites.
+**Caveat:** Alias/import expansion is syntax-aware, not full macro-expanded. Bare imports (without `only:`) match conservatively by default — they no longer expand every local call of the imported name. Pass `expand_imports: true` (0.12.10+) or `--expand-imports` on the CLI to restore expansive bare-import matching (useful when you want `import Foo` to match all local calls). `import Foo, only: [bar: 1, bar: 2]` resolves all listed arities. Struct/map patterns match partially; replacement formatting uses `Macro.to_string/1` — run `mix format` or pass `format: true` after rewrites.
 
 **Does NOT cover:** type analysis (→ Dialyzer), runtime call graphs (→ Reach), clone detection scoring (→ ExDNA).
 
@@ -37,6 +37,11 @@ Patterns are valid Elixir strings. Variable names bind captures; `_` / `_name` a
 | `...` | Ellipsis — zero or more args / items / body stmts | `IO.inspect(...)` |
 | `^name` | Pin — matches a literal variable named `name` | `{:reply, ^state, ^state}` |
 | `name` / `fun` / `function` | Captures the function name in `def`/call heads | `def name(_, _) do ... end` |
+| `_(...)` | Wildcard callee — any local call (0.13.0+) | `_(changeset)` |
+| `_._(...)` | Wildcard callee — any remote call (0.13.0+) | `_._(user)` |
+| `Mod._(...)` | Any function on a specific module (0.13.0+) | `Repo._(...)` |
+| `_.fun(...)` | Specific function on any module (0.13.0+) | `_.section(...)` |
+| `def name/N do ... end` | Def matched by arity (0.13.0+) | `def name/2 do ... end` |
 | Everything else | Literal match | `{:error, :not_found}` |
 
 **Repeated variable names require the same value** at every position:
@@ -59,6 +64,22 @@ ExAST.Patcher.find_all(source, "%User{role: role}")
 #   captures: %{role: :admin}
 ```
 
+**Rest patterns in maps and structs (0.13.0+)** — `...` inside `%{}` / `%Struct{}` explicitly captures the remaining key-value pairs:
+```elixir
+ExAST.Patcher.find_all(source, "%User{name: name, ...}")
+#=> matches any %User{} that has a name field; rest keys are captured
+ExAST.Patcher.find_all(source, "%{key: val, ...}")
+#=> partial map match with explicit rest capture
+```
+
+**Ellipsis in lists and tuples (0.13.0+)** — leading, trailing, and middle positions:
+```elixir
+ExAST.Patcher.find_all(source, "[..., last]")       # ends with last
+ExAST.Patcher.find_all(source, "[first, ...]")      # starts with first
+ExAST.Patcher.find_all(source, "[head, ..., tail]") # middle ellipsis
+ExAST.Patcher.find_all(source, "{x, ...}")          # tuple with leading x
+```
+
 **Multi-node patterns** match contiguous statements (separated by `;`):
 ```elixir
 ExAST.Patcher.find_all(source, "a = Repo.get!(_, _); Repo.delete(a)")
@@ -69,9 +90,11 @@ ExAST.Patcher.find_all(source, "a = Repo.get!(_, _); Repo.delete(a)")
 # Matches `Form.for_update(...)` when `alias AshPhoenix.Form` is in scope
 ExAST.Patcher.find_all(source, "AshPhoenix.Form.for_update(_, _)")
 
-# Matches `from(...)` when `import Ecto.Query` is present
-# (bare imports match conservatively — only genuine Ecto.Query.from calls, not every local `from`)
+# Matches `from(...)` when `import Ecto.Query` is present (conservative by default)
 ExAST.Patcher.find_all(source, "Ecto.Query.from(_, _)")
+
+# Opt-in expansive matching — also matches every local `from(...)` call (0.12.10+)
+ExAST.Patcher.find_all(source, "Ecto.Query.from(_, _)", expand_imports: true)
 
 # Multi-arity only: imports resolve all listed arities
 # `import Foo, only: [bar: 1, bar: 2]` — both bar/1 and bar/2 local calls matched
@@ -85,18 +108,38 @@ ExAST.Patcher.find_all(source, "@name Application.get_env(_, _)")
 # Use @_ to wildcard the attribute name
 ```
 
+**Wildcard callee patterns (0.13.0+):**
+```elixir
+ExAST.Patcher.find_all(source, "_(changeset)")    # any local call with one arg
+ExAST.Patcher.find_all(source, "_._(user)")       # any remote call with one arg
+ExAST.Patcher.find_all(source, "Repo._(user)")    # any Repo.*/1 call
+ExAST.Patcher.find_all(source, "_.section(_)")    # any Module.section/1 call
+```
+
+**Name/arity definition patterns (0.13.0+):**
+```elixir
+ExAST.Patcher.find_all(source, "def name/2 do ... end")   # any 2-arity def
+ExAST.Patcher.find_all(source, "defp _/_ do ... end")     # any private def
+ExAST.Patcher.find_all(source, "def name/_ do ... end")   # any arity def named 'name'
+```
+
 **What you can match:**
 ```elixir
 "IO.inspect(...)"                          # Any arity
 "fun(changeset)"                           # Local call, captures name
 "Repo.fun(changeset)"                      # Remote call, captures name
+"Repo._(changeset)"                        # Any Repo call with one arg (0.13.0+)
+"_(changeset)"                             # Any local call with one arg (0.13.0+)
 "def name(_, _) do ... end"               # Def, captures function name
+"def name/2 do ... end"                   # Def matched by arity (0.13.0+)
 "case _ do _ -> _ end"                    # Control flow
 "fn _ -> _ end"                           # Anonymous fn
 "{:error, e} -> raise e"                  # Standalone clause
 "use GenServer"                            # Directive
 "@env Application.get_env(_, _)"          # Module attribute
 "%{name: name}"                            # Map with partial keys
+"%{name: name, ...}"                       # Map with explicit rest (0.13.0+)
+"[first, ..., last]"                       # List with middle ellipsis (0.13.0+)
 ```
 
 #### Pattern Recipes
@@ -108,6 +151,9 @@ ExAST.Patcher.find_all(source, "@name Application.get_env(_, _)")
 "Enum.filter(_, _) |> Enum.map(_)"        # Pipe chain (matches direct form too)
 "Logger.info(\"starting\")"               # String literal in call
 "def _ do ... end"                         # Any function definition
+"def _/_ do ... end"                       # Any function definition, any arity (0.13.0+)
+"Repo._(_, _)"                             # Any 2-arg Repo call (0.13.0+)
+"[..., {:error, _}]"                       # List ending with an error tuple (0.13.0+)
 ```
 
 ---
@@ -140,7 +186,7 @@ ExAST.Patcher.find_many(source,
 # Single-step selectors with single-node patterns are batched in one traversal (0.12.1 perf).
 ```
 
-**Options for `find_all/3`:** `:inside` (ancestor filter), `:not_inside` (exclusion).
+**Options for `find_all/3`:** `:inside` (ancestor filter), `:not_inside` (exclusion), `:expand_imports` (boolean, default false — set true to enable expansive bare-import matching, 0.12.10+).
 
 ---
 
@@ -155,7 +201,7 @@ ExAST.search("lib/", "Repo.get!(_, _)", inside: "defp _ do _ end")
 ExAST.search("lib/", query)                # also accepts ExAST.Query selectors
 
 # Options: :limit (stop after N), :allow_broad (allow _ catch-all), :concurrency,
-#          :inside, :not_inside
+#          :inside, :not_inside, :expand_imports (0.12.10+)
 
 # Multi-pattern search — one pass over files
 ExAST.search_many("lib/", get_env: "@_ Application.get_env(_, _)", dbg: "dbg(_)")
@@ -352,8 +398,16 @@ mix ex_ast.search 'Repo.get!(_, _)' lib/ --inside 'defp _ do _ end'
 mix ex_ast.search 'IO.inspect(_)' lib/ --not-inside 'test _ do _ end'
 mix ex_ast.search 'def _ do ... end' lib/ --count
 mix ex_ast.search 'def _ do ... end' lib/ --limit 20
+mix ex_ast.search 'def _ do ... end' lib/ --count-by-file   # count per file (0.13.0+)
 mix ex_ast.search 'def _ do ... end' --comment-inside '/TODO|FIXME/' lib/
 mix ex_ast.search 'IO.inspect(_)' lib/ --format json
+
+# Multi-pattern search in one traversal (0.13.0+): -e / --pattern is repeatable
+mix ex_ast.search -e 'IO.inspect(_)' -e 'dbg(_)' lib/
+mix ex_ast.search --pattern 'IO.inspect(_)' --pattern 'dbg(_)' lib/ --format json
+
+# Expand bare imports when matching (0.12.10+)
+mix ex_ast.search 'Ecto.Query.from(_, _)' lib/ --expand-imports
 
 # Replace
 mix ex_ast.replace 'dbg(expr)' 'expr' lib/
@@ -382,13 +436,17 @@ All `search` relationship flags (`--inside`, `--not-inside`, `--contains`, `--no
 | "broad search" error on `from("_")` | Catch-all pattern refused project-wide | Pass `:limit` or `allow_broad: true` |
 | Repeated variable doesn't constrain | Typo — variable names must be identical | Use the exact same atom key at both positions |
 | Alias match fails | Alias not in scope at pattern parse time | ExAST IS alias-aware — verify the alias is explicit in the file (not just in the test source) |
-| Bare import matches too many calls | Old behavior (pre-0.12.5) expanded every local call of the imported name | Update to `~> 0.12.9`; bare imports now match conservatively |
-| Multi-arity import only matches one arity | Old behavior (pre-0.12.5) for `import Foo, only: [bar: 1, bar: 2]` | Update to `~> 0.12.9`; all listed arities now resolve |
-| Nested pipe stages not all reported | Old behavior (pre-0.12.2): `find_all/3` stopped walking after first match | Update to `~> 0.12.9`; walking continues past each match |
+| Bare import matches too many calls | `expand_imports: true` re-enables old expansive behavior | Default is conservative; opt in explicitly with `expand_imports: true` or `--expand-imports` |
+| Bare import matches too FEW calls | Old behavior (pre-0.12.5) before conservative change, or you need `expand_imports: true` | Pass `expand_imports: true` for full bare-import expansion |
+| Multi-arity import only matches one arity | Old behavior (pre-0.12.5) for `import Foo, only: [bar: 1, bar: 2]` | Update to `~> 0.13.1`; all listed arities now resolve |
+| Nested pipe stages not all reported | Old behavior (pre-0.12.2): `find_all/3` stopped walking after first match | Update to `~> 0.13.1`; walking continues past each match |
+| Piped call matches unexpected lower-arity forms | Pre-0.13.0 bug: piped call also matched unnormalized RHS at lower arity | Update to `~> 0.13.1`; fixed |
+| Literal matches reported twice | Pre-0.13.0 bug: Sourceror-wrapped literals (lists, tuples, atoms, strings, numbers) double-reported | Update to `~> 0.13.1`; fixed |
+| Two-element tuple pattern inconsistent | Pre-0.13.0: matched in some contexts but not others | Update to `~> 0.13.1`; consistent everywhere |
 | Multi-node pattern misses | Statements are not contiguous | Semi-colon syntax only matches adjacent statements in the same block |
 | `~p` sigil compile error | Pattern string not a literal | `~p` only works with compile-time string literals |
-| `.exs` files not searched | Pre-0.12.2 behavior | Update to `~> 0.12.9`; `.exs` files included in all scan forms |
-| External index returns wrong candidates for pipe patterns | Pre-0.12.8 index term extraction missed pipe-equivalent arities | Update to `~> 0.12.9`; piped-call candidate retrieval is now correct |
+| `.exs` files not searched | Pre-0.12.2 behavior | Update to `~> 0.13.1`; `.exs` files included in all scan forms |
+| External index returns wrong candidates for pipe patterns | Pre-0.12.8 index term extraction missed pipe-equivalent arities | Update to `~> 0.13.1`; piped-call candidate retrieval is correct |
 
 ---
 
@@ -400,6 +458,7 @@ All `search` relationship flags (`--inside`, `--not-inside`, `--contains`, `--no
 4. Use `replace` without `--dry-run` first on unfamiliar patterns — always preview.
 5. Pass `allow_broad: true` in production tooling — broad searches over entire project trees are slow; use `contains` predicates to narrow.
 6. Expect macro-expanded matches — ExAST works on the source AST; `use GenServer` generated callbacks are invisible (use Reach's BEAM frontend for those).
+7. Pin to `0.13.0` — it accidentally dropped Elixir 1.18 support; use `~> 0.13.1`.
 
 ---
 
@@ -407,8 +466,9 @@ All `search` relationship flags (`--inside`, `--not-inside`, `--contains`, `--no
 
 ```elixir
 # mix.exs — dev/test only
-{:ex_ast, "~> 0.12.9", only: [:dev, :test], runtime: false}
+{:ex_ast, "~> 0.13.1", only: [:dev, :test], runtime: false}
 # Transitive: sourceror ~> 1.7, jason ~> 1.4
+# Requires Elixir 1.18+
 ```
 
-Required by Reach (`ex_ast ~> 0.12.0` in Reach's own dep spec). No runtime component — safe as `:runtime: false` in all use cases.
+Required by Reach (`ex_ast ~> 0.12.0` in Reach's own dep spec — update if consuming 0.13 features). No runtime component — safe as `:runtime: false` in all use cases.

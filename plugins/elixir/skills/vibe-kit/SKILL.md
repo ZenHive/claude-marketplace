@@ -10,7 +10,7 @@ allowed-tools: Read, Bash, Grep, Glob
 
 One-command bootstrap: adds `mix ci`, quality-tool deps (Credo, Dialyxir, ExDNA, ExSlop, Reach), and starter config files to a new or existing Mix project.
 
-**Min version: `{:vibe_kit, "~> 0.1", only: [:dev, :test], runtime: false}`.** Published on Hex as of v0.1.5 (June 12, 2026) by `dannote`; MIT license.
+**Min version: `{:vibe_kit, "~> 0.1", only: [:dev, :test], runtime: false}`.** Published on Hex as of v0.1.7 (July 17, 2026) by `dannote`; MIT license. Requires Elixir **≥ 1.18** (lowered from 1.19 in v0.1.6).
 
 **Installer, not a runtime dep.** `mix igniter.install vibe_kit` applies changes and can be removed from `deps` afterwards unless you want `mix vibe_kit.install` to stay available.
 
@@ -51,9 +51,9 @@ VibeKit is an Igniter task (`Mix.Tasks.VibeKit.Install`) that mutates `mix.exs` 
 |--------|--------|
 | `mix ci` alias added to `mix.exs` | See pipeline below |
 | `def cli` updated | `preferred_envs: [ci: :test]` |
-| `dialyzer: [plt_add_apps: [:ex_unit]]` | Appended if not present |
+| `dialyzer: [plt_add_apps: [:ex_unit]]` | Appended if not present; idempotent on re-run (v0.1.6+) |
 | Deps added | Latest Hex versions of credo, dialyxir, ex_dna; optionally reach, ex_slop |
-| `.credo.exs` created/patched | ExSlop plugin prepended to the `"default"` config's `plugins`; relaxes `Credo.Check.Design.AliasUsage` and `ExSlop.Check.Readability.NarratorDoc` |
+| `.credo.exs` created/patched | ExSlop plugin prepended; recommended ExSlop checks activated; two checks relaxed; repeated installs preserve check ordering and do not re-enable relaxed checks (v0.1.6+, v0.1.7+) |
 | `.reach.exs` created | Starts as `[]`; fill in layer/boundary policies as architecture settles |
 | `AGENTS.md` / `CLAUDE.md` | Optional; created only with `--agents-md` / `--claude-md` |
 
@@ -61,7 +61,7 @@ VibeKit is an Igniter task (`Mix.Tasks.VibeKit.Install`) that mutates `mix.exs` 
 ```elixir
 ci: [
   "compile --warnings-as-errors",
-  "format --check-formatted",
+  "format --check-formatted",    # read-only check; does not mutate source (v0.1.6+)
   "test",
   "credo --strict",
   "dialyzer",
@@ -97,7 +97,7 @@ mix igniter.new my_lib \
 
 ### Generated `.credo.exs` Shape
 
-VibeKit patches an existing `.credo.exs` (or creates one) to prepend ExSlop and relax two checks:
+VibeKit patches an existing `.credo.exs` (or creates one) to prepend ExSlop, activate its recommended checks, and relax two checks:
 
 ```elixir
 %{
@@ -113,6 +113,8 @@ VibeKit patches an existing `.credo.exs` (or creates one) to prepend ExSlop and 
   ]
 }
 ```
+
+**v0.1.6+ patcher improvements:** handles `.credo.exs` files that use grouped enabled/disabled check sections (not just flat lists); activates recommended ExSlop checks without re-enabling any check you previously set to `false`. **v0.1.7** additionally preserves the original ordering of checks in the config on repeated installs, making the file byte-for-byte stable across re-runs.
 
 The patcher uses `ExAST.Pattern.match` + `ExAST.Patcher.replace_all` to surgically update AST, so hand-customized `.credo.exs` files are patched in-place rather than overwritten (if `"default"` config exists).
 
@@ -171,6 +173,8 @@ When contributing to an elixir-vibe ecosystem project, `mix ci` is the gate. On 
 | ExSlop checks not running | `.credo.exs` exists but has no `"default"` config name | Rename your config to `"default"` or add ExSlop plugin manually |
 | `reach.check` fails on empty `.reach.exs` | `[]` is valid; Reach treats it as no-policy | This is correct; populate as architecture solidifies |
 | `ex_dna --max-clones 0` blocks CI on generated code | Clones in generated/vendor files | Use `--no-strict-clones` flag or configure ExDNA ignore paths |
+| Re-run re-enables a relaxed check | Pre-v0.1.6 patcher behavior | Upgrade to v0.1.7; the patcher now preserves `false` checks and ordering |
+| `format --check-formatted` modifies files | Pre-v0.1.6 behavior | v0.1.6+ uses read-only check; upgrade if you see unexpected mutations |
 
 ---
 

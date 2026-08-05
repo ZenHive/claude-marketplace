@@ -10,7 +10,7 @@ allowed-tools: Read, Bash, Grep, Glob
 
 Catches patterns LLMs over-produce but experienced Elixir devs don't: blanket rescues, N+1 queries, narrator docs, obvious comments, anti-idiomatic Enum usage, try/rescue around non-raising functions, and more. 40 checks organized as Warning / Refactor / Readability.
 
-**Min version: `{:ex_slop, "~> 0.1", only: [:dev, :test], runtime: false}`** (latest: 0.4.2, May 2026).
+**Min version: `{:ex_slop, "~> 0.1", only: [:dev, :test], runtime: false}`** (latest: 0.4.4, July 2026).
 **31 checks enabled by default** when you register `{ExSlop, []}` as a plugin; 9 are opt-in (noisier style/perf).
 **Credo plugin — not a standalone Mix task.** Runs inside your existing `mix credo --strict` gate.
 **Intentional non-overlap with stock Credo** for doc/comment content and Ecto patterns; a few performance checks intentionally overlap so ExSlop can serve as a generated-code validation pipeline on its own.
@@ -30,6 +30,26 @@ Catches patterns LLMs over-produce but experienced Elixir devs don't: blanket re
     %{
       name: "default",
       plugins: [{ExSlop, []}]       # enables all 31 high-signal checks automatically
+    }
+  ]
+}
+```
+
+**0.4.4 warning:** if you register `{ExSlop, []}` as a plugin AND you have an explicit `checks: [enabled: [...]]` list, ExSlop's checks will be silently absent from that list — and as of 0.4.4, ExSlop emits a runtime warning directing you to add them. Fix: append `ExSlop.recommended_checks/0` to your enabled list:
+
+```elixir
+# recommended_checks/0 returns bare module atoms — Credo's enabled list wants
+# {Module, opts} tuples, so wrap them (this is upstream's own snippet).
+%{
+  configs: [
+    %{
+      name: "default",
+      plugins: [{ExSlop, []}],
+      checks: %{
+        enabled: [
+          # ...your other explicitly enabled checks...
+        ] ++ Enum.map(ExSlop.recommended_checks(), &{&1, []})
+      }
     }
   ]
 }
@@ -128,6 +148,7 @@ These stock Credo checks pair well — enable them alongside ExSlop:
 | Problem | Cause | Fix |
 |---|---|---|
 | ExSlop checks not appearing in `mix credo` | Plugin not registered in `.credo.exs` | Add `plugins: [{ExSlop, []}]` to the named config block |
+| Warning: "ExSlop is registered as a plugin but none of its checks are active." (0.4.4+) | Explicit `checks.enabled` list omits ExSlop checks — Credo treats it as authoritative and discards plugin-registered checks | Append `Enum.map(ExSlop.recommended_checks(), &{&1, []})` to the enabled list (see wiring example above) |
 | `ObviousComment` false positive on domain terms | Default keyword set too broad | Add `additional_keywords: []` option with only the words you want, or disable the check |
 | Refactor check fires on intentional code | Legitimate pattern that matches a heuristic | Cherry-pick checks instead of using `{ExSlop, []}` bulk registration; disable specific checks in `checks: [false: [...]]` |
 | Overlap with stock Credo output | Some perf checks intentionally overlap | Expected — ExSlop serves as a standalone AI-code gate; suppress duplicates in CI if running both |

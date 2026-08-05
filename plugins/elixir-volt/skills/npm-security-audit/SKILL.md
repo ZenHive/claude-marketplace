@@ -10,7 +10,7 @@ allowed-tools: Read, Bash
 
 CVE scanning, license compliance, deprecation detection, supply chain risk scoring, OSV-backed compromised-package checks.
 
-**Min version: `{:npm, "~> 0.7.5"}`.**
+**Min version: `{:npm, "~> 0.7.6"}`.**
 
 **Default-deny on exotic dep specs.** Direct `git`, GitHub-shorthand, URL, and `file:` specs are blocked. Allowlist with `config :npm, exotic_deps: ["github:owner/repo#sha"]`. Transitive exotic deps from published package metadata are always blocked. See § "Exotic Deps & Registry Policy".
 
@@ -122,6 +122,7 @@ The dependency security policy is recorded in `npm.lock`. Lockfiles written unde
 - `Lockfile.get_package/1`: reads file. If already in memory, use `Map.get(lockfile, "name")`.
 - `mix npm.audit --osv` fails on query errors by design — wrap CI calls with retry, don't suppress.
 - **Nested deps & frozen installs (0.7.5):** `npm.lock` now persists nested subtree metadata. Lockfiles generated before 0.7.5 that contain packages with incompatible transitive ranges (especially scoped packages like `@types/*`) may be regenerated on first `mix npm.install` after upgrade — this is expected and safe. `--frozen` installs correctly restore nested subtrees from the new metadata format.
+- **Windows traversal (0.7.6):** package and `node_modules` traversal now stops correctly at Windows filesystem roots. If running audit tasks in Windows CI/CD against repos with deeply nested package trees, upgrade to 0.7.6 before running `mix npm.audit` or `mix npm.licenses` — earlier versions could walk past the volume root.
 
 ### Decision Framework
 

@@ -10,13 +10,13 @@ allowed-tools: Read, Bash, Grep, Glob
 
 OTP-supervised DuckDB via the Quack protocol: DBConnection client, Ecto adapter, native append APIs, Explorer dataframe writes, Geo/WKB spatial, and query profiling.
 
-**Min version: `{:quackdb, "~> 0.5"}`.** Requires DuckDB 1.5.3+ with the `quack` extension. Managed binary auto-downloads on Linux/macOS; Windows support is incomplete.
+**Min version: `{:quackdb, "~> 0.5"}`.** Requires DuckDB 1.5.4+ with the `quack` extension. Managed binary auto-downloads on Linux/macOS; Windows support is incomplete.
 
 **Experimental protocol.** QuackDB targets DuckDB's Quack protocol, which DuckDB itself marks experimental. Public APIs, result shapes, Ecto adapter behavior, and protocol coverage may change between releases.
 
 **Optional integrations activate when packages are present:** `{:ecto_sql, "~> 3.13"}`, `{:explorer, "~> 0.11"}`, `{:geo, "~> 4.1"}`.
 
-**Hex-published at v0.5.15.** Use `{:quackdb, "~> 0.5"}` — do NOT pin to 0.3.x (older readme snapshots show that).
+**Hex-published at v0.5.18.** Use `{:quackdb, "~> 0.5"}` — do NOT pin to 0.3.x (older readme snapshots show that).
 
 **Caveat:** Unsupported vector/logical types raise at runtime. Ecto coverage is analytics-first; edge cases in OLTP-style operations are not guaranteed. QuackDB does not stage local files to remote servers.
 
@@ -33,6 +33,8 @@ OTP-supervised DuckDB via the Quack protocol: DBConnection client, Ecto adapter,
 As of v0.5.15, the server writes default boot SQL (including the generated token) to a temporary init file rather than embedding it in process arguments, so tokens no longer appear in `ps` output.
 
 As of v0.5.14, `INSTALL quack` runs idempotently before `LOAD quack` — the extension installs itself on first boot even when using a stock DuckDB binary.
+
+As of v0.5.18, the managed binary tracks DuckDB 1.5.4 (upgraded from 1.5.3).
 
 ```elixir
 # application.ex
@@ -151,6 +153,27 @@ Pass `:columns` option with explicit type specs for empty/nil-only columns where
 
 ---
 
+### List Helpers (v0.5.17+)
+
+`QuackDB.List` and `QuackDB.Ecto.List` provide helpers for working with DuckDB's native list type.
+
+```elixir
+# Pure list builders
+QuackDB.List.append(list, element)   # appends element to a DuckDB list value
+QuackDB.List.prepend(list, element)  # prepends element to a DuckDB list value
+
+# Ecto query expressions (import QuackDB.Ecto.List)
+import QuackDB.Ecto.List
+
+from t in "tags",
+  select: %{
+    extended: append(t.values, "new_tag"),
+    prefixed: prepend(t.values, "first_tag")
+  }
+```
+
+---
+
 ### Explorer Dataframe Writes
 
 Activated when `{:explorer, "~> 0.11"}` is in deps. Module is `QuackDB.Explorer`.
@@ -180,6 +203,8 @@ end
 
 Supported Ecto operations: raw `Repo.query/3`, schema selects, `Repo.get!/2`, joins, filters, grouping, windows, CTEs, `Repo.insert/2`, `Repo.insert_all/3`, `RETURNING`, `ON CONFLICT DO NOTHING`, common `DO UPDATE` upserts. Migrations: create/drop/alter tables, columns, references, indexes, PKs, check constraints, renames.
 
+As of v0.5.16, `{:array, :map}` columns (`JSON[]` in DuckDB) are supported with full round-trip dump/load through both the SQL and native append paths.
+
 Import helpers:
 ```elixir
 import QuackDB.Ecto           # pulls in all sub-modules below
@@ -192,6 +217,7 @@ import QuackDB.Ecto.Series      # series/1 for date/timestamp generation
 import QuackDB.Ecto.WindowFrames
 import QuackDB.Ecto.Spatial     # ST_* wrappers (requires :geo)
 import QuackDB.Ecto.FTS         # full-text search helpers
+import QuackDB.Ecto.List        # append/2, prepend/2 (v0.5.17+)
 ```
 
 #### Analytical Queries
@@ -302,6 +328,7 @@ Telemetry events emitted: `[:quackdb, :query, :start | :stop]`, `[:quackdb, :app
 | Scenario | Return | Notes |
 |----------|--------|-------|
 | SQL error | `{:error, %QuackDB.Error{}}` | Recoverable — inspect message |
+| Transaction conflict | `{:error, %QuackDB.Error{reason: :transaction_conflict}}` | Retriable as of v0.5.16 |
 | Unsupported type | raises at encode/decode | Fatal per query; avoid the type |
 | Connection timeout | `{:error, exception}` | Check `:receive_timeout` option |
 | Managed binary download fail | startup crash | Check DuckDB version / checksum |
@@ -318,13 +345,14 @@ Telemetry events emitted: `[:quackdb, :query, :start | :stop]`, `[:quackdb, :app
 | Ecto migration errors | Adapter is analytics-first | Stick to supported DDL; avoid OLTP edge cases |
 | `Table.Reader` not available | Explorer not in deps | `{:explorer, "~> 0.11"}` for Livebook integration |
 | Token visible in `ps` output | Older server version | Upgrade to v0.5.15+ (boot SQL written to temp init file) |
+| JSON map array (`{:array, :map}`) dumps incorrectly | Bug in pre-0.5.16 versions | Upgrade to v0.5.16+ |
 
 ---
 
 ### DO NOT
 
 1. Use QuackDB as a drop-in production Postgres replacement — the Quack protocol is experimental.
-2. Pin to `"~> 0.3"` — the README snapshots on mirror sites are stale; 0.5.15 is current.
+2. Pin to `"~> 0.3"` — the README snapshots on mirror sites are stale; 0.5.18 is current.
 3. Call `LOAD spatial` inside queries at runtime without connection pooling awareness — load it in `:boot_sql`.
 4. Expect Windows managed-binary support — provide the DuckDB path explicitly on Windows.
 5. Use `insert_rows!` for very wide schemas with nil-only columns without `:columns` type specs — DuckDB cannot infer the type.

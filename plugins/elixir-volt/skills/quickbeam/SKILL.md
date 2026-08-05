@@ -10,7 +10,7 @@ allowed-tools: Read, Bash, Grep, Glob
 
 QuickJS-NG as a Zig NIF. Each runtime is a GenServer with a persistent JS context — run JS libraries, bridge Elixir↔JS bidirectionally. No Node.js.
 
-**Min version: `{:quickbeam, "~> 0.10.18"}`.** Requires `oxc ~> 0.17.1` (atom-keyed AST — see `oxc.md`). Ships `QuickBEAM.Cover` (JS line coverage via `mix test --cover`), `Beam.XML.parse` (xmerl), and a default `max_stack_size` of 8MB. The bundler exposes oxc's `module_types` per-extension loader option. Vendored C symbols are hidden in the native library, so QuickBEAM can be loaded alongside other Zig/C NIFs without symbol collisions.
+**Min version: `{:quickbeam, "~> 0.10.20"}`.** Requires `oxc ~> 0.17.1` (atom-keyed AST — see `oxc.md`). Ships `QuickBEAM.Cover` (JS line coverage via `mix test --cover`), `Beam.XML.parse` (xmerl), and a default `max_stack_size` of 8MB. The bundler exposes oxc's `module_types` per-extension loader option. Vendored C symbols are hidden in the native library, so QuickBEAM can be loaded alongside other Zig/C NIFs without symbol collisions.
 
 **`npm_ex` is optional.** QuickBEAM does not pull `npm_ex` into your dep tree. The runtime / `eval` / `call` / `load_module` path works without it. Add `{:npm, "~> 0.7.4"}` to your own `mix.exs` only when you actually need `mix npm.install`, lockfile resolution, or browser-bundle hot-loading. The public `QuickBEAM.JS` surface (`parse`, `transform`, `minify`, `bundle`, `bundle_file`) does NOT depend on npm.
 
@@ -32,7 +32,9 @@ QuickJS-NG as a Zig NIF. Each runtime is a GenServer with a persistent JS contex
   memory_limit: 256_000_000,   # 256MB default
   max_stack_size: 8_000_000,   # 8MB default — ~55 recursive frames
   max_convert_depth: 32,       # nested structure depth limit
-  max_convert_nodes: 10_000    # total nodes in conversion
+  max_convert_nodes: 10_000,   # total nodes in conversion
+  wasm_stack_size: 65_536,     # WASM operand stack (bytes) for JS-path WebAssembly guests [0.10.19+]
+  wasm_heap_size: 65_536       # WASM auxiliary heap (bytes) for JS-path WebAssembly guests [0.10.19+]
 )
 
 # Stop and free resources
@@ -48,16 +50,35 @@ QuickBEAM.globals(rt)          # list all global names
 QuickBEAM.globals(rt, user_only: true)  # only user-defined globals
 ```
 
+**`start/1` options — full table:**
+
+| Option | Default | Notes |
+|---|---|---|
+| `:name` | — | Register GenServer under this atom |
+| `:id` | `:name`, then module | Child spec ID |
+| `:handlers` | — | `%{String.t() => function}` for `Beam.call`/`Beam.callSync` |
+| `:script` | — | JS/TS file evaluated at startup (auto-bundles imports) |
+| `:apis` | `[:browser]` | `:browser`, `:node`, both, or `false` for bare engine |
+| `:define` | — | `%{String.t() => term()}` globals injected before script runs (JSON-encoded) |
+| `:memory_limit` | 256 MB | Maximum JS heap in bytes |
+| `:max_stack_size` | 8 MB | Maximum JS call stack in bytes |
+| `:wasm_stack_size` | 65 536 | WASM operand stack for `WebAssembly.instantiate` guests (JS path) |
+| `:wasm_heap_size` | 65 536 | WASM auxiliary heap for `WebAssembly.instantiate` guests (JS path) |
+| `:max_convert_depth` | 32 | Maximum nesting depth for JS→BEAM conversion |
+| `:max_convert_nodes` | 10 000 | Maximum total nodes for JS→BEAM conversion |
+
 **API surfaces:**
 
 | `:apis` | Provides | Does NOT provide |
 |---|---|---|
-| `:browser` (default) | `fetch`, `document`, `crypto`, `WebSocket`, `URL`, `TextEncoder` | `self`, `window`, `process` |
+| `:browser` (default) | `fetch`, `document`, `crypto`, `WebSocket`, `URL`, `TextEncoder`, `Intl.Segmenter` | `self`, `window`, `process` |
 | `:node` | `process`, `path`, `fs`, `os` | `fetch`, `document` |
 | `[:browser, :node]` | Both | — |
 | `false` | Bare QuickJS | Everything above |
 
 `:browser` does NOT define `self`/`window` — see "npm Browser Bundles" for the correct stub pattern.
+
+`Intl.Segmenter` (grapheme segmentation only) is available under `:browser` via `unicode-segmenter` 0.17.0 as of 0.10.20.
 
 ### Code Execution
 
@@ -288,7 +309,9 @@ Mint-backed, full JS `WebSocket` API — `onopen`, `onmessage`, `onclose`, `oner
 
 ### WebAssembly
 
-WAMR-backed, standard JS `WebAssembly` API — `Module`, `Instance`, `Memory`, `Table`, `Global`, `compile`, `instantiate`, `validate`, `CompileError`, `LinkError`, `RuntimeError`.
+Two execution paths: the **JS path** (standard `WebAssembly` API from inside a runtime) and the **Elixir path** (`QuickBEAM.WASM` GenServer).
+
+**JS path** — WAMR-backed, standard JS `WebAssembly` API. Bulk-memory operations (`memory.copy`/`memory.fill`) are enabled as of 0.10.19 — modules compiled with standard toolchains no longer fail with `unsupported opcode fc 0a`. WASM guest stack and heap come from the owning runtime's `:wasm_stack_size` / `:wasm_heap_size` options (default 64 KB each); raise these for complex guest initialization.
 
 ```elixir
 {:ok, 42} = QuickBEAM.eval(rt, """
@@ -300,6 +323,33 @@ WAMR-backed, standard JS `WebAssembly` API — `Module`, `Instance`, `Memory`, `
 """, timeout: 10_000)
 ```
 
+**Elixir path** (`QuickBEAM.WASM`) — supervised GenServer instances with isolated stack/heap. Each instance has its own `:stack_size` and `:heap_size` options (default 64 KB each, independent of the runtime options above).
+
+```elixir
+# :module is the option key for the binary — NOT :bytes
+{:ok, wasm} = QuickBEAM.WASM.start_link(module: wasm_bytes, stack_size: 128_000)
+
+# Call an exported WASM function
+{:ok, 42} = QuickBEAM.WASM.call(wasm, "add", [40, 2])
+
+# Memory operations
+{:ok, data} = QuickBEAM.WASM.read_memory(wasm, offset, length)
+:ok         = QuickBEAM.WASM.write_memory(wasm, offset, data)
+{:ok, n}    = QuickBEAM.WASM.memory_size(wasm)
+{:ok, prev} = QuickBEAM.WASM.memory_grow(wasm, pages)   # pages of 64 KB
+
+# Introspection — exports/1 and imports/1 return a BARE list (or {:error, msg}),
+# not an {:ok, _} tuple; validate/1 returns a plain boolean.
+exports   = QuickBEAM.WASM.exports(wasm_bytes)   # [Module.export_desc()] | {:error, String.t()}
+imports   = QuickBEAM.WASM.imports(wasm_bytes)   # [Module.import_desc()] | {:error, String.t()}
+{:ok, bc} = QuickBEAM.WASM.disasm(wasm_bytes)    # {:ok, Module.t()} | {:error, String.t()}
+true      = QuickBEAM.WASM.validate(wasm_bytes)  # boolean()
+
+QuickBEAM.WASM.stop(wasm)
+```
+
+Use `QuickBEAM.WASM` when you need a supervised Elixir process, direct memory access, or want to avoid the JS runtime overhead.
+
 ### Common Pitfalls
 
 | Problem | Cause | Fix |
@@ -310,6 +360,9 @@ WAMR-backed, standard JS `WebAssembly` API — `Module`, `Instance`, `Memory`, `
 | Memory grows unbounded | Runtime accumulates state | `QuickBEAM.reset/1` or stop/restart |
 | Timeout on large bundle load | No default timeout | Pass `timeout: 30_000` |
 | String keys unexpected | JS objects always string-keyed | Unlike OXC (atom keys) |
+| `unsupported opcode fc 0a` on WASM load | Pre-0.10.19: bulk-memory ops not enabled | Upgrade to `~> 0.10.19`; ops now enabled |
+| WASM guest crashes on complex init | Default 64KB stack/heap too small | Set `:wasm_stack_size` / `:wasm_heap_size` on `start/1` |
+| Crash on `String.prototype.normalize("NFC")` with empty string | Native bug in <0.10.20 | Fixed in 0.10.20 |
 
 ### DO NOT
 

@@ -10,7 +10,7 @@ allowed-tools: Read, Bash, Grep, Glob
 
 GenServer-like RPC over Erlang external term format for BEAM-native control-plane channels that need narrow, auditable authority — not the broad trust of Erlang distribution.
 
-**Min version: `{:safe_rpc, "~> 0.1"}`.** Current release is **v0.1.14**.
+**Min version: `{:safe_rpc, "~> 0.1"}`.** Current release is **v0.1.17**.
 
 **Unix socket-first.** The only shipped transport is `SafeRPC.Transport.Unix` (`:gen_tcp` over `{:local, path}`). TCP/TLS/stdio are defined in the transport behaviour but not yet implemented.
 
@@ -20,7 +20,17 @@ GenServer-like RPC over Erlang external term format for BEAM-native control-plan
 
 **Atom vocabulary preparation.** Safe ETF raises `ArgumentError` on atoms not yet in the atom table. Use `SafeRPC.prepare/2` before connecting to seed the client's atom table from the server's declared vocabulary (v0.1.10+; see section below).
 
-**Caveat:** No TCP/TLS transport yet — both ends must share a filesystem path for the Unix socket.
+**Security hardening (v0.1.15).** Executable ETF terms and compressed ETF are now rejected before request dispatch. Request IDs, operation names, and metadata shapes are validated at the protocol boundary. Frame-size limits are configurable on both client and server (see hexdocs for the exact option key). The trusted-service threat model is documented — SafeRPC is designed for BEAM-to-BEAM communication on trusted networks, not as a public API endpoint.
+
+**Connection isolation (v0.1.15).** Handler exceptions and connection exits no longer terminate the listener. The acceptor loop blocks in a dedicated thread rather than spinning, eliminating idle CPU consumption.
+
+**Concurrent dispatch (v0.1.17, opt-in).** The default remains serialized stateful dispatch. Set `execution: :concurrent` on `start_link` to process requests under a dedicated `Task.Supervisor`. In-flight load is bounded globally (`max_in_flight:`, default 1_024) and per-connection (`max_in_flight_per_connection:`, default 64). Handlers must be stateless in concurrent mode — state-mutating returns are rejected at dispatch with `{:error, :stateful_handler_requires_serial_execution}`.
+
+**Telemetry (v0.1.17).** Connection and request lifecycle events are emitted via `:telemetry`. Metadata is secret-safe — capability tokens are never included in event metadata.
+
+**Receive-side backpressure (v0.1.17).** A bounded per-connection receive window is enforced server-side. In serial mode the window equals `max_in_flight_per_connection`; in concurrent mode the window is fixed at 1 (one outstanding receive per connection slot). Clients that exceed the window will stall their send until capacity is available.
+
+**Caveat:** No TCP/TLS transport yet — both ends must share a filesystem path for the Unix socket. A v2 protocol RFC covering negotiation, authenticated session identity, bounded concurrency, cancellation, deadlines, reconnect behavior, telemetry, and streaming flow control is included as a design document as of v0.1.16 (not yet implemented).
 
 **Does NOT cover:** Erlang distribution, cross-node fanout/multicall (planned but unimplemented), TCP/TLS transports, streaming responses, schema validation.
 
@@ -36,6 +46,8 @@ GenServer-like RPC over Erlang external term format for BEAM-native control-plan
 | `SafeRPC.Client` | GenServer holding a persistent Unix socket connection; also one-shot helpers |
 | `SafeRPC.ClientPool` | Sharded pool of `Client` processes, keyed by `:erlang.phash2/2` |
 | `SafeRPC.Server` | `use` macro + acceptor loop; spawns `Server.Connection` per accepted client |
+| `SafeRPC.Server.Connection` | Per-client connection loop; enforces receive window; emits connection telemetry |
+| `SafeRPC.Server.Dispatcher` | Authorization pipeline + handler dispatch; emits request telemetry |
 | `SafeRPC.Service` | Behaviour for `use SafeRPC, service: ..., version: ...` modules with `@rpc true` annotations |
 | `SafeRPC.Atoms` | Atom vocabulary preparation — collects boundary atoms for safe ETF clients (v0.1.10) |
 | `SafeRPC.Descriptor` | Service descriptor for introspection and vocabulary export |
@@ -116,11 +128,15 @@ end
   authorizer: MyAuthz,             # optional module implementing SafeRPC.Authorizer
   auth_context: %{env: :prod},    # passed as second arg to authorizer.authorize/2
   recv_timeout: 10_000,           # ms, default 5_000
-  socket_mode: 0o660              # optional Unix permission bits on the socket file (v0.1.5)
+  socket_mode: 0o660,             # optional Unix permission bits on the socket file (v0.1.5)
+  # v0.1.17 concurrent dispatch options (all optional):
+  execution: :serial,             # :serial (default) or :concurrent
+  max_in_flight: 1_024,           # global in-flight cap across all connections
+  max_in_flight_per_connection: 64  # per-connection in-flight cap
 )
 ```
 
-**Server lifecycle:** on terminate, the loop closes the listen socket and removes the socket file via `File.rm/1`. Connection cleanup after sending replies was fixed in v0.1.6.
+**Server lifecycle:** on terminate, the loop closes the listen socket and removes the socket file via `File.rm/1`. Connection cleanup after sending replies was fixed in v0.1.6. As of v0.1.15, each connection runs in isolation — handler exceptions and connection exits no longer bring down the listener process.
 
 ---
 
@@ -146,6 +162,67 @@ end
 {:ok, result} = SafeRPC.call("/tmp/mybackend.sock", :status, %{}, cap: "my-secret-token")
 # Service-style op tuple:
 {:ok, :ready} = SafeRPC.call("/tmp/my-app.sock", {MyApp.AdminRPC, :status})
+```
+
+---
+
+### Concurrent Dispatch (v0.1.17)
+
+By default, `SafeRPC.Server` processes requests serially — one handler at a time, with a mutable state threaded through `handle_call`/`handle_cast`. Set `execution: :concurrent` to dispatch each request under a dedicated `Task.Supervisor`, enabling parallel handling.
+
+**When to use concurrent mode:**
+- Service handlers are pure/stateless (no mutable state passed through to reply)
+- High-throughput read operations that need overlap
+
+**When NOT to use concurrent mode:**
+- Any handler that relies on accumulated server state (e.g. a counter, cache, session) — state mutations are rejected with `{:error, :stateful_handler_requires_serial_execution}`
+
+```elixir
+# Concurrent server — handlers must be stateless
+{:ok, _} = MyReadService.start_link(
+  socket: "/tmp/read-service.sock",
+  execution: :concurrent,
+  max_in_flight: 512,            # global cap; excess requests block until a slot frees
+  max_in_flight_per_connection: 32
+)
+```
+
+Global and per-connection limits are enforced independently. A request is accepted only when both the global count and the per-connection count are below their ceilings. The receive window on each connection is set to `max_in_flight_per_connection` in serial mode and to `1` in concurrent mode.
+
+---
+
+### Telemetry (v0.1.17)
+
+SafeRPC emits `:telemetry` events for connection and request lifecycle. Attach handlers with `:telemetry.attach/4` or `:telemetry.attach_many/4`. Capability tokens are **never** included in metadata.
+
+**Connection events** (emitted by `SafeRPC.Server.Connection`):
+
+| Event | Measurements | Metadata |
+|---|---|---|
+| `[:safe_rpc, :connection, :start]` | `%{system_time: integer}` | `%{execution: :serial \| :concurrent, transport: module}` |
+| `[:safe_rpc, :connection, :stop]` | `%{duration: integer}` (monotonic ns) | `%{execution: atom, transport: module, reason: atom}` |
+
+**Request events** (emitted by `SafeRPC.Server.Dispatcher`):
+
+| Event | Measurements | Metadata |
+|---|---|---|
+| `[:safe_rpc, :request, :start]` | `%{system_time: integer}` | `%{execution: atom, kind: :call \| :cast, operation: atom}` |
+| `[:safe_rpc, :request, :stop]` | `%{duration: integer}` (monotonic ns) | `%{execution: atom, kind: atom, operation: atom}` + outcome |
+| `[:safe_rpc, :request, :exception]` | `%{duration: integer}` | `%{execution: atom, kind: atom, operation: atom}` + exception info |
+
+```elixir
+# Example: count requests by operation
+:telemetry.attach(
+  "my-app-rpc-requests",
+  [:safe_rpc, :request, :stop],
+  fn _event, measurements, metadata, _config ->
+    MyMetrics.observe(:rpc_duration_ms,
+      System.convert_time_unit(measurements.duration, :native, :millisecond),
+      [op: metadata.operation, kind: metadata.kind]
+    )
+  end,
+  nil
+)
 ```
 
 ---
@@ -326,9 +403,9 @@ Reply:    {:safe_rpc_reply,  1, id, result}
 Cancel:   {:safe_rpc_cancel, 1, id}
 ```
 
-`id` is an integer (v0.1.8/0.1.13) — integer IDs survive safe ETF decoding across independent clients where a `make_ref()` reference would not. All terms encoded via `:erlang.term_to_binary/1`; decoded via `:erlang.binary_to_term(binary, [:safe])`. The `:safe` flag blocks atoms-from-binary and function references — terms with new atoms or funs will raise `ArgumentError`, caught and returned as `{:error, {:invalid_term, error}}`. RPC operation specs are serialized as strings in descriptors so they remain safe ETF across clients (v0.1.7).
+`id` is an integer (v0.1.8/0.1.13) — integer IDs survive safe ETF decoding across independent clients where a `make_ref()` reference would not. All terms encoded via `:erlang.term_to_binary/1`; decoded via `:erlang.binary_to_term(binary, [:safe])`. The `:safe` flag blocks atoms-from-binary and function references — terms with new atoms or funs will raise `ArgumentError`, caught and returned as `{:error, {:invalid_term, error}}`. As of v0.1.15, executable ETF terms and compressed ETF are rejected at the protocol boundary before dispatch (not merely after decoding). RPC operation specs are serialized as strings in descriptors so they remain safe ETF across clients (v0.1.7).
 
-Protocol version is hard-coded to `1`; mismatched version produces `{:error, {:invalid_request, term}}`.
+Protocol version is hard-coded to `1`; mismatched version produces `{:error, {:invalid_request, term}}`. Request IDs, operation names, and metadata shapes are validated at the boundary as of v0.1.15.
 
 ---
 
@@ -340,11 +417,14 @@ Protocol version is hard-coded to `1`; mismatched version produces `{:error, {:i
 | `{:error, :econnrefused}` | Server stopped but socket file lingered | Server manages cleanup on terminate; check if it crashed |
 | `{:error, :unauthorized}` | Token missing, wrong token, or op not in `ops` list | Pass `cap:` in call opts; check `Capability.new` ops list |
 | `{:error, {:invalid_term, _}}` on reply | Atom in reply not yet in client atom table | Call `SafeRPC.prepare/2` before the first call (v0.1.10+) |
-| `{:error, {:invalid_term, _}}` on request | Binary contains funs or atoms not in table | Sender is not using `:safe`-compatible encoding — audit sender side |
+| `{:error, {:invalid_term, _}}` on request | Binary contains executable terms, compressed ETF, funs, or atoms not in table | Rejected at protocol boundary (v0.1.15); audit sender encoding |
 | `exit {:timeout, ...}` from `await` | Reply didn't arrive in timeout window | Raise timeout in `await/2`, or use `yield/2` to avoid exit |
 | Pool shard imbalance | Low-cardinality key space with few shards | Use a higher-cardinality key or increase `shards:` |
 | Socket file not cleaned up on crash | Server process exited abnormally (skipped `terminate`) | Wrap in a supervisor with restart strategy; server removes file on normal terminate |
 | Socket permission denied | Other OS user can't connect | Pass `socket_mode: 0o660` (or appropriate bits) to `start_link` (v0.1.5) |
+| `{:error, {:invalid_request, _}}` | Malformed request ID, op name, or metadata shape | Protocol boundary validation added in v0.1.15; check sender constructs valid requests |
+| `{:error, :stateful_handler_requires_serial_execution}` | Handler returned mutated state in `execution: :concurrent` mode | Concurrent mode requires stateless handlers; use `:serial` (default) for stateful servers (v0.1.17) |
+| Client stalls sending requests | Server receive window full (`max_in_flight_per_connection` reached) | Increase `max_in_flight_per_connection` or reduce client concurrency; backpressure is by design (v0.1.17) |
 
 ---
 
@@ -358,6 +438,8 @@ Protocol version is hard-coded to `1`; mismatched version produces `{:error, {:i
 6. Assume `shutdown/2` waits for the handler to finish — current impl is an alias for `cancel/1` (cancel frame, no drain).
 7. Use this as a cross-language transport — ETF is BEAM-native; payloads are opaque bytes on any other runtime.
 8. Skip `SafeRPC.prepare/2` when connecting to a fresh node — the first reply with novel atoms will raise `ArgumentError` under `[:safe]` decoding.
+9. Send compressed ETF or terms containing funs/references across the wire — rejected at the protocol boundary since v0.1.15.
+10. Use `execution: :concurrent` with stateful handlers — handlers that mutate state are rejected; concurrent mode is for pure/stateless functions only (v0.1.17).
 
 ---
 
@@ -402,8 +484,8 @@ Supervisor.start_link(children, strategy: :one_for_one)
 ```elixir
 # mix.exs
 {:safe_rpc, "~> 0.1"}
-# Requires Elixir ~> 1.20
-# Transitive runtime dep: {:plug, "~> 1.18"} (for SafeRPC.Adapter.Plug)
+# Requires Elixir ~> 1.19
+# Transitive runtime dep: {:plug, "~> 1.20"} (minimum 1.20.3 as of v0.1.15, for SafeRPC.Adapter.Plug)
 ```
 
 No Hex-published third-party deps beyond Plug. No NIF, no native extension. The `:crypto` application must be started (it is by default in OTP 24+).

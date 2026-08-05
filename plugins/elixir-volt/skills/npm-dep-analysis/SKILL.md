@@ -10,6 +10,14 @@ allowed-tools: Read, Bash
 
 Understand your dep tree, find heavy packages, reduce bloat.
 
+**`{:npm, "~> 0.7.6"}`** — Windows filesystem-root traversal fix + nested-dep conflict resolution + lockfile persistence for nested subtrees (0.7.6).
+
+### Caveat / Does NOT cover
+
+- Does not install or manage packages — use `mix npm.install` / `mix npm.get` for that
+- `NPM.Package.Quality` scores are relative comparisons only; lockfile metadata is too sparse for absolute quality judgments
+- `mix npm.dedupe` suggests deduplication candidates; it does not rewrite `package.json` for you
+
 ### Investigation Workflow
 
 ```bash
@@ -102,13 +110,24 @@ NPM.Diagnostics.Health.grade(health)                   # "D"
 NPM.Diagnostics.Health.recommendations(health)
 ```
 
-### Gotchas
+### Common Issues
 
-- `Dependency.Graph`: lockfile → `adjacency_list/1`; adj → everything else. Passing lockfile to `fan_out` crashes `(ArgumentError) not a list`.
-- `Size.analyze/1`, `Size.top/2`: path strings, not lists. `top/2` re-analyzes.
-- `Package.Quality.score/1`: single entry (`lockfile["name"]`), not whole lockfile.
-- `Why.direct?/2`: checks lockfile keys — misleading; use `pkg_json`.
-- `Diagnostics.Health.score/1`: checks map with `:lockfile`, `:pkg_json`, `:node_modules`.
+| Symptom | Cause | Fix |
+|---|---|---|
+| `(ArgumentError) not a list` on `fan_out/1` | Passed lockfile directly instead of adj | `adjacency_list(lockfile)` first |
+| `top/2` is slow | Re-analyzes from disk every call | Cache `analyze/1` result; call `top` only for display |
+| `Quality.score/1` crashes | Passed whole lockfile | Pass single entry: `lockfile["pkg-name"]` |
+| `Why.direct?/2` returns `true` for transitive | Checks lockfile keys, not `package.json` | Use `Map.has_key?(pkg_json, name)` |
+| `Health.score/1` raises | Passed lockfile directly | Pass `%{lockfile:, pkg_json:, node_modules:}` map |
+| Nested dep missing after reinstall | Pre-0.7.5 lockfile lacks nested metadata | Run `mix npm.install` once to regenerate; 0.7.5+ persists nested subtrees |
+| Scoped package (`@scope/pkg`) nested conflict unresolved | Pre-0.7.5 conflict resolver didn't handle scoped names | Upgrade to 0.7.5; re-run `mix npm.install` |
+| `node_modules` traversal hangs or errors on Windows | Pre-0.7.6 traversal didn't stop correctly at filesystem roots (e.g. `C:\`) | Upgrade to 0.7.6 |
+
+### DO NOT
+
+- Do not call `Size.top/2` in a tight loop — it re-analyzes from disk on each call; call `analyze/1` once and slice the result
+- Do not treat `Quality.score` as an absolute signal — lockfile entries lack enough metadata; use it for relative ranking only
+- Do not rely on `Why.direct?/2` to distinguish real direct deps from hoisted transitive ones — use `pkg_json` directly
 
 ### Optimization Playbook
 
@@ -118,3 +137,14 @@ NPM.Diagnostics.Health.recommendations(health)
 4. `mix npm.dedupe` — flatten duplicate versions where semver allows.
 5. `mix npm.stats` again — measure improvement.
 6. `mix npm.remove` for packages only used transitively by optional features.
+
+### Dependencies
+
+```elixir
+# mix.exs
+{:npm, "~> 0.7.6"}
+```
+
+No runtime Elixir dependencies beyond the standard library. Requires Node.js on `PATH` for the mix tasks; the Elixir API modules (`NPM.Dependency.Graph`, `NPM.Size`, etc.) work against lockfile data without Node.
+
+**Portfolio fit:** used in `elixir-volt` repos (tapakly, etc.) to audit `node_modules` bloat and trace why heavy packages like `ccxt` pull in a given transitive dep.
