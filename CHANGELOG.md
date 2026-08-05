@@ -19,6 +19,19 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 
 ### Changed
 
+- **`elixir` 0.2.7 → 0.2.8**, **`elixir-volt` 0.1.2 → 0.1.3**, **`harness`
+  0.2.8 → 0.2.9**, **`tasks` 0.1.6 → 0.1.7**, **`tools` 0.1.0 → 0.1.1** —
+  skill-include sync. Upstream version bumps: `ex_ast` 0.12.9 → 0.13.1
+  (`_(...)` wildcard callee, `expand_imports:`, Elixir 1.18 support restored
+  after 0.13.0 dropped it), `oxc` through 0.17.8 (`parse/3` `:native` returning
+  an opaque `NativeProgram`, `:env`/`:globals` for type-aware lint,
+  `collect_imports`/`imports` documented as superseded by `select/3`),
+  `quickbeam` 0.10.18 → 0.10.20 (WASM bulk-memory ops, `:wasm_stack_size` /
+  `:wasm_heap_size`, `Intl.Segmenter`, NFC-normalize crash fix), `npm_ex`
+  0.7.4/0.7.5 → 0.7.6 (Windows filesystem-root traversal, nested-dep conflict
+  resolution, nested lockfile subtree persistence). Content updates across
+  `exograph`, `pi-elixir`, `safe-rpc`, `reach`, `quackdb`, `ex-slop`,
+  `vibe-kit`, `harness-workflow`, `rmap`, `task-writing`, and `himalaya`.
 - **`harness` 0.2.7 → 0.2.8** — aligns the driver and dogfooding contracts
   with portfolio-wide inline routing while preserving the reviewer's intentional
   fix-and-approve role for dispatched work.
@@ -47,6 +60,9 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 
 ### Removed
 
+- **`elixir:gatehouse` skill** — the upstream `gatehouse.md` include is retired,
+  so the skill is dropped from the plugin, from `skill-include-map.sh`, and from
+  the `elixir-vibe` roster description.
 - **`phoenix` plugin** — retired. phxagents.dev covers Phoenix/LiveView setup
   (phx.gen.auth, Sobelow, LiveDebugger, formatter) far deeper than
   `phoenix-setup` did; that skill is dropped. `nexus-template` (a Nexus admin
