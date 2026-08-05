@@ -66,7 +66,6 @@ MAPPINGS=(
   "plugins/elixir/skills/building-blocks/SKILL.md:building-blocks.md"
   "plugins/elixir/skills/systemdkit/SKILL.md:systemdkit.md"
   "plugins/elixir/skills/host-kit/SKILL.md:host-kit.md"
-  "plugins/elixir/skills/gatehouse/SKILL.md:gatehouse.md"
   "plugins/elixir/skills/safe-rpc/SKILL.md:safe-rpc.md"
   "plugins/elixir/skills/unitctl/SKILL.md:unitctl.md"
   "plugins/elixir/skills/ex-slop/SKILL.md:ex-slop.md"
