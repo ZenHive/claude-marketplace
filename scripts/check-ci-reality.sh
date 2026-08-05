@@ -25,7 +25,7 @@
 # Observed 2026-08: 29 repos had :integration tests, 2 had CI that ran them.
 #
 # Usage:  check-ci-reality.sh [root-dir]      (default: ~/_DATA/code)
-#         Needs: git, rg, jq, gh (authenticated). Read-only — changes nothing.
+#         Needs: git, rg, jq, python3, gh (authenticated). Read-only.
 
 set -uo pipefail
 
@@ -34,11 +34,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 command -v rg >/dev/null || { echo "need ripgrep (rg)" >&2; exit 1; }
 command -v jq >/dev/null || { echo "need jq" >&2; exit 1; }
+command -v python3 >/dev/null || { echo "need python3" >&2; exit 1; }
 
 have_gh=1
 gh auth status >/dev/null 2>&1 || have_gh=0
 
 echo "== CI reality check: $ROOT"
+# A silently-disabled check reads as a clean bill of health, so say so.
+[ "$have_gh" = 1 ] || echo "!! gh unavailable/unauthenticated — class 2 (never ran) NOT checked"
 echo
 
 # ---------------------------------------------------------------- class 1
@@ -54,28 +57,32 @@ def git(repo, *a):
     return r.stdout if r.returncode == 0 else ""
 
 def filters(path):
-    """Yield (line_no, [branches]) per branches:/branches-ignore: filter."""
+    """Yield (line_no, kind, [branches]) per branches:/branches-ignore: filter."""
     text = path.read_text(errors="replace").splitlines()
     for i, line in enumerate(text, 1):
         m = re.match(r"\s*(branches|branches-ignore)\s*:\s*\[(.*)\]", line)
         if m:
             got = [b.strip().strip("\"'") for b in m.group(2).split(",")]
-            yield i, [b for b in got if b]
+            yield i, m.group(1), [b for b in got if b]
             continue
-        if re.match(r"\s*(branches|branches-ignore)\s*:\s*$", line):
+        m = re.match(r"\s*(branches|branches-ignore)\s*:\s*$", line)
+        if m:
             indent = len(line) - len(line.lstrip())
             got = []
             for j in range(i, len(text)):
                 nxt = text[j]
                 if not nxt.strip():
                     continue
-                if len(nxt) - len(nxt.lstrip()) <= indent or not nxt.lstrip().startswith("-"):
+                # A dash at the SAME indent as its key is valid YAML, so only a
+                # strictly smaller indent ends the sequence. Sibling keys at the
+                # same indent are caught by the startswith("-") test.
+                if len(nxt) - len(nxt.lstrip()) < indent or not nxt.lstrip().startswith("-"):
                     break
                 b = nxt.lstrip()[1:].strip().strip("\"'")
                 if b:
                     got.append(b)
             if got:
-                yield i, got
+                yield i, m.group(1), got
 
 dead = stale = 0
 for repo in sorted(p for p in root.iterdir() if (p / ".git").exists()):
@@ -91,10 +98,15 @@ for repo in sorted(p for p in root.iterdir() if (p / ".git").exists()):
     if not known:
         continue
     for f in sorted([*wf.glob("*.yml"), *wf.glob("*.yaml")]):
-        for ln, names in filters(f):
+        for ln, kind, names in filters(f):
             literal = [b for b in names if not any(c in b for c in "*?![]")]
             missing = [b for b in literal if b not in known]
             if not missing:
+                continue
+            if kind == "branches-ignore":
+                # Inverted semantics: an ignore-list of dead branches ignores
+                # nothing, so the workflow fires on every branch. Harmless.
+                stale += 1
                 continue
             # Still fires if any listed branch is live, or a glob is present.
             if len(literal) - len(missing) > 0 or len(names) > len(literal):
@@ -114,7 +126,8 @@ printf '  %-22s %-6s %-10s %s\n' REPO WF RUNS/GREEN "excluded tags: files / re-i
 for d in "$ROOT"/*/; do
   repo="${d%/}"
   name="$(basename "$repo")"
-  [ -d "$repo/.git" ] || continue
+  # -e, not -d: in a worktree or submodule checkout .git is a file.
+  [ -e "$repo/.git" ] || continue
   # A repo with tests but NO workflows at all is the strongest form of this
   # defect, so it must not be filtered out here.
   [ -d "$repo/.github/workflows" ] || [ -d "$repo/test" ] || continue
@@ -139,10 +152,14 @@ for d in "$ROOT"/*/; do
   itest=0 ici=0 detail=""
   for t in $tags; do
     n=0
-    [ -d "$repo/test" ] && n=$(rg -lI --no-messages ":$t\b" "$repo/test" 2>/dev/null | wc -l | tr -d ' ')
+    # Exclude test_helper.exs: it is where the exclusion list itself lives, so
+    # it matches every tag and would inflate each count by one — hiding the
+    # zero-tagged-test case behind the n=0 guard below.
+    [ -d "$repo/test" ] && n=$(rg -lI --no-messages -g '!test_helper.exs' ":$t\b" "$repo/test" 2>/dev/null | wc -l | tr -d ' ')
     [ "$n" = "0" ] && continue
     inci=0
-    [ "$nwf" != "0" ] && inci=$(rg -lI --no-messages -- "--include[ =]$t" "$repo/.github/workflows" 2>/dev/null | wc -l | tr -d ' ')
+    # \b so --include external_network does not satisfy the check for :external.
+    [ "$nwf" != "0" ] && inci=$(rg -lI --no-messages -- "--include[ =]$t\b" "$repo/.github/workflows" 2>/dev/null | wc -l | tr -d ' ')
     itest=$((itest + n))
     [ "$inci" != "0" ] && ici=$((ici + 1))
     if [ "$inci" = "0" ]; then
@@ -156,18 +173,28 @@ for d in "$ROOT"/*/; do
   if [ "$have_gh" = 1 ]; then
     slug=$(git -C "$repo" remote get-url origin 2>/dev/null | sed -E 's|.*github.com[:/]||; s|\.git$||')
     if [ -n "$slug" ]; then
-      json=$(gh run list -R "$slug" --limit 100 --json conclusion 2>/dev/null)
-      if [ -n "$json" ] && [ "$json" != "[]" ]; then
-        runs=$(echo "$json" | jq 'length')
-        green=$(echo "$json" | jq '[.[]|select(.conclusion=="success")]|length')
+      # Branch on gh's exit status, not on empty output: a rate limit, an
+      # unreadable private repo, a network blip or a non-GitHub origin would
+      # otherwise be indistinguishable from "zero runs" and report a healthy
+      # repo as NEVER RAN. Unknown stays "?", which no flag triggers on.
+      if json=$(gh run list -R "$slug" --limit 100 --json conclusion 2>/dev/null); then
+        if [ -n "$json" ] && [ "$json" != "[]" ]; then
+          runs=$(echo "$json" | jq 'length')
+          green=$(echo "$json" | jq '[.[]|select(.conclusion=="success")]|length')
+        else
+          runs=0 green=0
+        fi
       else
-        runs=0 green=0
+        runs="?" green="?"
       fi
     fi
   fi
 
   flag=""
-  [ "$nwf" = "0" ] && [ "$itest" != "0" ] && flag="  <- NO WORKFLOWS AT ALL"
+  # Gate on having tests at all, not on having *excluded-tag* tests: a repo with
+  # a test suite and zero workflows is the strongest form of this defect, and
+  # gating on itest silently dropped the ones with no excluded tags.
+  [ "$nwf" = "0" ] && [ -d "$repo/test" ] && flag="  <- NO WORKFLOWS AT ALL"
   [ "$nwf" != "0" ] && [ "$runs" = "0" ] && flag="  <- NEVER RAN"
   case "$detail" in *"(NO)"*) flag="$flag  <- tests never execute" ;; esac
   [ -z "$flag" ] && continue
