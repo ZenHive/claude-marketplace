@@ -102,7 +102,7 @@ defp aliases do
       "cmd MIX_ENV=test mix test.json --quiet --cover --cover-threshold 85 --summary-only --exclude integration",
       "sobelow --skip"                 # --skip honors inline # sobelow_skip; drop on pure libs
     ],
-    # CI mirror — adds dialyzer. Matches `elixir-ci-harness` `harness.yml`.
+    # Full gate — adds dialyzer.
     "precommit.full": ["precommit", "dialyzer.json --quiet"]
   ]
 end
@@ -118,9 +118,9 @@ end
 
 - **`credo --strict --ignore TagTODO,TagFIXME`.** TODO/FIXME are tracked-debt visibility (`development-philosophy.md` § "TODO Comment Requirements"), not regressions. Standalone `mix credo` still surfaces them so an agent can SEE the debt; the gate doesn't fail on them so PRs aren't blocked by accumulated tags.
 - **`doctor --raise`.** Overrides `.doctor.exs` `raise: false` to gate CI without changing local behavior. Redundant if the repo already sets `raise: true`, but harmless.
-- **`test.json --cover --cover-threshold 85 --summary-only --exclude integration`.** 85% is the project default (cartouche's empirical floor; meaningful bump from 80%, leaves headroom under typical ~87% project coverage). Critical-path repos (signing, money, crypto, wire-format encoders) raise to `95`. `--exclude integration` because local + CI lack credentials/network for live services; see `elixir-ci-harness` SKILL.md § "Integration Tag Exclusion" for the separate-workflow pattern if integration coverage is needed.
+- **`test.json --cover --cover-threshold 85 --summary-only --exclude integration`.** 85% is the project default (cartouche's empirical floor; meaningful bump from 80%, leaves headroom under typical ~87% project coverage). Critical-path repos (signing, money, crypto, wire-format encoders) raise to `95`. `--exclude integration` because the credentials/network for live services are not present in a normal run; run the integration tag separately where they are.
 - **`sobelow --skip`.** `--skip` makes sobelow honor inline `# sobelow_skip` annotations (without it they're ignored — see "Sobelow skip/config semantics" below). Phoenix / Plug / web-facing apps only — drop on pure libraries. A `.sobelow-conf` needs no flag — it auto-loads since 0.14.1 (`--no-config` opts out).
-- **`dialyzer.json --quiet`** (in `precommit.full`). Agent-friendly JSON variant (`harness.yml` uses plain `mix dialyzer` because GH Actions consumes human-readable output; agents prefer JSON). For pipeline parsing: `dialyzer.json --quiet --output /tmp/dialyzer.json` then jq.
+- **`dialyzer.json --quiet`** (in `precommit.full`). Agent-friendly JSON variant (agents prefer JSON over the human-readable default). For pipeline parsing: `dialyzer.json --quiet --output /tmp/dialyzer.json` then jq.
 
 **Sobelow skip/config semantics** (source-verified against 0.15.0 tarball 2026-08-09, `nccgroup/sobelow`; flag behavior drifts across versions — re-check before relying):
 

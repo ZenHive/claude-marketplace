@@ -147,7 +147,7 @@ Unlike Codex Cloud and Cursor Cloud, these four run as **local CLIs** on the dev
 
 ### CI as the Shared Harness
 
-When the target repo has a `harness.yml` (see `elixir-ci-harness` skill in `claude-marketplace`), every PR push runs the full Elixir harness as a GitHub check — visible to user, agent, and PR review tooling. CI doesn't close the Codex hex.pm + PATH gap (a PR with no harness-validated commits is one CI green away from the same uncertainty either way — one reason `[CX]` code-mutation delegation is suspended). For Cursor PRs, CI is the authoritative harness signal regardless of whether the agent ran the harness pre-PR.
+When the target repo has a `harness.yml`, every PR push runs the full Elixir harness as a GitHub check — visible to user, agent, and PR review tooling. CI doesn't close the Codex hex.pm + PATH gap (a PR with no harness-validated commits is one CI green away from the same uncertainty either way — one reason `[CX]` code-mutation delegation is suspended). For Cursor PRs, CI is the authoritative harness signal regardless of whether the agent ran the harness pre-PR.
 
 The shift this enables:
 
@@ -155,9 +155,8 @@ The shift this enables:
 - **Push-back becomes the default for harness drift.** When CI flags a format / credo / dialyzer / coverage issue, the reviewer's job is to point the agent at the failing check — not to fix it locally. The cloud agent (Cursor especially, since it has hex.pm + can run mix) iterates against the same CI signal the reviewer sees
 - **Local fix shrinks to the env-constraint exception cases.** Per `agent-pr-review.md` § "Push-Back-vs-Fix-Locally Matrix by Agent", local-fix is reserved for items the agent fundamentally can't verify — hex.pm for Codex, Tidewave for Codex (Cursor reaches it via curl), external specs for Codex. CI handles everything else
 
-GH-native auto-merge requires CI status checks to gate against (per `plugins/review/templates/auto-merge.md` § 1 "Branch protection"). When CI is absent, auto-merge cannot fire — the merge falls back to manual `gh pr merge`. File a `TODO(setup-ci)` rmap follow-up pointing at this skill so the next iteration of the PR has CI; `audit-review` Step 9 will surface the gap if it persists.
+GH-native auto-merge requires CI status checks to gate against (per `plugins/review/templates/auto-merge.md` § 1 "Branch protection"). When CI is absent, auto-merge cannot fire — the merge falls back to manual `gh pr merge`. That is a consequence to accept, not a reason to add a workflow.
 
-**Adoption path for delegation-target repos without CI:** copy `templates/harness.yml` from the `elixir-ci-harness` skill into the target repo's `.github/workflows/`, customize the four marked points (branch, MIX_ENV, coverage threshold, integration tag), commit. The next PR push gets the harness check.
 
 ### AGENTS.md Generation
 
@@ -197,5 +196,4 @@ Fly Sprite-hosted Claude Code is a third delegation option that doesn't fit the 
 - `agent-dispatch.md` § "Cursor Delegation Flow" / "Codex Delegation (`[CX]`)" — issue creation, PR review, merge gate
 - `agent-dispatch.md` § "Codex Delegation (`[CX]`)" — eligibility criteria for delegation
 - `critical-rules.md` § "FIX HOOK-FLAGGED ISSUES ON FILES YOU TOUCH" — touched-file scope for harness fixes
-- `elixir-ci-harness` skill (claude-marketplace) — copy-ready CI workflow that closes the Codex-Cloud-no-hex.pm gap
 - `feedback_codex_sandbox_pr_gap.md` — observed Codex env gaps post-allowlist
