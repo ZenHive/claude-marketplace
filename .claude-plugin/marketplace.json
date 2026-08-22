@@ -19,7 +19,7 @@
     {
       "name": "workflow",
       "source": "./plugins/workflow",
-      "description": "Language-agnostic development workflow — worktree-per-branch isolation, the dev lifecycle (task → worktree → review → merge → audit), session-per-phase / evaluator-separation principles, and the upstream-PR contribution flow. Skills: git-worktrees, dev-lifecycle, workflow-philosophy, upstream-pr-workflow.",
+      "description": "Language-agnostic development workflow — worktree isolation, the dev lifecycle, evaluator separation, upstream contributions, and layered Solidity/EVM verification. Skills: git-worktrees, dev-lifecycle, workflow-philosophy, upstream-pr-workflow, onchain-verification.",
       "repository": "https://github.com/ZenHive/claude-marketplace",
       "license": "MIT"
     },
@@ -82,7 +82,7 @@
     {
       "name": "elixir",
       "source": "./plugins/elixir",
-      "description": "Essential Elixir/OTP development support — per-edit check hooks (format, compile, test.json, credo, dialyzer.json, sobelow, doctor) plus core skills: code-style, development-commands/philosophy, dialyzer-json, ex-unit-json, elixir-setup, elixir-ci-harness, integration-testing, usage-rules, hex-docs-search, reach, tidewave-guide, web-command, agent-economy, api-toolkit, zen-websocket, nexus-template.",
+      "description": "Essential Elixir/OTP development support — per-edit check hooks (format, compile, test.json, credo, dialyzer.json, sobelow, doctor) plus core skills: code-style, development-commands/philosophy, dialyzer-json, ex-unit-json, elixir-setup, integration-testing, usage-rules, hex-docs-search, reach, tidewave-guide, web-command, agent-economy, api-toolkit, zen-websocket, nexus-template.",
       "repository": "https://github.com/ZenHive/claude-marketplace",
       "license": "MIT"
     },

@@ -22,6 +22,7 @@ Every skill shipped by a `zenhive` plugin, grouped by plugin. Invoke as
 - `dev-lifecycle` (synced ← dev-lifecycle.md)
 - `workflow-philosophy` (synced ← workflow-philosophy.md)
 - `upstream-pr-workflow` (synced ← upstream-pr-workflow.md)
+- `onchain-verification` (synced ← onchain-verification.md)
 
 ### tasks
 - `rmap` (synced ← rmap.md)
@@ -50,6 +51,7 @@ Every skill shipped by a `zenhive` plugin, grouped by plugin. Invoke as
 
 ### tools
 - `himalaya` (synced ← himalaya.md)
+- `gloomberb` (synced ← gloomberb.md)
 
 ## Per-language dev tooling
 
@@ -58,7 +60,7 @@ Every skill shipped by a `zenhive` plugin, grouped by plugin. Invoke as
   `development-philosophy`, `dialyzer-json`, `ex-unit-json`, `elixir-setup`,
   `reach`, `web-command`, `agent-economy`, `api-toolkit`, `zen-websocket`,
   `nexus-template`
-- native: `elixir-ci-harness`, `hex-docs-search`, `integration-testing`,
+- native: `hex-docs-search`, `integration-testing`,
   `tidewave-guide`, `usage-rules`
 
 ### elixir-volt
