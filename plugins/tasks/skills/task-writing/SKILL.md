@@ -39,6 +39,12 @@ For work against an external API or service, the task must name the provider-own
 
 Do not create a separate research task for this observation when the same implementer will build from it in one session; reality discovery is part of the implementation task.
 
+### Solidity and EVM Verification Tasks
+
+When a task creates or changes deployable Solidity, an EVM executor, or money/authorization logic, also invoke the `onchain-verification` skill. Its acceptance criteria must name the domain invariants, the exact source/bytecode/deployment target, an independent oracle or checker, a deliberate negative control, mutation-survivor review, and a commit-bound verification ledger.
+
+Do not phrase a source-level proof as evidence about deployed bytecode. Financial and authorization contracts need an explicit abstract model plus evidence that the compiled implementation refines it. Simple data/UI wrappers do not need decorative theorem proving, but still require reproducible artifacts, stateful fuzzing, mutation adequacy, and bytecode-level evidence for deployment or lineage claims.
+
 **Encode clarification answers into the task, not the chat** (inspired by spec-kit's `/speckit.clarify`): when the user answers a scoping or clarifying question, fold the answer into `body` / `acceptance_criteria` / `out_of_scope` before filing. An answer that lives only in the conversation is invisible to every future session and to the dispatched implementer — the task file is the only channel that survives.
 
 ### Pre-Creation Gate

@@ -105,6 +105,34 @@ Claude Code's project-scoped hooks (`post-edit-check.sh`, `pre-commit-unified.sh
 
 **Still do not bypass** when the flag is inside your staged diff, when tests actually fail (that's a correctness failure, not a style artifact), or when the user asks you to fix the issue instead of bypass it. The default remains global `critical-rules.md`: "never skip hooks without explicit request" — these aliases are that explicit request, configured once in the shell.
 
+### 🚨 NEVER open an issue or a PR yourself — the human presses send
+
+Fork, branch, commit, push to **your own fork**: all fine, all reversible, all invisible
+to the upstream project. **`gh pr create` and `gh issue create` are where it stops.**
+Prepare the branch and the body, hand both to the user, and let them open it.
+
+The instruction "make a PR for this" authorizes the *work*, not the *publication*. Those
+are different acts: the branch is private until the moment a PR exists, and from that
+moment on the text is public, attributed to the user's GitHub identity, visible to the
+maintainers, and mailed to every watcher. It cannot be unsent — closing a PR leaves it in
+the record.
+
+**What this actually prevents is not rudeness, it's acting on stale context.** Worked
+example (muex, 2026-08-24): a PR was opened against an issue the user had filed, without
+reading the maintainer's reply on that issue. The reply said "Expect it to be fixed" —
+they were taking it — and prescribed a *different* implementation than the one being
+shipped. Every fact needed to not do that was one `gh issue view --comments` away. The
+agent had queried the issue, but read only the metadata.
+
+So, before handing any upstream contribution to the user:
+
+- **Read the full thread**, not the metadata. `gh issue view <n> --repo <o/r> --comments`
+  and `gh pr list --repo <o/r> --state all`. A comment count is not a comment.
+- **Check whether a maintainer has claimed it or prescribed an approach.** Contributing an
+  implementation they already ruled against wastes their review and looks like not reading.
+- **Show the user the PR/issue body before it goes out.** It is published under their name.
+- Their decision is the gate even when they asked for the PR. Re-confirm at publish time.
+
 ### 6. Cleanup
 
 After the PR merges or is abandoned:

@@ -84,10 +84,11 @@ Descripex.MCP.tools([MyApp.Funding, MyApp.Risk])
 
 Use structured discovery instead of reading source. Contracts are compile-time validated — if it compiles, they're accurate.
 
-- **Detect:** `function_exported?(SomeModule, :__api__, 0)` or `function_exported?(MyLib, :describe, 0)`
+- **Detect:** `Code.ensure_loaded?(SomeModule) and function_exported?(SomeModule, :__api__, 0)` (same for `:describe, 0`) — `function_exported?/3` answers `false` for a module that simply has not been loaded yet, which under lazy loading makes an annotated module look unannotated
 - **Discover:** `MyLib.describe()` / `.describe(:funding)` / `.describe(:funding, :annualize)` — Level 3 has everything needed to call correctly (param order, kinds, defaults, return shape, errors, composition hints)
 - **Direct module access:** `Module.__api__()` / `.__api__(:func)` — `hints` has the same fields as Level 3
 - **Batch:** `Descripex.Manifest.build(modules)` — JSON-serializable map of the whole API
+- **Type-coverage audit:** `Descripex.typeless_params(modules)` — every `kind: :value` param still shipping without a JSON Schema, tagged `:no_spec` / `:no_type_info` / `:unconvertible`. Only `:unconvertible` is actionable; gate CI on it
 
 See the library's `CONSUMING.md` for exact output shapes.
 
