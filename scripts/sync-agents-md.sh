@@ -25,6 +25,10 @@
 #   ./sync-agents-md.sh --check     # exit non-zero if AGENTS.md is stale/missing
 #                                   # (compares rendered output, so it catches
 #                                   #  drift in transitive @-imports too)
+#
+# All modes also refuse to let a Hex-publishing repo ship AGENTS.md as ex_doc
+# documentation — see check_publish_exposure below. --check fails on it; the
+# write/dry-run modes warn.
 
 set -euo pipefail
 
@@ -45,6 +49,10 @@ Usage:
 --check compares the rendered output (not mtimes), so it catches drift in
 transitive @-imports too. Use it as a CI / pre-commit / harness check_command
 gate so a stale AGENTS.md fails loudly instead of misleading reviewers.
+
+Every mode also checks that a Hex-publishing repo does not list AGENTS.md in
+ex_doc's `extras` — publishing it would put your inlined CLAUDE.md on
+hexdocs.pm. --check exits non-zero; write and --dry-run only warn.
 USAGE
     exit 0
     ;;
@@ -113,6 +121,66 @@ inline_file() {
   done < "$path"
 }
 
+# AGENTS.md inlines CLAUDE.md's @-imports, so it carries the maintainer's global
+# rules, harness workflow, and references to unrelated private projects. That is
+# correct for a reviewer reading it in-repo, and wrong for anything published:
+# listing it in ex_doc's `extras` ships all of it to hexdocs.pm as consumer
+# documentation. Observed 2026-08-22 on zen_websocket, where agents.html had been
+# live across six releases (0.3.1–0.6.1) under the "Getting Started" group; no
+# gate flagged it, because --check only ever asked whether AGENTS.md was FRESH,
+# never whether it belonged in the docs at all.
+#
+# Only Hex-publishing repos are affected — a private repo may list AGENTS.md in
+# its docs harmlessly, so the guard requires both signals before it fires.
+check_publish_exposure() {
+  [[ -f ./mix.exs ]] || return 0
+
+  # Strip whole-line comments so an explanatory comment naming AGENTS.md (the
+  # usual way a repo records WHY it is excluded) can never trip the guard.
+  local code
+  code=$(sed 's/^[[:space:]]*#.*$//' ./mix.exs)
+
+  grep -qE '(^|[^_[:alnum:]])package:|defp[[:space:]]+package' <<<"$code" || return 0
+
+  # Only an occurrence INSIDE a `files:` / `extras:` / `groups_for_extras` list
+  # counts. Two false signals must not fire the guard:
+  #   * a repo whose aliases run this very script ("AGENTS.md freshness check")
+  #   * a repo documenting the exclusion in a trailing comment
+  # And the match must be delimiter-agnostic: a Hex `files:` list is usually a
+  # ~w() sigil where the entry is a bare word, not a quoted string. Requiring
+  # quotes missed dialyzer_json, which shipped AGENTS.md inside the package
+  # tarball across all four of its releases.
+  awk '
+    function opens(s,  n,i,c) { n=0; for (i=1;i<=length(s);i++) { c=substr(s,i,1)
+      if (c=="(" || c=="[" || c=="{") n++
+      else if (c==")" || c=="]" || c=="}") n-- }
+      return n }
+    {
+      line=$0
+      if (!collecting && match(line, /(^|[^a-zA-Z_])(files|extras)[[:space:]]*:|groups_for_extras/)) {
+        collecting=1; depth=0; seen=0; span=0
+        line=substr(line, RSTART+RLENGTH-1)
+      }
+      if (collecting) {
+        span++
+        if (line ~ /(^|[^[:alnum:]_\/.-])AGENTS\.md/) { found=1 }
+        d=opens(line); depth+=d; if (d>0) seen=1
+        if ((seen && depth<=0) || span>60) collecting=0
+      }
+    }
+    END { exit(found ? 0 : 1) }
+  ' <<<"$code" || return 0
+
+  echo "EXPOSED: ./mix.exs publishes to Hex and lists AGENTS.md in files:/extras:." >&2
+  echo "  AGENTS.md inlines CLAUDE.md's @-imports — publishing it puts your global rules" >&2
+  echo "  and unrelated internal project references on hexdocs.pm and inside the package." >&2
+  echo "  Remove it from ex_doc's \`extras\` (and \`groups_for_extras\`) AND from the Hex" >&2
+  echo "  \`files:\` list; keep the file in the repo for reviewers." >&2
+  echo "  Already published? \`mix hex.publish docs --revert VSN\` drops the docs page;" >&2
+  echo "  a tarball can only be corrected by a new release." >&2
+  return 1
+}
+
 output+="<!-- Auto-generated from CLAUDE.md by claude-marketplace/scripts/sync-agents-md.sh — do not edit manually -->"$'\n'
 output+=$'\n'
 
@@ -129,8 +197,12 @@ case "$MODE" in
     echo ""
     echo "--- Summary ---" >&2
     echo "Dry run — would write to $AGENTS_MD" >&2
+    check_publish_exposure || true
     ;;
   check)
+    # Exposure is checked before freshness: a published AGENTS.md is a leak
+    # whether or not it is current, and "up to date" must never read as "fine".
+    check_publish_exposure || exit 1
     if [[ ! -f "$AGENTS_MD" ]]; then
       echo "STALE: $AGENTS_MD is missing — run sync-agents-md.sh" >&2
       exit 1
@@ -144,5 +216,8 @@ case "$MODE" in
   write)
     printf '%s' "$output" > "$AGENTS_MD"
     echo "Wrote $AGENTS_MD"
+    # Warn but never fail: regenerating the file is how you FIX a stale
+    # AGENTS.md, so blocking the write would strand a repo that trips the guard.
+    check_publish_exposure || true
     ;;
 esac
