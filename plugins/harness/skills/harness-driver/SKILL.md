@@ -97,6 +97,10 @@ You are an AI agent in `~/_DATA/code/harness/` itself, building harness with har
 
 So in this context the names collapse: the native dispatch tools are `mcp__harness__dispatch-*` (same as Context A), and the `project_eval` escape hatch is `mcp__tidewave__project_eval` (Context A's `mcp__harness_eval__project_eval`). Everything else applies identically.
 
+### Mountable-consumer endpoint security
+
+> **Warning:** Harness ships no authentication or authorization for its dashboard, Oban Web, or `/harness/mcp` routes. The standalone endpoint is safe under its default loopback bind. If a consumer mounts these routes in its own non-loopback or public Phoenix endpoint, it must add its own authentication and authorization plug in front of both the browser pipeline and the separate `/harness/mcp` forward. Protecting only the browser pipeline leaves the MCP control surface unauthenticated.
+
 ---
 
 ## Core Principle
@@ -623,7 +627,7 @@ Changes that require an update to this skill:
 
 Either way it does not auto-load on its own — the CLAUDE.md import is what brings it into session context.
 
-When in doubt, read the current moduledocs for `Harness.AgentAdapter`, `Harness.Run`, `Harness.Batch`, `Harness.ProjectRegistry`, and `Harness.Roadmap`, then make this skill match reality. Tidewave `project_eval` is the fastest verifier: `function_exported?/3`, `__info__(:functions)`, `Map.keys(Struct.__struct__())`, and `get_docs` will catch most drift in seconds.
+When in doubt, read the current moduledocs for `Harness.AgentAdapter`, `Harness.Run`, `Harness.Batch`, `Harness.ProjectRegistry`, and `Harness.Roadmap`, then make this skill match reality. The adapter subsystem lives in the `harness_agent_adapter` git dependency (Task 397); the `Harness.AgentAdapter.*` namespace is unchanged, and the conformance suite is `Harness.AgentAdapter.Testing.ConformanceCase`. Tidewave `project_eval` is the fastest verifier: `function_exported?/3`, `__info__(:functions)`, `Map.keys(Struct.__struct__())`, and `get_docs` will catch most drift in seconds.
 
 ---
 
