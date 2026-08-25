@@ -1,7 +1,7 @@
 {
   "name": "tools",
-  "version": "0.1.1",
-  "description": "Personal/utility CLI-usage reference skills — not tied to a dev-lifecycle process or a specific language. Skills: himalaya.",
+  "version": "0.2.0",
+  "description": "Personal/utility CLI-usage reference skills — not tied to a dev-lifecycle process or a specific language. Skills: himalaya, gloomberb.",
   "author": {
     "name": "ZenHive",
     "url": "https://github.com/ZenHive"

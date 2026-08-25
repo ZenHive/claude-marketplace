@@ -1,6 +1,6 @@
 {
   "name": "git-commit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Intelligent git commit workflow automation with AI-powered file grouping and configurable message formats. Command: /git-commit:commit.",
   "author": {
     "name": "ZenHive",

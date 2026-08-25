@@ -103,7 +103,7 @@
     {
       "name": "tools",
       "source": "./plugins/tools",
-      "description": "Personal/utility CLI-usage reference skills — not tied to a dev-lifecycle process or a specific language. Skill: himalaya.",
+      "description": "Personal/utility CLI-usage reference skills — not tied to a dev-lifecycle process or a specific language. Skills: himalaya, gloomberb.",
       "repository": "https://github.com/ZenHive/claude-marketplace",
       "license": "MIT"
     },

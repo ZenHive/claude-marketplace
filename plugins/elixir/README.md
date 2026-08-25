@@ -91,15 +91,6 @@ See [skills/hex-docs-search/SKILL.md](skills/hex-docs-search/SKILL.md) for detai
 
 See [skills/usage-rules/SKILL.md](skills/usage-rules/SKILL.md) for details.
 
-**elixir-ci-harness** - Copy-ready GitHub Actions workflow for Elixir delegation-target repos:
-- ⚙️ **Drift-free version sourcing** - `setup-beam` reads `.tool-versions` directly (no matrix-pin drift between local and CI `mix format`)
-- ✅ **Full harness gate** - format / compile (warnings-as-errors) / credo --strict --ignore TagTODO,TagFIXME / doctor --raise / sobelow / test.json with coverage gate / dialyzer
-- 🎯 **Closes the Codex-Cloud-no-hex.pm gap** - CI runs the harness Codex's env can't, so reviewers read `gh pr checks` instead of running mix locally
-- 📋 **Two template variants** - default single-version (drift-free); forward-compat multi-version addendum (catches dep-version issues at PR-open time during runtime migrations)
-- 🎚️ **Threshold tuning documented** - 80% / 85% / 95% with cartouche worked example
-
-See [skills/elixir-ci-harness/SKILL.md](skills/elixir-ci-harness/SKILL.md) for details.
-
 ## Hook Timeouts
 
 | Hook | Timeout | Rationale |

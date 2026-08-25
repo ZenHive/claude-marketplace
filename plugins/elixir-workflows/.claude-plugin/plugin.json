@@ -1,6 +1,6 @@
 {
   "name": "elixir-workflows",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Workflow-generator plugin — scaffolds project-agnostic research / planning / implementation / QA workflows and the commands that drive them. Skill: workflow-generator. Command: /elixir-workflows:workflow-generator.",
   "author": {
     "name": "ZenHive",

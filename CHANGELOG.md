@@ -8,6 +8,12 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 
 ### Added
 
+- **`tools:gloomberb`** — Gloomberb CLI reference (headless JSON/NDJSON market
+  data from Yahoo, Gloom Cloud, FRED, CNN), synced ← `gloomberb.md`. Carries the
+  verified sharp edges: the level-vs-return correlation trap, unit-free econ
+  calendar strings, options OI-vs-quotes reliability, and the IBKR order-command
+  guardrail.
+- **`workflow:onchain-verification`** — layered verification guidance for deployable Solidity, EVM bytecode, financial/authorization invariants, independent stateful fuzzing, mutation adequacy, Lean models, Kontrol/KEVM, exact-artifact binding, and deliberate negative controls.
 - **`tools`** (new plugin) — personal/utility CLI-usage reference skills.
   Skill: `himalaya` (synced ← himalaya.md), registering the existing
   `~/.claude/includes/himalaya.md` include as a self-invocable skill.
@@ -19,6 +25,33 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 
 ### Changed
 
+- **`tools` 0.1.1 → 0.2.0** — registers `gloomberb` as an include-synced skill;
+  plugin and marketplace descriptions updated.
+- **`workflow` 0.1.1 → 0.1.2** — registers `onchain-verification` as an include-synced skill and exposes its trigger in the marketplace metadata.
+- **`elixir` 0.2.8 → 0.3.0** — removed the `elixir-ci-harness` skill (retired
+  upstream) and dropped it from the plugin description, skill registry, and
+  README.
+- **`harness` 0.2.10 → 0.2.11** — `harness-workflow` / `harness-driver` skill
+  syncs: Herdr adjudication, origin-watching over `dispatch-await`, cursor
+  pinned to `cursor-grok-4.6-high`.
+- **`elixir-volt` 0.1.3 → 0.1.4** — `quickbeam` skill documents 0.11.0
+  (`QuickBEAM.VM`, program pinning, Windows targets).
+- **`tasks` 0.1.7 → 0.1.8** — `task-writing` skill sync (filing-rule flip).
+- **`code-quality` 0.1.0 → 0.1.1**, **`dev-discipline` 0.3.0 → 0.3.1**,
+  **`marketplace-hygiene` 0.1.1 → 0.1.2** — every hard-deny and soft-warn rule
+  is now named and numbered (`CQ-*`, `DD-*`, `MH-*`) in `HOOK-RULES.md`, and
+  each hook message cites its ID.
+- **`review` 0.1.1 → 0.1.2** — `audit-review` fetches GitHub advisories and
+  Dependabot alerts in Step 4.5; stale bare `staged-review` references fixed
+  after the `staged-review` → `review` rename.
+- **`delegation` 0.1.1 → 0.1.2** — `cloud-agent-environments` skill resync after
+  the CI-harness removal; stale marketplace/`staged-review` references swept.
+- **`elixir-workflows` 0.1.0 → 0.1.1**, **`git-commit` 0.1.0 → 0.1.1** — stale
+  `@deltahedge` marketplace references renamed to `@zenhive` in the READMEs.
+- **`scripts/sync-agents-md.sh`** — new `check_publish_exposure` guard refuses to
+  let a Hex-publishing repo ship `AGENTS.md` as ex_doc documentation or inside
+  the package tarball (`--check` fails, write/dry-run warn). Observed live on
+  zen_websocket across six releases and in every `dialyzer_json` tarball.
 - **`elixir` 0.2.7 → 0.2.8**, **`elixir-volt` 0.1.2 → 0.1.3**, **`harness`
   0.2.8 → 0.2.9**, **`tasks` 0.1.6 → 0.1.7**, **`tools` 0.1.0 → 0.1.1** —
   skill-include sync. Upstream version bumps: `ex_ast` 0.12.9 → 0.13.1

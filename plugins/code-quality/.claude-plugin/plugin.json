@@ -1,6 +1,6 @@
 {
   "name": "code-quality",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Language-agnostic LLM-based code quality gate — blocks untracked TODOs, unmarked deferred work, stub functions, and silent workarounds on every source-file edit.",
   "author": {
     "name": "ZenHive",
