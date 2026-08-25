@@ -47,6 +47,7 @@ MAPPINGS=(
   "plugins/workflow/skills/upstream-pr-workflow/SKILL.md:upstream-pr-workflow.md"
   "plugins/workflow/skills/dev-lifecycle/SKILL.md:dev-lifecycle.md"
   "plugins/workflow/skills/workflow-philosophy/SKILL.md:workflow-philosophy.md"
+  "plugins/workflow/skills/onchain-verification/SKILL.md:onchain-verification.md"
 
   # --- portfolio (rename of portfolio-strategy) ---
   "plugins/portfolio/skills/portfolio-strategy/SKILL.md:portfolio-strategy.md"
@@ -87,4 +88,5 @@ MAPPINGS=(
 
   # --- tools (personal/utility CLI-usage skills) ---
   "plugins/tools/skills/himalaya/SKILL.md:himalaya.md"
+  "plugins/tools/skills/gloomberb/SKILL.md:gloomberb.md"
 )
