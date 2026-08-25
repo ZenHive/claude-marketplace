@@ -10,13 +10,13 @@ allowed-tools: Read, Bash, Grep, Glob
 
 OTP-supervised DuckDB via the Quack protocol: DBConnection client, Ecto adapter, native append APIs, Explorer dataframe writes, Geo/WKB spatial, and query profiling.
 
-**Min version: `{:quackdb, "~> 0.5"}`.** Requires DuckDB 1.5.4+ with the `quack` extension. Managed binary auto-downloads on Linux/macOS; Windows support is incomplete.
+**Min version: `{:quackdb, "~> 0.5"}`.** Requires DuckDB 1.5.5+ with the `quack` extension. Managed binary auto-downloads on Linux/macOS; Windows support is incomplete.
 
 **Experimental protocol.** QuackDB targets DuckDB's Quack protocol, which DuckDB itself marks experimental. Public APIs, result shapes, Ecto adapter behavior, and protocol coverage may change between releases.
 
 **Optional integrations activate when packages are present:** `{:ecto_sql, "~> 3.13"}`, `{:explorer, "~> 0.11"}`, `{:geo, "~> 4.1"}`.
 
-**Hex-published at v0.5.18.** Use `{:quackdb, "~> 0.5"}` — do NOT pin to 0.3.x (older readme snapshots show that).
+**Hex-published at v0.5.19.** Use `{:quackdb, "~> 0.5"}` — do NOT pin to 0.3.x (older readme snapshots show that).
 
 **Caveat:** Unsupported vector/logical types raise at runtime. Ecto coverage is analytics-first; edge cases in OLTP-style operations are not guaranteed. QuackDB does not stage local files to remote servers.
 
@@ -35,6 +35,8 @@ As of v0.5.15, the server writes default boot SQL (including the generated token
 As of v0.5.14, `INSTALL quack` runs idempotently before `LOAD quack` — the extension installs itself on first boot even when using a stock DuckDB binary.
 
 As of v0.5.18, the managed binary tracks DuckDB 1.5.4 (upgraded from 1.5.3).
+
+As of v0.5.19, the managed binary tracks DuckDB 1.5.5 (upgraded from 1.5.4); Mint is bumped to 1.9.3, fixing an HTTP/1 response-smuggling issue via sign-tolerant chunk-size parsing.
 
 ```elixir
 # application.ex
@@ -205,6 +207,8 @@ Supported Ecto operations: raw `Repo.query/3`, schema selects, `Repo.get!/2`, jo
 
 As of v0.5.16, `{:array, :map}` columns (`JSON[]` in DuckDB) are supported with full round-trip dump/load through both the SQL and native append paths.
 
+As of v0.5.19, adding a `null: false` column via `alter table` migrations no longer fails: the adapter splits DuckDB's unsupported inline `NOT NULL` constraint into a separate `ADD COLUMN` followed by `ALTER COLUMN ... SET NOT NULL`.
+
 Import helpers:
 ```elixir
 import QuackDB.Ecto           # pulls in all sub-modules below
@@ -346,13 +350,14 @@ Telemetry events emitted: `[:quackdb, :query, :start | :stop]`, `[:quackdb, :app
 | `Table.Reader` not available | Explorer not in deps | `{:explorer, "~> 0.11"}` for Livebook integration |
 | Token visible in `ps` output | Older server version | Upgrade to v0.5.15+ (boot SQL written to temp init file) |
 | JSON map array (`{:array, :map}`) dumps incorrectly | Bug in pre-0.5.16 versions | Upgrade to v0.5.16+ |
+| `ALTER TABLE ... ADD COLUMN ... NOT NULL` fails | Pre-0.5.19: DuckDB doesn't support the inline constraint | Upgrade to v0.5.19+ (adapter splits into `ADD COLUMN` + `SET NOT NULL`) |
 
 ---
 
 ### DO NOT
 
 1. Use QuackDB as a drop-in production Postgres replacement — the Quack protocol is experimental.
-2. Pin to `"~> 0.3"` — the README snapshots on mirror sites are stale; 0.5.18 is current.
+2. Pin to `"~> 0.3"` — the README snapshots on mirror sites are stale; 0.5.19 is current.
 3. Call `LOAD spatial` inside queries at runtime without connection pooling awareness — load it in `:boot_sql`.
 4. Expect Windows managed-binary support — provide the DuckDB path explicitly on Windows.
 5. Use `insert_rows!` for very wide schemas with nil-only columns without `:columns` type specs — DuckDB cannot infer the type.
