@@ -12,7 +12,7 @@ Introduces deliberate bugs into `lib/` and checks whether the suite catches them
 mutant means a test actually asserted the behavior; a **survivor** means the line is executed
 but nothing checks the result — the class of hole coverage percentage cannot see.
 
-**`{:muex, "~> 0.9.0", only: [:dev, :test], runtime: false}`.** Invoked as `mix muex`.
+**`{:muex, "~> 0.9.1", only: [:dev, :test], runtime: false}`.** Invoked as `mix muex`.
 
 ### 🚨 Never a gate — it is a hand-run audit
 
@@ -105,13 +105,15 @@ changed since a git ref) are the two levers that make a repeated audit affordabl
 - **Only `test/`, `priv/` and `config/` are copied into the sandbox.** Fixtures outside those
   three are missing, so every mutant returns `:invalid` and the score reads 0 %.
 
-### Known open defect (unreported as of 2026-08-27)
+### Fixed in 0.9.1 — the map-update swap
 
-`FunctionCall` swaps the arguments of `%{s | k: v}` and emits an AST shape no parser produces,
-so `Code.Normalizer` raises `FunctionClauseError`. No crash — the mutant lands as `:invalid`
-and drops out of the denominator, so it costs mutations **silently**. Measured on bourse:
-36 hits across 15 of 15 inspected files. Draft issue body:
-`upstream_repos/_ours/muex/ready/5-map-update-swap.md`.
+Through 0.9.0, `FunctionCall` swapped the arguments of `%{s | k: v}` and emitted an AST shape
+no parser produces, so `Code.Normalizer` raised `FunctionClauseError`. There was no crash —
+the mutant landed as `:invalid` and dropped out of the denominator, costing mutations
+**silently**. Measured on bourse before the fix: 36 hits across 15 of 15 inspected files.
+0.9.1 visits the operands instead of the `|` node. **An invalid-heavy run taken on ≤ 0.9.0
+is not comparable to one taken after** — re-baseline rather than reading the change as a
+regression.
 
 ### Key flags
 
