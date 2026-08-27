@@ -31,6 +31,13 @@ Consequences, both load-bearing:
 Serializing does **not** fix the flicker (it was measured *at* `--concurrency 1`), so
 `--concurrency 1` costs ~10× wall time and buys nothing. Use the default.
 
+*Counter-measurement, so the rule is applied and not just repeated:* on bourse
+(`lib/bourse/signing/eip712.ex`, 398 mutants, 0.9.1, default concurrency) two identical runs
+returned identical counts **and byte-identical survivor lists**. So the flicker is not
+universal — check it on your own surface with one small module run twice before deciding how
+much a single score is worth. Compare the survivor *lists*, not the totals: equal counts can
+coincide.
+
 ### 🚨 `--timeout` is the trap that silently zeroes a run
 
 **Default is 10 000 ms, and that is far too low for any non-trivial project.** Each mutant
@@ -114,6 +121,11 @@ the mutant landed as `:invalid` and dropped out of the denominator, costing muta
 0.9.1 visits the operands instead of the `|` node. **An invalid-heavy run taken on ≤ 0.9.0
 is not comparable to one taken after** — re-baseline rather than reading the change as a
 regression.
+
+**A second invalid-producing cause is still open.** On bourse's `hmac_recipe.ex` the fix
+added 11 mutants and left the invalid count at exactly 370 across both versions — ~16 % of
+the mutation set, removed from the denominator with no error. Treat a double-digit invalid
+percentage as an unexplained hole in the measurement, not as a property of the code.
 
 ### Key flags
 
