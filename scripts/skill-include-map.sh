@@ -72,6 +72,7 @@ MAPPINGS=(
   "plugins/elixir/skills/ex-slop/SKILL.md:ex-slop.md"
   "plugins/elixir/skills/ex-ast/SKILL.md:ex-ast.md"
   "plugins/elixir/skills/ex-dna/SKILL.md:ex-dna.md"
+  "plugins/elixir/skills/muex/SKILL.md:muex.md"
   "plugins/elixir/skills/exograph/SKILL.md:exograph.md"
   "plugins/elixir/skills/program-facts/SKILL.md:program-facts.md"
   "plugins/elixir/skills/pi-elixir/SKILL.md:pi-elixir.md"
