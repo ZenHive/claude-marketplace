@@ -26,7 +26,7 @@ argument-hint: "harness driver | delegate via harness | use harness for this tas
 
 You (driver) do not run the implementation work. You decide which task, which adapter, which env scrubbing — then dispatch and read the reviewer's verdict.
 
-**Post-v0_5 reality:** Harness is a multi-project OTP node with Oban dispatch, per-project queues, restart resilience, Phoenix LiveView dashboard + Oban Web, a **native MCP server** (`/harness/mcp`, flat JSON tools) AND a Tidewave MCP plug (`/tidewave/mcp`, `project_eval` escape hatch) all on one Bandit endpoint (`http://localhost:4018`), and `Oban.Plugins.Cron` for autonomous polling. **The native MCP tools are the primary driver surface; `project_eval` is the escape hatch** — see § "Primary Surface" below.
+**Post-v0_5 reality:** Harness is a multi-project OTP node with Oban dispatch, per-project queues, restart resilience, Phoenix LiveView dashboard + Oban Web, a **native MCP server** (`/harness/mcp`, flat JSON tools) AND a Tidewave MCP plug (`/tidewave/mcp`, `project_eval` escape hatch) all on one Bandit endpoint (`http://localhost:4018`), and `Oban.Cron` for autonomous polling. **The native MCP tools are the primary driver surface; `project_eval` is the escape hatch** — see § "Primary Surface" below.
 
 ---
 
@@ -49,6 +49,8 @@ Four setup steps the consuming repo needs:
 - **IEx / MCP ad-hoc:** dispatch `Harness.ProjectRegistry.upsert/1` via IEx or the `project_eval` escape hatch (`mcp__harness_eval__project_eval`, wired in step 3). With Postgres enabled, the upsert persists across BEAM restarts.
 
 `check_command` is a free-text dispatch-scale hint handed to the reviewer AI — the reviewer runs the project's checks itself and judges the output; harness never executes this command. For Elixir projects, prefer `mix check.dispatch` plus focused `mix test.json ...` checks for touched behavior; keep `mix precommit.full` / `mix ci` for the landed-base Architect/QA pass that the orchestrator runs between waves. Because `mix check.dispatch` is normally verbose, capture the first run to a unique tmp log (`LOG=$(mktemp -t harness-check-dispatch.XXXXXX.log)` then `mix check.dispatch > "$LOG" 2>&1`) and inspect that file instead of re-running for readable output. For a multi-language monorepo, describe each component's dispatch-scale command. `language` is an optional atom (`nil`/`:elixir` keeps Elixir injected rules; other atoms suppress Elixir-specific rule sections).
+
+`roadmap_target_branch` on `%Harness.Project{}` names the git branch for durable `mark_*` writes when `roadmap_path` lives in a different repository than `source` (the split-repo case). It is required in that case; omitting it on a split-repo project falls back to a local rmap write and origin never advances. Same-repo registrations omit it — durable writes then derive the branch from `target_branch`. Set it from `dispatch-register_project`, the `/harness/settings` create/edit form (blank stays `nil`), or `ProjectRegistry.upsert/1`.
 
 **3. Add harness's MCP endpoints to `myapp`'s `.mcp.json`.** This is the load-bearing step that wires the driver (you) to harness. Add the native server (your primary surface) and, optionally, the eval escape hatch — alongside `myapp`'s own Tidewave (if it has one):
 
@@ -140,10 +142,10 @@ For every dispatched task, the cross-family reviewer AI's verdict — not the im
 | `dispatch-reland` | Re-enqueue the landing job for a run whose land-train hit its cap and left the task `blocked`. Pure git, reviewer-approved branch — **zero agent tokens**. `Harness.Dispatch.reland/1` → `Harness.Lander.enqueue/1`. |
 | `dispatch-verdict_detail` | After settle, read the **reviewer's verdict / report / ratings / checks / concerns / proposed tasks / warning flag** by `run_id` — loaded from the persisted record, so it works after the run process is gone. |
 | `dispatch-pending` / `dispatch-approve` | List / drain autonomous (cron) dispatch decisions parked for operator approval when a project's cron dispatch mode is `:manual` (Task 237). Only the cron poller path is gated; interactive `dispatch-task` / `dispatch-await` are never parked. |
-| `dispatch-register_project` | Register a project for dispatch from JSON scalars (`name`, `source_type` local/github, `source_location`, `roadmap_path`, optional `check_command` / `concurrency_cap` / `language` / `warm_paths`) — the JSON-native path for `Harness.ProjectRegistry.register/1` (which takes a struct). `warm_paths` is a list of repo-relative gitignored directory strings to seed into fresh worktrees. Runtime-only unless `:repo_enabled`; durable registration stays config + restart. |
+| `dispatch-register_project` | Register a project for dispatch from JSON scalars (`name`, `source_type` local/github, `source_location`, `roadmap_path`, `languages`, optional `check_command` / `concurrency_cap` / `warm_paths` / `roadmap_target_branch`) — the JSON-native path for `Harness.ProjectRegistry.register/1` (which takes a struct). `concurrency_cap` must be a positive integer or omitted/`nil` — a string `"4"` (or 0 / -1 / a float) returns `{:error, {:invalid_project, {:invalid_concurrency_cap, _}}}` and is never persisted. `warm_paths` is a list of repo-relative gitignored directory strings to seed into fresh worktrees. `roadmap_target_branch` on `%Harness.Project{}` is the durable-write branch when `roadmap_path` and `source` are different repositories (required then); omit/blank for same-repo registrations, which derive it from `target_branch`. Registration persists to Postgres by default (`:repo_enabled` defaults to `true`) and survives a BEAM restart. Set `repo_enabled: false` for ephemeral in-memory registration; `config :harness, :projects` only seeds missing rows on first boot. |
 | `roadmap-list` / `roadmap-next_bundle` / `roadmap-ingest` | Browse / ingest a registered project's roadmap as structured data. |
 | `roadmap-ready` | The dependency-ready, headless-dispatchable task set (`rmap ready --dispatchable`) — every pending task with all deps done, `handbuild` excluded; returns `id`, `assignee`, and `markers` for autonomous routing. Harness still serializes any write-set overlaps before dispatch. |
-| `roadmap-mark_landed` / `roadmap-mark_blocked` | Write a run's outcome back to the roadmap: `done --verified --verified-by <reviewer> --verification-ref harness-run:<run-id> --shipped-in <sha>` after a successful land; `blocked --reason "..."` as the terminal sink. |
+| `roadmap-mark_landed` / `roadmap-mark_blocked` / `roadmap-mark_in_progress` / `roadmap-mark_pending` | Write a run's outcome back to the roadmap. Each takes `item_or_id` plus `opts` (JSON object of the documented keyword options: `:root` or `:project`, landed `:sha`/`:verified_by`/…, blocked `:reason`). |
 | `project_registry-list` / `project_registry-lookup` | Discover registered project names + config. |
 | `agents-list` / `agents-reviewers` | Read installed/available/enabled agent facts, reviewer eligibility, configured model pins, and the ordered cross-family reviewer slate. |
 | `autonomy-status` | Read cron autonomy master/project toggles, dispatch mode, effective state, and schedule presets. |
@@ -226,7 +228,7 @@ end
 
 `Run.Supervisor.start_run/4` options worth knowing (full list in moduledoc):
 - `:subscriber` — pid that receives `{:harness_run, run_id, result}`. Defaults to caller. **Pass `nil` when dispatching from a `project_eval` escape-hatch snippet** (eval process is ephemeral; see two-eval pattern).
-- `:total_timeout` / `:idle_timeout` — agent run timeouts (forwarded to `Driver`).
+- `:total_timeout` / `:idle_timeout` — agent run timeouts (forwarded to `Harness.AgentDriver`).
 - `:lifetime_timeout` — whole-job wall budget in ms.
 - `:adapter_opts` — per-adapter knobs forwarded to `Invocation`.
 - `:required_capabilities` — gated at dispatch; the run won't start if the selected adapter lacks them.
@@ -260,12 +262,17 @@ rmap can also render an agent harness has **no adapter for** (currently `droid`)
 
 > **Worktree isolation is a separate, orthogonal axis.** All six shipped adapters currently declare `worktree_isolation: true`. `agy` ignores Port `cwd` for writes unless the adapter also passes `--add-dir <worktree>` (Task 32/198 — mirrors Codex `exec --cd`, Task 41). The dispatch guard (`Harness.Worktree.Isolation`) still refuses to start a worktree-isolated run on any future adapter that declares `false`. This is independent of whether rmap can render the agent.
 
-### 2. Cheap / Direct Driver Path (`Harness.AgentAdapter.Driver.run/3`)
+### 2. Cheap / Direct Driver Path (`Harness.AgentDriver.run/3`)
 
 Use for:
 - Cross-agent grading (`Harness.AuditReview`)
 - Quick probes or A/B experiments where you don't need the full worktree + verification lifecycle
 - Situations where you just want raw transcript + `Outcome`
+
+`Harness.AgentDriver` is the only harness-owned entry point. It applies
+rule-delivery policy (Codex/Pi rules go in the prompt so a tracked `AGENTS.md`
+is never modified) and then drives `Harness.AgentAdapter.Driver`. Do not call
+the raw Driver from harness code, MCP/chat tools, or driver scripts.
 
 ```elixir
 invocation = %Harness.AgentAdapter.Invocation{
@@ -276,7 +283,7 @@ invocation = %Harness.AgentAdapter.Invocation{
 }
 
 {:ok, %Harness.AgentAdapter.Outcome{} = outcome} =
-  Harness.AgentAdapter.Driver.run(Harness.AgentAdapter.Grok, invocation,
+  Harness.AgentDriver.run(Harness.AgentAdapter.Grok, invocation,
     total_timeout: 1_800_000,
     idle_timeout: 300_000
   )
@@ -290,7 +297,7 @@ invocation = %Harness.AgentAdapter.Invocation{
 - `:grader` — defaults to the cross-family pair from `config :harness, :audit_review, grader_pairs:` (built-in default: `:codex` for `:claude` and vice versa); implementers absent from the pair map require explicit `:grader`.
 - `:cwd` — defaults to `File.cwd!/0` (see caveat above for Context A).
 - `:model` — pin a specific model id (e.g. `"claude-opus-4-7"` when grading higher-stakes fixes).
-- `:total_timeout` / `:idle_timeout` — forwarded to `Driver`.
+- `:total_timeout` / `:idle_timeout` — forwarded to `AgentDriver`.
 
 ---
 
@@ -300,7 +307,7 @@ Always read `Harness.Run.Result` (or the `Outcome` from the cheap path). The ver
 
 Key fields you care about as driver (full struct: `lib/harness/run/result.ex`):
 - `state` + `reason` — `:done`/`:approved`, or `:failed` with `{:review_rejected, report}` / `{:review_stuck, report}` / a mechanical reason
-- `review` — the parsed `.harness/review.json` artifact (`%Harness.Run.Review{verdict, report, checks, concerns, facets, skills, ratings}`)
+- `review` — the parsed `.harness/review.json` artifact (`%Harness.Run.Review{verdict, report, checks, concerns, facets, skills, ratings}`). The file is removed before every reviewer spawn and must echo `run_id` / `review_attempt` from `HARNESS_RUN_ID` / `HARNESS_REVIEW_ATTEMPT`; a mismatch is treated as missing.
 - `agent_outcome` (raw implementer transcript + kind + exit_status)
 - `reviewer_outcome` (raw reviewer transcript + kind + exit_status, or `nil` if the run never produced a clean reviewer outcome — killed by an idle/spawn timeout, crashed, or no reviewer available). On a `{:review_stuck, _}` run this is the diagnostic of *why* the gate produced no verdict; the dominant stuck mode is a clean reviewer exit that simply omitted the verdict file.
 - `worktree_path` (the deliverable; the branch name is conventionally `"harness/" <> run_id` — not stored on `Result`)
@@ -315,7 +322,7 @@ Never trust `agent_outcome.exit_status` or the implementer's self-reported succe
 
 ## Driving via Chat / MCP (Phase 9, milestone v0_7)
 
-A third consumer surface — alongside `Harness.Run.Supervisor.start_run/4` (verified lifecycle) and `Harness.AgentAdapter.Driver.run/3` (cheap path) — lets an operator drive harness through a natural-language chat session backed by a tool-equipped LLM. Two pieces:
+A third consumer surface — alongside `Harness.Run.Supervisor.start_run/4` (verified lifecycle) and `Harness.AgentDriver.run/3` (cheap path) — lets an operator drive harness through a natural-language chat session backed by a tool-equipped LLM. Two pieces:
 
 ### Chat backend (in-process)
 
@@ -428,7 +435,7 @@ A playbook body names the exact tools to call, in order, with the gotchas inline
 | `dispatch-verdict_detail` (flat MCP) | **Read the reviewer's verdict / report / ratings / checks / concerns / proposed tasks / warning flag** after settle, by `run_id`, loaded from the persisted record. The report is the triage surface for a rejected run. |
 | `dispatch-pending` / `dispatch-approve` (flat MCP) | **Manual-approval cron gate (Task 237):** list parked autonomous decisions (`:manual` dispatch mode projects) and approve one to drain it into the normal reviewer-gated run loop. Only cron-polled work is held; interactive dispatches are not. |
 | `Run.Supervisor.start_run/4` / `Batch.run/4` (escape hatch — `project_eval` / IEx) | You need struct-level control the flat tools don't expose — explicit `retry_policy`, `required_capabilities`, `adapter_opts`, an explicit `reviewer:` override, an ordered fail-over adapter list, or `subscriber: self()` from a long-lived BEAM. |
-| `Driver.run/3` / `AuditReview.grade_fix/1` | A cheap one-shot agent invocation (probe, grade, A/B), no worktree/reviewer-gate lifecycle. `audit_review-grade_fix` is the flat default-pairing version. |
+| `Harness.AgentDriver.run/3` / `AuditReview.grade_fix/1` | A cheap one-shot agent invocation (probe, grade, A/B), no worktree/reviewer-gate lifecycle. `audit_review-grade_fix` is the flat default-pairing version. Do not call `Harness.AgentAdapter.Driver.run/3` — it skips rule-delivery policy. |
 | `Chat.Session` + `Chat.Claude` | The operator (human or upstream LLM) drives harness in natural language and watches tool calls render in the dashboard — exploratory ops, status queries, free-form orchestration. The LLM picks which tools to call. |
 | MCP endpoint at `/harness/mcp` | An **external** orchestrator (another Claude session, Cursor, Sprite, etc.) calls harness tools without being inside harness's BEAM. Standard MCP transport — same `.mcp.json` shape you'd use for any MCP server. This is what surfaces all the flat tools above. |
 | `playbooks-list` / `playbooks-get` | You want a ready-made recipe for a common flow rather than assembling the tool sequence yourself. List the catalog, fetch the one that fits, follow it. |
@@ -469,7 +476,7 @@ case Harness.Run.status("<run-id>") do
 end
 ```
 
-Live transcript: open `http://localhost:4018/harness/runs/<run_id>` in the browser. LiveView is subscribed to `Phoenix.PubSub` topic `harness:run:<id>:transcript`, fed by `Driver.run/3`'s `:on_output` callback. The operator (human) usually has this open; you (driver) usually don't need it unless you're triaging.
+Live transcript: open `http://localhost:4018/harness/runs/<run_id>` in the browser. LiveView is subscribed to `Phoenix.PubSub` topic `harness:run:<id>:transcript`, fed by `Harness.AgentDriver.run/3`'s `:on_output` callback. The operator (human) usually has this open; you (driver) usually don't need it unless you're triaging.
 
 > **LogRecord field coverage.** `%LogRecord{}` carries the reviewer's **verdict** (`:approve`/`:reject`), its **report** (`review_report`) + **quality scores** (`review_skills` since the v0_13 rubric, with legacy `review_ratings` as fallback — KPI rollups prefer `review_skills` via `AgentKPI.record_ratings/1`), plus reviewer-written **checks** (`review_checks`), **concerns** (`review_concerns`), and raw **discovery proposals** (`review_proposed_tasks`). Each proposal carries title, body, suggested scores/markers, and evidence. It is not a filed roadmap task: after the delivery lands, the orchestrator reads proposals via `dispatch-verdict_detail`, dedupes/merges them against the live pending set, and uses its own task-writing gate to decide whether to file. Reviewers never edit roadmap/history files in the run worktree; `roadmap/tasks.toml`, `roadmap/data.json`, `ROADMAP.md`, and `CHANGELOG.md` are excluded from delivery commits. `review_warning?` is true when an approve carries non-empty concerns or a reviewer-authored `passed: false` check claim; harness surfaces that fact loudly but never auto-blocks. The record also carries the **reviewer fix-diff size** (`reviewer_diff_size`), per-run `token_usage` (`%Harness.TokenUsage{}`, parsed from the transcript), the full implementer transcript (`agent_output` + `agent_outcome_kind` / `agent_exit_status`), and — mirroring it — the full **reviewer** transcript (`reviewer_output` + `reviewer_outcome_kind` / `reviewer_exit_status`), so a `{:review_stuck, _}` run is diagnosable after the fact. Both raw-transcript blobs are dropped from `list_run_records` scans and returned only on a single-`run_id` point lookup. To triage a rejected run just call `dispatch-verdict_detail(run_id)` (or read `rec.review_report` off the LogRecord) — the report is the reviewer's prose on what it found.
 
@@ -569,7 +576,7 @@ true = Harness.AgentAdapter.supports?(Harness.AgentAdapter.Pi, {:cost_tier, :fre
 
 - **Don't confuse the two MCP endpoints.** `mcp__tidewave__project_eval` runs inside *your repo's* BEAM (useful for inspecting your app's runtime state); `mcp__harness__project_eval` runs inside *harness's* `:4018` BEAM (this is the dispatch surface). Sending a `Harness.Run.Supervisor.start_run/4` call to your own Tidewave will fail with `undefined function` — harness modules aren't loaded there.
 - **`.mcp.json` changes need a Claude Code restart.** New MCP servers aren't hot-reloaded into the running session — restart after editing.
-- **`File.cwd!/0` is harness's cwd, not yours.** Inside an `mcp__harness__project_eval` snippet, any relative path resolves against `~/_DATA/code/harness/`, not `~/_DATA/code/myapp/`. Pass `:project` to `Roadmap.ingest/2` (carries `roadmap_path`), and pass explicit `cwd:` to `AuditReview.grade_fix/1` and ad-hoc `Driver.run/3` calls.
+- **`File.cwd!/0` is harness's cwd, not yours.** Inside an `mcp__harness__project_eval` snippet, any relative path resolves against `~/_DATA/code/harness/`, not `~/_DATA/code/myapp/`. Pass `:project` to `Roadmap.ingest/2` (carries `roadmap_path`), and pass explicit `cwd:` to `AuditReview.grade_fix/1` and ad-hoc `Harness.AgentDriver.run/3` calls.
 - **Project registration persists across BEAM restarts via Postgres.** Use `/harness/settings` for a running node, or copy/edit `priv/repo/seeds.exs.example` to `priv/repo/seeds.exs` and run `mix harness.seed` for a fresh/reset DB. `config :harness, :projects` is seed-only compatibility and is shadowed by the Postgres table when repo persistence is enabled.
 
 **General (apply to both contexts):**
@@ -607,7 +614,7 @@ In consuming-repo context (A), inline means editing the consuming repo directly 
 Changes that require an update to this skill:
 - New or changed fields on `Harness.AgentAdapter.Invocation`
 - New `rule_channel` values or rule injection behavior
-- New public functions on `Harness.Run.Supervisor`, `Harness.Batch`, `Harness.Batch.AgentEvaluation`, `Harness.Roadmap`, `Harness.Dispatch`, `Harness.AgentAdapter.Driver`
+- New public functions on `Harness.Run.Supervisor`, `Harness.Batch`, `Harness.Batch.AgentEvaluation`, `Harness.Roadmap`, `Harness.Dispatch`, `Harness.AgentDriver`
 - Changes to which `api()`-annotated functions are JSON-reachable vs. `:exchange_data`-filtered (the orchestrator surface) — keep `docs/orchestrator-surface-inventory.md` in sync
 - New adapters or capability declarations
 - Changes to the renderable-vs-executable contract (`@valid_agents`, the adapter registry) or recommended dispatch paths
@@ -627,7 +634,7 @@ Changes that require an update to this skill:
 
 Either way it does not auto-load on its own — the CLAUDE.md import is what brings it into session context.
 
-When in doubt, read the current moduledocs for `Harness.AgentAdapter`, `Harness.Run`, `Harness.Batch`, `Harness.ProjectRegistry`, and `Harness.Roadmap`, then make this skill match reality. The adapter subsystem lives in the `harness_agent_adapter` git dependency (Task 397); the `Harness.AgentAdapter.*` namespace is unchanged, and the conformance suite is `Harness.AgentAdapter.Testing.ConformanceCase`. Tidewave `project_eval` is the fastest verifier: `function_exported?/3`, `__info__(:functions)`, `Map.keys(Struct.__struct__())`, and `get_docs` will catch most drift in seconds.
+When in doubt, read the current moduledocs for `Harness.AgentAdapter`, `Harness.Run`, `Harness.Batch`, `Harness.ProjectRegistry`, and `Harness.Roadmap`, then make this skill match reality. The adapter subsystem lives in the `harness_agent_adapter` package (Task 397; currently a path pin at `vendor/harness_agent_adapter`); the `Harness.AgentAdapter.*` namespace is unchanged, and the conformance suite is `Harness.AgentAdapter.Testing.ConformanceCase`. Tidewave `project_eval` is the fastest verifier: `function_exported?/3`, `__info__(:functions)`, `Map.keys(Struct.__struct__())`, and `get_docs` will catch most drift in seconds.
 
 ---
 
