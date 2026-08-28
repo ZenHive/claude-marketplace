@@ -18,7 +18,7 @@ allowed-tools: Read, Bash, Grep, Glob
 
 **Caveat:** `elixir-rustler-release.yml` requires `contents: write` permission at the calling workflow level — it uploads artifacts and creates GH release assets via `softprops/action-gh-release@v2`.
 
-**Does NOT cover:** `mix ci` definition (that's your repo's `mix.exs` alias), per-module coverage gating, Sobelow, Credo, Doctor (those live in your repos' `harness.yml` CI template). The vibe workflows delegate the entire CI command to the caller via `latest-command` / `min-command`.
+**Does NOT cover:** `mix ci` definition (that's your repo's `mix.exs` alias), per-module coverage gating, Sobelow, Credo, Doctor (those live in `harness.yml` from `elixir-ci-harness`). The vibe workflows delegate the entire CI command to the caller via `latest-command` / `min-command`.
 
 ---
 
@@ -221,11 +221,11 @@ Default job matrix (5 targets):
 
 ---
 
-### Diff vs Your `harness.yml` CI Template
+### Diff vs Your `elixir-ci-harness` (`harness.yml`)
 
 The vibe workflows and the local harness serve different jobs:
 
-| Dimension | `vibe-actions` workflows | `harness.yml` (delegation-target gate) |
+| Dimension | `vibe-actions` workflows | `harness.yml` (elixir-ci-harness) |
 |-----------|--------------------------|----------------------------------|
 | **Purpose** | Shared CI primitives for elixir-vibe org repos | Deterministic gate for cloud-agent (Codex/Cursor) delegation targets |
 | **Version sourcing** | Explicit inputs (`latest-elixir: "1.20"`) | `.tool-versions` file via `erlef/setup-beam version-file:` — no drift |
@@ -242,7 +242,7 @@ The vibe workflows and the local harness serve different jobs:
 
 **They can coexist:** a Rustler elixir-vibe repo can use `elixir-rustler-ci.yml` for the base Elixir+Rust matrix and `harness.yml` on PRs for the stricter mechanical gate — just call `mix ci` from `latest-command` and let `mix ci` run the harness steps locally.
 
-Portfolio fit: the `harness.yml` template in this user's repos (`api_toolkit`, `ccxt_ocx`, `tapakly`) is the local equivalent of what vibe-actions provides for the org — understanding both lets you decide which to reference or compose when adding CI to a new elixir-vibe project or migration target.
+Portfolio fit: the `elixir-ci-harness` skill and `harness.yml` template in this user's repos are the local equivalent of what vibe-actions provides for the org — understanding both lets you decide which to reference or compose when adding CI to a new elixir-vibe project or migration target.
 
 ---
 
