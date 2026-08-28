@@ -68,7 +68,7 @@
     {
       "name": "dev-discipline",
       "source": "./plugins/dev-discipline",
-      "description": "Pause-and-pick PreToolUse reminders (non-blocking) at the moments Claude tends to choose ceremony over inline fix: about-to-rmap-new, about-to-add-[[task]]-via-direct-edit, and about-to-sleep/poll. Fires at the trigger word, where memory entries don't.",
+      "description": "PreToolUse discipline hooks at the moments Claude tends to choose ceremony over inline fix: pause-and-pick reminders (about-to-rmap-new, about-to-add-[[task]]-via-direct-edit, about-to-sleep/poll) plus blocking roadmap/tasks.toml guards — including DD-8, which searches every task status and blocks filing an instance of a class existing tasks already cover. Fires at the trigger word, where memory entries don't.",
       "repository": "https://github.com/ZenHive/claude-marketplace",
       "license": "MIT"
     },

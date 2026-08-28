@@ -9,7 +9,7 @@ exit 0). **Two block** — `tasks-toml-block-human-assignee.sh` and
 failure behind an otherwise-valid-looking edit, and both are cheaply
 recoverable in place.
 
-Every hook cites a stable rule ID (`DD-1`..`DD-7`) in its message — see
+Every hook cites a stable rule ID (`DD-1`..`DD-8`) in its message — see
 [`HOOK-RULES.md`](../../HOOK-RULES.md) at the repo root for the full
 cross-plugin catalog.
 
@@ -106,6 +106,33 @@ deferred build where it drops out of the backlog (the same silent-defer failure
 as masking work as `human`, in a different shape)? Shipped → add the evidence;
 deferred → it's `blocked` (+ `blocked_reason`) or still `pending`, not done.
 
+### `rmap-new-sibling-class.sh` — DD-8, blocking
+
+**Fires:** PreToolUse on `rmap new` (Bash) **and** on a `[[task]]`-shaped edit
+to `*/roadmap/tasks.toml` (Edit/Write/MultiEdit) — the same two surfaces DD-3
+and DD-5 cover — when the proposed title shares strong tokens with existing
+task titles. It runs `rmap list --json` itself and searches **every status**.
+
+**Asks:** Is your finding an INSTANCE of a class those tasks already cover, or
+genuinely a different surface? Same class -> widen this task to the class (the
+invariant that makes the next instance impossible), or fold it into the
+existing task. Different surface -> re-issue with `RMAP_SIBLING_CHECKED=1` in
+the command, or as a comment line in the task block, naming the ids you checked
+and why.
+
+**Why the existing dedupe misses it:** `task-writing`'s "refine, don't
+duplicate" merges against the **pending** set, so a sibling of a *landed* task
+passes every time. Worked example from the bourse roadmap: 658 "bybit dated
+future carries the venue-native date form" (done) -> 660 "...**still** carries
+DDMMMYY after the 658 pass-through" (done) -> 661 (superseded), plus a fourth
+instance still open in `BUGS.md`. Three tasks, one class, class still unfixed.
+Same shape at 664 (the instance) -> 666 ("derived per venue with no shared
+rule" — the class, filed *after* the instance shipped).
+
+**Precision over recall:** a single shared word never fires, even a rare one —
+a false positive trains the caller to reflex-bypass, which costs more than a
+miss. Fails open on a missing `rmap`/`jq`/`python3` or outside a roadmap dir.
+
 ## Why this exists
 
 The close-2-open-2 anti-pattern: close N tasks, open N new tasks — net
@@ -131,7 +158,7 @@ configuration needed.
 If you want to silence one hook locally (e.g. during a long marketplace
 audit pass where rmap new IS the work), unregister or replace at the user
 or project settings level. The five soft reminders are informational noise
-you can ignore at worst; the two blocking hooks (`tasks-toml-block-human-
+you can ignore at worst; the three blocking hooks (`tasks-toml-block-human-
 assignee.sh` [DD-1], `tasks-toml-block-stale-model.sh` [DD-2]) are always
 recoverable in place — add the `# human:` blocker line / swap to a valid
 model, or give the task a dispatchable assignee — so neither ever strands

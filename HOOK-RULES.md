@@ -39,6 +39,7 @@ pause-and-pick reminders.
 | DD-5 | soft | `tasks-toml-new-task-pause.sh` | Same pause-and-pick question as DD-3, for a `[[task]]` block added via direct TOML edit (closes the `rmap new` Bash-matcher bypass). |
 | DD-6 | soft | `tasks-toml-warn-demand-hedging.sh` | Demand-hedge phrasing ("wait until someone asks", "table-stakes", ...) in a task body — gate on a named technical/legal/market-scope blocker, never speculated demand. |
 | DD-7 | soft | `tasks-toml-warn-evidenceless-done.sh` | `status = "done"` set with no `implemented`/`shipped_in`/`delivered_by` in the same edit — may be a decision-only "done" burying a deferred build. |
+| DD-8 | hard | `rmap-new-sibling-class.sh` | A task whose title overlaps existing tasks (searched across **every** status, not just `pending`) is blocked — file the class, not the instance; bypass with `RMAP_SIBLING_CHECKED=1` naming the ids checked. |
 
 ## marketplace-hygiene
 
