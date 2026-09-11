@@ -5,7 +5,7 @@ Detailed variable substitution instructions for each generated command.
 ## Step 3: Generate /elixir-research Command
 
 **Read the template:**
-- Use Read tool to read `plugins/elixir-meta/skills/workflow-generator/templates/research-template.md`
+- Use Read tool to read `plugins/elixir-workflows/skills/workflow-generator/templates/research-template.md`
 
 **Perform variable substitution:**
 
@@ -31,7 +31,7 @@ Replace these variables in the template:
 ## Step 4: Generate /elixir-plan Command
 
 **Read the template:**
-- Use Read tool to read `plugins/elixir-meta/skills/workflow-generator/templates/plan-template.md`
+- Use Read tool to read `plugins/elixir-workflows/skills/workflow-generator/templates/plan-template.md`
 
 **Perform variable substitution:**
 
@@ -60,7 +60,7 @@ Replace these variables in the template:
 ## Step 5: Generate /elixir-implement Command
 
 **Read the template:**
-- Use Read tool to read `plugins/elixir-meta/skills/workflow-generator/templates/implement-template.md`
+- Use Read tool to read `plugins/elixir-workflows/skills/workflow-generator/templates/implement-template.md`
 
 **Perform variable substitution:**
 
@@ -91,7 +91,7 @@ Replace these variables in the template:
 ## Step 6: Generate /elixir-qa Command
 
 **Read the template:**
-- Use Read tool to read `plugins/elixir-meta/skills/workflow-generator/templates/qa-template.md`
+- Use Read tool to read `plugins/elixir-workflows/skills/workflow-generator/templates/qa-template.md`
 
 **Perform variable substitution:**
 
@@ -115,7 +115,7 @@ Replace these variables in the template:
 ## Step 7: Generate /elixir-oneshot Command
 
 **Read the template:**
-- Use Read tool to read `plugins/elixir-meta/skills/workflow-generator/templates/oneshot-template.md`
+- Use Read tool to read `plugins/elixir-workflows/skills/workflow-generator/templates/oneshot-template.md`
 
 **Perform variable substitution:**
 
@@ -137,7 +137,7 @@ Replace these variables in the template:
 ## Step 8: Generate /elixir-interview Command
 
 **Read the template:**
-- Use Read tool to read `plugins/elixir-meta/skills/workflow-generator/templates/interview-template.md`
+- Use Read tool to read `plugins/elixir-workflows/skills/workflow-generator/templates/interview-template.md`
 
 **Perform variable substitution:**
 

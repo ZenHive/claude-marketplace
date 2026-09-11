@@ -33,7 +33,7 @@ Create a standardized workflow system adapted to any project's:
 
 ### Template Path Resolution
 
-Templates are stored in `plugins/elixir-meta/skills/workflow-generator/templates/`. When this skill uses the Read tool:
+Templates are stored in `plugins/elixir-workflows/skills/workflow-generator/templates/`. When this skill uses the Read tool:
 - **During marketplace development**: Paths are relative to repository root
 - **When plugin is installed**: Claude Code resolves paths relative to plugin installation location
 
@@ -117,7 +117,7 @@ Use TodoWrite to track progress through all 10 steps.
 
 ## Steps 3-8: Generate Commands
 
-For each command, read the corresponding template from `plugins/elixir-meta/skills/workflow-generator/templates/`, perform variable substitution based on question answers, and write the customized command to `.claude/commands/`.
+For each command, read the corresponding template from `plugins/elixir-workflows/skills/workflow-generator/templates/`, perform variable substitution based on question answers, and write the customized command to `.claude/commands/`.
 
 | Step | Command | Template |
 |------|---------|----------|

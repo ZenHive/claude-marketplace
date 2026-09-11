@@ -8,7 +8,7 @@ allowed-tools: Read, Grep, Glob, Bash
 
 # Delegation Flow Rules
 
-Load this in repos that actively delegate to cloud agents (Codex, Cursor, future agents). For repos with no delegation, these rules add cognitive load without payoff. Foundational rule for all five below: `critical-rules.md` § "NEVER COMMIT WITHOUT EXPLICIT REQUEST".
+Load this in repos that actively delegate to cloud agents (Codex, Cursor, future agents). For repos with no delegation, these rules add cognitive load without payoff. Foundational rule for all five below: `critical-rules.md` § "Git Commit / Push / PR-Create — Allowed by Default" — commits and pushes are default-allowed; what stays fenced is *whose* branch and *whose* queue.
 
 ## 🚨 DON'T STEAL CLOUD-AGENT-DELEGATED TASKS
 
@@ -23,7 +23,7 @@ A delegation marker means the task is queued for a specific cloud agent's pickup
 **How to apply:**
 1. When picking from ROADMAP.md, skip every cloud-agent-delegated row (`[CX]`, `[CSR]`, etc.) unless it's already `🔄 in-review` (those need GH-native auto-merge to fire — `gh pr merge --auto` was set when the PR opened — or manual `[BLOCK-MERGE]` review; not local re-implementation).
 2. If you genuinely think a delegated task should be local instead, ask: "Task N is marked `[CX]` (or `[CSR]`) — are you sure you want me to do this rather than delegate?" Don't just execute.
-3. Same discipline shape as `NEVER COMMIT WITHOUT EXPLICIT REQUEST` — the marker is a fence; explicit user override is the gate.
+3. The marker is a fence; explicit user override is the gate.
 4. **Per-marker eligibility differs.** Cursor (`[CSR]`) can do strictly more than Codex (`[CX]`) — hex.pm, mix tasks, internet — so the user may have intentionally chosen one over the other. Don't second-guess the marker by reasoning "but Cursor could've done this — let me redirect."
 
 The marker is load-bearing across every cloud agent in the lineup; adding more agents (Devin, OpenHands, etc.) expands the rule, doesn't loosen it.

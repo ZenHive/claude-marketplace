@@ -64,3 +64,7 @@ Himalaya is installed and pre-authed for all mail accounts (Proton via local Bri
 ## JMAP for Stalwart mailboxes
 
 himalaya v2 ships a `jmap` backend/subcommand tree, but the configured accounts run IMAP. `jmapcli` (https://boogie.digital/cli/) remains the tool for JMAP-level ops against Stalwart (`jmapcli accounts`; default `efries@deltahedge.io`, plus `efries@pulau-indah.com`, via https://mail.deltahedge.io).
+
+## Port 465 blocked on some networks — fall back to 587 STARTTLS via a temp config
+
+Observed 2026-09-06 (Bali network): `message send` on a Stalwart account hung ~4 min and died with `connect mail.deltahedge.io:465 … Operation timed out (os error 60)` while 587 and 993 were reachable (`nc -z -G 8 mail.deltahedge.io 465|587|993`). Nothing is sent on a connect timeout — safe to retry — but with `--save sent` himalaya had ALREADY appended the Sent copy over IMAP before SMTP failed, so a stale duplicate row sits in Sent Items (delete it after the successful resend; the Stalwart delivery log, not the Sent folder, is the proof). Fix without touching the real config: copy `config.toml` to a scratch path, in that account's block replace `smtp.server = "smtps://…:465"` with `smtp.server = "smtp://mail.deltahedge.io:587"` plus `smtp.starttls = true` (the key is `starttls`, not `encryption`), then `himalaya -c <tmp> message send …`. Probe with a self-addressed mail first, delete the temp copy afterwards (it inherits the password commands, not secrets, but keep it out of the repo).

@@ -1,6 +1,6 @@
 ---
 name: dev-lifecycle
-description: Use when explaining or orienting around the development lifecycle — answers "which phase am I in?", "which skill owns this?", "what's the handoff between phases?". Canonical reference for the five-phase chain (task-driver → worktree → bots → merge → audit-review; Phase 4 merge is GitHub-native `gh pr merge --auto`) that composes the task-driver, review, and cloud-delegation plugins. Pure documentation — no actions taken.
+description: Use when explaining or orienting around the development lifecycle — answers "which phase am I in?", "which skill owns this?", "what's the handoff between phases?". Canonical reference for the five-phase chain (task-driver → worktree → bots → merge → audit-review; Phase 4 merge is GitHub-native `gh pr merge --auto`) that composes the tasks, review, and delegation plugins. Pure documentation — no actions taken.
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
@@ -8,7 +8,7 @@ allowed-tools: Read, Grep, Glob, Bash
 
 # Five-Phase Development Lifecycle
 
-The `task-driver` + `review` + `cloud-delegation` plugins compose into a five-phase lifecycle from task plan to merged-and-audited code. Same 5+1 category catalog across the two Claude-driven review layers (`code-review` pre-commit + `audit-review` post-merge); each phase has a single owning skill / actor:
+The `tasks` + `review` + `delegation` plugins compose into a five-phase lifecycle from task plan to merged-and-audited code. Same 5+1 category catalog across the two Claude-driven review layers (`code-review` pre-commit + `audit-review` post-merge); each phase has a single owning skill / actor:
 
 ```
 task-driver(1) → worktree(2) → bots(3) → merge(4: GH-native gh pr merge --auto) → audit-review(5)
@@ -26,7 +26,7 @@ task-driver(1) → worktree(2) → bots(3) → merge(4: GH-native gh pr merge --
 
 **Linear is optional.** Projects without Linear use the ROADMAP-fallback flow: Phase 1 files an `rmap` task (`rmap new --from-stdin` into `roadmap/tasks.toml`) + `.thoughts/plans/<id>.md`; Phase 2–5 carry on identically; Linear-status columns above are skipped. The roadmap is rmap-backed in both modes — `roadmap/tasks.toml` canonical, `ROADMAP.md` rendered (see `rmap.md`). See `linear-queue.md` § "ROADMAP-Fallback Flow".
 
-**Language-agnostic by design.** Every phase composes skills from the three already-language-agnostic plugins (`task-driver`, `review`, `cloud-delegation`) plus the `worktree-workflow.md` include. No mix/cargo/npm-specific commands appear in the chain. Elixir-specific gates (`mix test.json`, `mix dialyzer.json`, pre-commit hooks) live in the `elixir` plugin and run alongside but are not part of the lifecycle itself.
+**Language-agnostic by design.** Every phase composes skills from the three already-language-agnostic plugins (`tasks`, `review`, `delegation`) plus the `worktree-workflow.md` include. No mix/cargo/npm-specific commands appear in the chain. Elixir-specific gates (`mix test.json`, `mix dialyzer.json`, pre-commit hooks) live in the `elixir` plugin and run alongside but are not part of the lifecycle itself.
 
 ## End-to-end flow for a typical feature task
 

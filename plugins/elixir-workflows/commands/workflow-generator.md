@@ -11,17 +11,17 @@ This command invokes the workflow-generator skill to create a complete set of cu
 ## What This Does
 
 Generates four workflow commands tailored to your project:
-- `/research` - Document codebase and answer questions
-- `/plan` - Create detailed implementation plans
-- `/implement` - Execute plans with verification
-- `/qa` - Validate implementation quality
+- `/elixir-research` - Document codebase and answer questions
+- `/elixir-plan` - Create detailed implementation plans
+- `/elixir-implement` - Execute plans with verification
+- `/elixir-qa` - Validate implementation quality
 
 ## Execution
 
-Invoke the workflow-generator skill from the elixir-meta plugin:
+Invoke the workflow-generator skill from the elixir-workflows plugin:
 
 ```
-Execute the workflow-generator@deltahedge skill, which will:
+Execute the workflow-generator@zenhive skill, which will:
 
 1. Discover project context (tech stack, build tools, structure)
 2. Ask customization questions about your project
@@ -50,11 +50,11 @@ Skill(command="workflow-generator")
 ```
 .claude/
 ├── commands/
-│   ├── research.md          # Customized research command
-│   ├── plan.md              # Customized planning command
-│   ├── implement.md         # Customized implementation command
-│   ├── qa.md                # Customized QA command
-│   └── oneshot.md           # Complete workflow in one command
+│   ├── elixir-research.md   # Customized research command
+│   ├── elixir-plan.md       # Customized planning command
+│   ├── elixir-implement.md  # Customized implementation command
+│   ├── elixir-qa.md         # Customized QA command
+│   └── elixir-oneshot.md    # Complete workflow in one command
 └── [your-docs-location]/    # Documentation directories
     ├── research/
     └── plans/

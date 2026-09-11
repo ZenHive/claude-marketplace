@@ -22,7 +22,7 @@ code-review          → reviews staged changes (pre-commit)
 QA                   → validates against acceptance criteria
 ```
 
-Durable handoffs: ROADMAP.md (cross-session), `.thoughts/` (within-workflow). Oneshot commands (`/elixir-oneshot`) are for small-medium scope only — large features use separate sessions.
+Durable handoffs: ROADMAP.md (cross-session), `.thoughts/` (within-workflow). Generated oneshot commands (`/elixir-oneshot`) are for small-medium scope only — large features use separate sessions.
 
 ### Acceptance Criteria
 
@@ -37,7 +37,7 @@ Plans produce testable criteria a fresh QA session can check without ambiguity.
 
 - **Hooks** — real-time (post-edit compile, format)
 - **`review:code-review`** — pre-commit (staged changes)
-- **`/elixir-qa`** — post-implementation (against the plan)
+- **`/elixir-qa`** (generated per project by `elixir-workflows:workflow-generator`) — post-implementation, against the plan
 
 Implementer and evaluator are always different sessions. Even with the same model, separation beats self-evaluation. For high-stakes code (auth, crypto, money, migrations), a second reviewer catches what self-review misses.
 
@@ -47,7 +47,7 @@ The done-signal between sessions is **staged-but-uncommitted**, not a commit. Th
 
 - **Implementer:** when tests pass and docs are updated, `git add` the final set and summarise what's staged. Do **not** `git commit`, even if the task "feels done" — that's the temptation the rule exists to stop.
 - **Reviewer (fresh session):** read the staged diff, run the review, stage no new code (the set being reviewed must be frozen); either approve + commit, or push back and let the original author amend the staged set in a follow-up.
-- **Exception:** the user explicitly says "commit it" in the implementer session. Global CLAUDE.md's "never commit without being asked" still governs — staging is the default handoff, not a permission to commit later.
+- **Exception:** the user explicitly says "commit it" in the implementer session. Commits are otherwise default-allowed (`critical-rules.md` § "Git Commit / Push / PR-Create"); what this rule fences is *self-grading*, not permission — the implementer stops at `git add` so a fresh session decides mergeability.
 
 **Hand over a ready commit message.** Whenever you stop and a commit is the next step — the staged-but-uncommitted handoff above, a `⏸ CHECKPOINT`, or simply "the user will commit this" — include a ready one-line commit message in your closing summary. The user (or the next session) should never have to replay chat history to reconstruct what the commit should say. One line, imperative mood, matching the repo's existing log style.
 
@@ -95,10 +95,10 @@ No completion claims without fresh evidence. Run the command, read the output, t
 |-----------|------|
 | Existing roadmap task (harness BEAM running) | `@~/.claude/includes/harness-workflow.md` + `skills/harness-driver/SKILL.md` |
 | Existing roadmap task (no harness) | `task-driver` skill |
-| New feature from scratch | `/elixir-plan` → `/elixir-implement` |
+| New feature from scratch | `/elixir-plan` → `/elixir-implement` (generated per project by `elixir-workflows:workflow-generator` — not shipped by any plugin) |
 | Pre-commit review | `review:code-review` |
-| Post-implementation validation | `/elixir-qa` |
-| Small-medium feature, single session | `/elixir-oneshot` |
+| Post-implementation validation | `/elixir-qa` (generated) |
+| Small-medium feature, single session | `/elixir-oneshot` (generated) |
 | Large feature | Separate sessions + `.thoughts/` handoffs |
 
 ### Layered Architecture
@@ -107,5 +107,5 @@ No completion claims without fresh evidence. Run the command, read the output, t
 |-------|-------|---------|
 | Global includes | Language-agnostic, loaded everywhere | `workflow-philosophy.md`, `task-prioritization.md`, `harness-workflow.md` |
 | Universal skills | Language-agnostic foundations | `task-driver`, `review:code-review` |
-| Language commands | Domain concerns | `/elixir-plan`, `/elixir-qa` |
+| Language commands | Domain concerns | project-generated `/elixir-plan`, `/elixir-qa` (`workflow-generator`) |
 | Language hooks | Real-time enforcement | `post-edit-check.sh`, `pre-commit-unified.sh` |

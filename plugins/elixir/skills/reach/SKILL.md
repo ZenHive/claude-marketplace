@@ -10,7 +10,7 @@ allowed-tools: Read, Bash, Grep, Glob
 
 Builds PDG/SDG from Elixir, Erlang, Gleam, or compiled BEAM. Backward/forward slicing, taint analysis, independence checks, dead-code detection, OTP state-machine analysis, `mix reach` HTML viz.
 
-**Min version: `{:reach, "~> 2.8"}`.** Requires `ex_ast ~> 0.12.0` at the dep level. Optional `:boxart, "~> 0.3.3"` for terminal `--graph` rendering.
+**Min version: `{:reach, "~> 2.8"}` (current: 2.8.3).** Requires `ex_ast ~> 0.12.0` at the dep level. Optional `:boxart, "~> 0.3.3"` for terminal `--graph` rendering.
 
 **Canonical CLI — five commands:** `mix reach.map` (project view), `reach.inspect TARGET` (target-local), `reach.trace` (taint + slicing), `reach.check` (CI gates), `reach.otp` (process / state-machine analysis). `TARGET` accepts `Module.function/arity` or `file:line`.
 
@@ -124,9 +124,13 @@ Reach.classify_effect(node)       # :pure | {:io, ...} | {:send, ...} | ...
 Reach.Effects.classify(node)
 Reach.Effects.effectful?(node, kind)
 Reach.Effects.conflicting?(a, b)
+
+# New in 2.8.3 — provenance: sources, confidence, contributing plugins, unknown reasons
+Reach.Effects.classify_with_provenance(node, graph)
+# → %{effect: :read, confidence: :high, sources: [:plugin], plugins: [Reach.Plugins.Ecto], unknown_reasons: []}
 ```
 
-Built-in classification covers Enum, Map, String, Process, :ets, :code, Node, System, Access, Calendar, Date, Time, `:atomics`/`:counters`/`:persistent_term`, and 30+ more. `Enum.each` → `:io`, `Application.get_env` → `:read`, term-store ops → `:read`/`:write`. Effects of local functions are inferred via fixed-point iteration. On Elixir 1.19+ the classifier reads the `ExCk` BEAM chunk for compiler-inferred type signatures (gracefully disabled on older Elixir). **Plugin `classify_effect/1` results take precedence over generic typespec inference** (2.8.2).
+Built-in classification covers Enum, Map, String, Process, :ets, :code, Node, System, Access, Calendar, Date, Time, `:atomics`/`:counters`/`:persistent_term`, and 30+ more. `Enum.each` → `:io`, `Application.get_env` → `:read`, term-store ops → `:read`/`:write`. Effects of local functions are inferred via fixed-point iteration — now also resolving unqualified project calls, default-argument wrappers, and function references against their owning module (2.8.3). On Elixir 1.19+ the classifier reads the `ExCk` BEAM chunk for compiler-inferred type signatures (gracefully disabled on older Elixir). **Plugin `classify_effect/1` results take precedence over generic typespec inference** (2.8.2). Dependency functions derive medium-confidence effects from BEAM code when plugins and typespecs don't answer (2.8.3). Function captures are classified as `:pure` values until an eager higher-order operation actually executes them (2.8.3). Framework-specific semantics — Phoenix PubSub, `Task.Supervisor`, Mint, controllers, HEEx event attributes — are classified at framework call boundaries rather than falling through to generic inference (2.8.3).
 
 **Plugin `classify_effect/1` callback.** Plugins teach the classifier about framework calls. All built-ins implement it — Phoenix assigns/route helpers → `:pure`, Ecto queries → `:pure`, Repo reads → `:read`, writes → `:write`, Oban `insert` → `:write`, GenStage/Jido signal dispatch → `:send`, OpenTelemetry spans → `:io`, Jason → `:pure`, Poison → `:pure` (split out of the Jason plugin into `Reach.Plugins.Poison`).
 
@@ -187,10 +191,11 @@ mix reach.trace --pattern regex-on-structured                       # named pres
 
 `--pattern` takes a **named source-to-sink preset**, not a regex. The only built-in generic preset is `regex-on-structured` (`Reach.Trace.Pattern`): it flags `File.read/read!/stream!` on structured extensions (`.xml .html .htm .heex .eex .ex .exs .rs`) flowing into `Regex.run/scan/replace/match?`, `=~`, or regex `String.split` — i.e. parsing structured formats with regex. Plugins can register additional presets. `--in` restricts **variable** tracing to a function (`--variable token --in MyApp.Auth.login/2`); it does not take a directory path.
 
-**`mix reach.check`** — CI / release-safety gates. Reports include Mix environment, source roots, and file count metrics (2.8.2). Baseline scope is strictly enforced: baselines regenerate when the Mix environment or source-root configuration changes; cross-environment reuse is rejected to prevent suppression drift (2.8.2).
+**`mix reach.check`** — CI / release-safety gates. Reports include Mix environment, source roots, and file count metrics (2.8.2). Baseline scope is strictly enforced: baselines regenerate when the Mix environment or source-root configuration changes; cross-environment reuse is rejected to prevent suppression drift (2.8.2). Use `checks: [source_paths: [...]]` in `.reach.exs` or `--path` for environment-independent source scope (2.8.2).
 
 ```bash
 mix reach.check --arch                       # validate against .reach.exs policy
+mix reach.check --arch --path lib/my_app/    # scope to a subtree (2.8.2)
 mix reach.check --changed --base main        # changed-risk report (callers, public-API touches, suggested tests)
 mix reach.check --dead-code                  # unused pure expressions
 mix reach.check --smells                     # the full smell surface (see below)
@@ -365,7 +370,7 @@ Each candidate carries `confidence`, `actionability`, `proof`, and (for cycles) 
 
 ```bash
 mix reach lib/my_app/accounts.ex lib/my_app/auth.ex
-# → reach_report/index.html (self-contained, offline)
+# → reach_report/index.html (self-contained, offline; JS/CSS compiled in from 2.8.3)
 ```
 
 Three tabs: Control Flow (CFG), Call Graph (cross-module), Data Flow (def→use chains). Graph data embedded as `window.graphData = {call_graph, control_flow, data_flow}`. `data_flow.taint_paths` slot exists but the CLI doesn't expose source/sink flags — use `mix reach.trace` for taint. Optional deps: `:jason`, `:makeup`, `:makeup_elixir`.
@@ -397,6 +402,12 @@ Reach.taint_analysis(graph,
 **Reorder two side-effecting calls?**
 ```elixir
 Reach.independent?(graph, call_a.id, call_b.id)
+```
+
+**Why does this node get classified as :io?**
+```elixir
+# New in 2.8.3 — inspect effect provenance for debugging or plugin development
+Reach.Effects.classify_with_provenance(node, graph)
 ```
 
 ### Tidewave Exploration

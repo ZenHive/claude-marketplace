@@ -1,6 +1,6 @@
 {
   "name": "workflow",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Language-agnostic development workflow: worktree isolation, lifecycle and evaluator separation, upstream contributions, and layered Solidity/EVM verification. Skills: git-worktrees, dev-lifecycle, workflow-philosophy, upstream-pr-workflow, onchain-verification. Command: /workflow:dev-lifecycle.",
   "author": {
     "name": "ZenHive",

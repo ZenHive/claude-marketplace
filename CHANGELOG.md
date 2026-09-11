@@ -6,6 +6,31 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Dated-prompt-pattern audit** (`/claude-api prompt-audit` over `~/.claude/includes` +
+  every skill). Twelve findings applied:
+  - **Dangling inverted rule** — eight references to `critical-rules.md`
+    § "NEVER COMMIT WITHOUT EXPLICIT REQUEST", a section that was deleted and replaced
+    by "Git Commit / Push / PR-Create — Allowed by Default". `workflow-philosophy`
+    asserted the retired policy as current. `delegation:delegation-rules` (0.1.3),
+    `workflow:git-worktrees` + `workflow:workflow-philosophy` (0.1.3).
+  - **`elixir-workflows:workflow-generator` (0.1.2)** — the skill instructed a Read
+    against `plugins/elixir-meta/…`, a path that does not exist (7 sites across
+    `SKILL.md` and `references/command-generation.md`), and the command invoked
+    `workflow-generator@deltahedge`, a retired marketplace id. Generated-command names
+    reconciled to the `elixir-*` set the templates actually emit.
+  - **`workflow:dev-lifecycle` (0.1.3)** — named the pre-rename `cloud-delegation` and
+    `task-driver` plugins (now `delegation` / `tasks`), body and frontmatter.
+  - **`elixir:code-style` (0.3.2)** — twelve unenforced numeric caps (functions per
+    module, lines per function, call depth, pattern-match depth across three
+    self-assessed tiers) replaced with prose plus the gate that is actually enforced;
+    `Credo score: 8.0` was a fossil of legacy `mix credo` output.
+  - **`tasks:task-writing` (0.1.9)** — migration-relative framing ("Inverse of the
+    pre-2026-08-13 rule…") restated as the current rule.
+  - **`delegation:sprite-claude-code` (0.1.3)** — 1115-char description that enumerated
+    the skill's table of contents, riding in every request, cut to intent categories.
+
 ### Added
 
 - **`tools:gloomberb`** — Gloomberb CLI reference (headless JSON/NDJSON market

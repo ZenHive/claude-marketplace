@@ -139,7 +139,7 @@ A project can opt out of the worktree workflow by pinning a memory file under `~
 ## Cross-References
 
 - `~/.claude/CLAUDE.md` § "Worktree-Per-Branch Workflow" — the rule pointer
-- `~/.claude/includes/critical-rules.md` § "NEVER COMMIT WITHOUT EXPLICIT REQUEST" — the relaxed rule for tracked worktrees
+- `~/.claude/includes/critical-rules.md` § "Git Commit / Push / PR-Create — Allowed by Default" + § "STAGE PATH-SCOPED" — commits are allowed; staging stays path-scoped
 - `~/.claude/includes/delegation-rules.md` — strict rules that stay strict (cloud-agent branches); auto-merge loosened for cloud-agent PRs
 - `~/.claude/includes/task-prioritization.md` § "Parallel Work (`parallel` marker)" — when roadmap-tracked work uses worktrees
 - `review:audit-review` skill — the post-merge hygiene pass
