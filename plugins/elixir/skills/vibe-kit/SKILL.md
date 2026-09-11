@@ -16,7 +16,7 @@ One-command bootstrap: adds `mix ci`, quality-tool deps (Credo, Dialyxir, ExDNA,
 
 **Requires Igniter.** `{:igniter, "~> 0.7"}` must be in deps; without it the install task exits with an error message.
 
-**Portfolio fit: this installer is a *subset* of your `elixir-setup` skill.** Your skill already wires `ex_unit_json`, `dialyzer.json`, `sobelow`, `mix doctor`, `tidewave`, and PostToolUse hooks — things VibeKit does not touch. Use VibeKit to document what the ecosystem *expects* as a baseline `mix ci`; reference your skill for the fuller picture. Both describe `credo --strict`, `dialyzer`, `ex_dna`, `reach.check --arch --smells` — know they overlap.
+**Portfolio fit: this installer is a *subset* of your `elixir-setup` skill.** Your skill already wires `ex_unit_json`, `dialyzer.json`, `sobelow`, `mix doctor`, `tidewave`, and PostToolUse hooks — things VibeKit does not touch. Use VibeKit to document what the ecosystem *expects* as a baseline `mix ci`; reference your skill for the fuller picture. Both describe `credo --strict`, `dialyzer`, `ex_dna`, `reach.check --arch --smells`, and the ExSlop Credo plugin — know they overlap.
 
 **Caveat:** v0.1.x — API surface is small and stable, but the library is young. Pin `~> 0.1` to stay on the 0.1.x series.
 
@@ -154,6 +154,7 @@ VibeKit's `mix ci` is a **public ecosystem convention** — what the elixir-vibe
 | `dialyzer` | yes | yes (+ `dialyzer.json` reporter) |
 | `ex_dna --max-clones 0` | yes | yes |
 | `reach.check --arch --smells` | yes (default) | yes |
+| ExSlop Credo plugin | yes (default) | yes |
 | `ex_unit_json` JSON reporter | no | yes |
 | `sobelow` security scanner | no | yes |
 | `mix doctor` coverage | no | yes |
