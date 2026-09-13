@@ -24,6 +24,8 @@ This file is the **decision layer** — *which* command, *when*. The authoritati
 
 `rmap` walks ancestors of cwd to find `roadmap/tasks.toml`.
 
+**Archive-collapse changelog link.** A `done` phase renders as one line, `> N tasks. See [CHANGELOG.md](CHANGELOG.md#phase-<n>-<slug>)`. Where that link points is configurable: top-level `changelog_path = "packages/x/CHANGELOG.md"` sets the project default, and `[phases.N] changelog = "..."` overrides it per phase (phase → project → built-in `CHANGELOG.md`). Set either to `false` to render the bare `> N tasks.` line with no link — do this for monorepo roots whose changelogs carry no phase headings, so the roadmap never links to an anchor that cannot exist. Nothing configured keeps today's link byte-identically; `true`, blank, or non-string values are rejected before any write. Both fields surface in `data.json`, `rmap schema`, and `rmap diff --verbose`.
+
 ### Command surface, by intent
 
 | Intent | Command |
@@ -35,7 +37,7 @@ This file is the **decision layer** — *which* command, *when*. The authoritati
 | Pick the parallel-safe dispatch set | `rmap ready [--bundle B] [--phase N] [--marker M] [--milestone V] [--count N] [--dispatchable] [--fields a,b,c] [--json]` |
 | See the parallel dispatch schedule | `rmap waves [--json]` — every pending/unblocked task grouped by `dep_layer`; wave 0 runs first, each wave gates the next |
 | List release lines / pin to a release | `rmap milestones [--has-next\|--status\|--json]` · `rmap milestone <id> <name\|none>` |
-| Change status | `rmap status <id> <pending\|in_progress\|blocked\|done\|superseded> [--implemented "..."] [--delivered-by <agent>] [--verified --verified-by <evaluator> [--verification-ref <ref>]] [--shipped-in <sha>] [--reason "..."]` (bulk `1,2,3` atomic; `done` requires `implemented`; new verification claims require evaluator provenance; outcome flags settable only on `done`; `--reason` settable only on `blocked`) |
+| Change status | `rmap status <id> <pending\|in_progress\|blocked\|done\|superseded> [--implemented "..."] [--delivered-by <agent>] [--verified --verified-by <evaluator> [--verification-ref <ref>]] [--shipped-in <sha>] [--reason "..."] [--landing-ref <ref>]` (bulk `1,2,3` atomic; `done` requires `implemented`; new verification claims require evaluator provenance; outcome flags settable only on `done`; `--reason` settable only on `blocked`; `--landing-ref` settable only on `in_progress`) |
 | Toggle a marker | `rmap mark <id> +parallel -cx` |
 | Set/clear agent routing | `rmap assign <id> <assignee\|none\|human> [--model <m>]` — non-`human` live tasks require `--model`; `none`/`human` clear both fields |
 | Add a dependency | `rmap depend <id> on <id>` |
@@ -227,6 +229,7 @@ Outcome fields sit next to `implemented` and are set by `rmap status <id> done`.
 - `verified_by = "<evaluator>"` — free-text independent reviewer identity. Required for new positive verification transitions; legacy schema-v2 rows without it remain valid but `rmap doctor` reports `verified_without_provenance`.
 - `verification_ref = "<ref>"` — optional durable pointer to the evidence, such as `harness-run:<run-id>`, a CI URL, or a review artifact. Blank values or provenance on a non-verified task are invalid.
 - `shipped_in = "<sha>"` — where the work landed (commit SHA / PR ref, free-text, unvalidated). Settable via `--shipped-in <sha>` on `done` transitions; overwrites on re-set. No sha-shape validation, no git auto-derivation — the caller supplies it.
+- `landing_ref = "<ref>"` — an *open* landing pointer (PR URL, MR, or any free-text ref; never parsed or fetched) on a task that is still `in_progress` — the PR-landed harness policy sets it so the roadmap, not only the harness ResultStore, shows why the task is waiting. Settable via `rmap status <id> in_progress --landing-ref <ref>` (an `in_progress` → `in_progress` call is a pure field update, `started_at` unchanged; `""` clears; any other target status rejects the flag). Kept on `done` (provenance next to `shipped_in`) and `blocked`; cleared on `pending`. Rows render a `🔗 <ref>` segment; `rmap stale` / `rmap doctor` list such tasks under `awaiting landing (N)` instead of as stalled.
 
 All outcome fields surface in `rmap show`, JSON / `data.json`, projections, and `rmap diff --verbose`. `rmap list --delivered-by <agent>` filters the delivery ledger. `rmap doctor` emits soft `ClaimedNotGraded` and `VerifiedWithoutProvenance` advisories; hand-built tasks may honestly remain ungraded. These fields stay off `StdinTask` / `NewTaskFields`; they are transition facts, not creation-time intent.
 

@@ -50,6 +50,11 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 
 ### Changed
 
+- **`tasks` 0.1.9 → 0.1.10** — `rmap` skill sync: per-project/per-phase
+  archive-collapse changelog links (`changelog_path`, `[phases.N] changelog`,
+  `false` to drop the link) and the `--landing-ref` open-landing pointer on
+  `in_progress` tasks (`🔗` row segment, `awaiting landing` bucket in
+  `rmap stale` / `rmap doctor`).
 - **`tools` 0.1.1 → 0.2.0** — registers `gloomberb` as an include-synced skill;
   plugin and marketplace descriptions updated.
 - **`workflow` 0.1.1 → 0.1.2** — registers `onchain-verification` as an include-synced skill and exposes its trigger in the marketplace metadata.
