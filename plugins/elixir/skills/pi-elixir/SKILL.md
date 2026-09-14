@@ -15,6 +15,7 @@ Connects the pi agent to a running Elixir/OTP system: stateful IEx-style eval, E
 **Two packages ship together:** `packages/extension/` (TypeScript, pi tool registration, transport) and `packages/bridge/` (Elixir, `Pi.*` modules, eval runtime). Clone from `github.com/elixir-vibe/pi-elixir`.
 **Requires Elixir `~> 1.16` and OTP 27+** for target projects; Elixir 1.20+ recommended.
 **ExAST `~> 0.12` is a hard dep** (pulled automatically by the bundled bridge); supplies all AST pattern matching.
+**Pinned: v0.8.5**
 
 **Caveat:** docs are split across `packages/bridge/README.md`, `packages/extension/README.md`, `AGENTS.md`, and `packages/bridge/docs/protocol.md` — no single canonical hexdocs page. The four eval targets (below) are the primary architectural fact missing from pre-v0.8 documentation.
 
@@ -38,6 +39,8 @@ pi install "$PWD"    # installs from local clone instead of npm
 ```
 
 The bundled bridge manages its own Elixir VM. There is no version-matching ceremony between an npm pin and a Mix dep — that was removed in v0.8.0.
+
+**Version manager note (v0.8.5):** the bridge now preserves caller-provided Mix home and archive paths at startup, so asdf / mise / rtx installs are correctly isolated. If you were seeing wrong Elixir versions inside the bridge VM, upgrade to v0.8.5.
 
 ---
 
@@ -128,7 +131,7 @@ Pi.Eval.sandbox(code)    # untrusted snippet; requires optional {:dune, "~> 0.3"
 
 ### elixir_ast_search / elixir_ast_replace — ExAST Patterns
 
-Patterns are **plain Elixir syntax** — not regex, not a custom DSL. The ExAST engine matches on AST structure; pipe forms are normalized. As of v0.8.2 the tools explicitly reject invalid patterns with guidance rather than silently misbehaving.
+Patterns are **plain Elixir syntax** — not regex, not a custom DSL. The ExAST engine matches on AST structure; pipe forms are normalized. As of v0.8.2 the tools explicitly reject invalid patterns with guidance rather than silently misbehaving. As of v0.8.5 local helper calls are correctly located in modules with broad `import` / `use` expansions.
 
 **Pattern language:**
 
@@ -350,6 +353,9 @@ Note: `/elixir:install` was removed in v0.8.0 — no Mix dep to install.
 | `runtime` target connection refused | `PI_ELIXIR_NODE` not set or node unreachable | Set `PI_ELIXIR_NODE=myapp@localhost`; verify `epmd -names` |
 | Eval state stale after branch switch | Sidecar from a previous session loaded | `Pi.Eval.reset()` to clear |
 | QuackDB mirror not connecting | QuackDB init deferred until first use (v0.8.2) | First mirror event triggers init; wait for first eval output |
+| Bridge picks wrong Elixir version (version manager) | Mix home/archive paths not preserved at startup (pre-v0.8.5) | Upgrade to v0.8.5; verify `mix --version` inside `/elixir:doctor` output |
+| Bridge handshake fails in umbrella app | App name resolution failed for unnamed umbrella roots (pre-v0.8.5) | Upgrade to v0.8.5; ensure top-level `mix.exs` has `:app` key or use a child app as the project root |
+| `ast grep` misses local helper calls | Search skipped locally-defined calls in broad-import modules (pre-v0.8.5) | Upgrade to v0.8.5 |
 
 ---
 

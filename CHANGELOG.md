@@ -50,6 +50,13 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 
 ### Changed
 
+- **`elixir` 0.3.2 → 0.3.3** — upstream include drift drained into three skills:
+  `pi-elixir` pinned to v0.8.5 (version-manager Mix home/archive isolation, umbrella
+  handshake fix, local helper calls located in broad-import modules), `quackdb` to
+  v0.5.24 (`client: {Module, opts}` child spec form, `QuackDB.DDL` sequences and
+  CHECK constraints, decimal/UUID/UUIDv7 round-trip fixes, Mint 1.10+ CVE bump),
+  `reach` to v2.8.4.
+
 - **`tasks` 0.1.9 → 0.1.10** — `rmap` skill sync: per-project/per-phase
   archive-collapse changelog links (`changelog_path`, `[phases.N] changelog`,
   `false` to drop the link) and the `--landing-ref` open-landing pointer on

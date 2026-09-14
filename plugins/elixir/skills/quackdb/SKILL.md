@@ -8,7 +8,7 @@ allowed-tools: Read, Bash, Grep, Glob
 
 ## QuackDB — DuckDB DBConnection + Ecto adapter for Elixir
 
-OTP-supervised DuckDB via the Quack protocol: DBConnection client, Ecto adapter, native append APIs, Explorer dataframe writes, Geo/WKB spatial, and query profiling.
+OTP-supervised DuckDB via the Quack protocol: DBConnection client, Ecto adapter, native append APIs, Explorer dataframe writes, Geo/WKB spatial, query profiling, and DDL helpers (sequences, CHECK constraints).
 
 **Min version: `{:quackdb, "~> 0.5"}`.** Requires DuckDB 1.5.5+ with the `quack` extension. Managed binary auto-downloads on Linux/macOS; Windows support is incomplete.
 
@@ -16,7 +16,7 @@ OTP-supervised DuckDB via the Quack protocol: DBConnection client, Ecto adapter,
 
 **Optional integrations activate when packages are present:** `{:ecto_sql, "~> 3.13"}`, `{:explorer, "~> 0.11"}`, `{:geo, "~> 4.1"}`.
 
-**Hex-published at v0.5.20.** Use `{:quackdb, "~> 0.5"}` — do NOT pin to 0.3.x (older readme snapshots show that).
+**Hex-published at v0.5.24.** Use `{:quackdb, "~> 0.5"}` — do NOT pin to 0.3.x (older readme snapshots show that).
 
 **Caveat:** Unsupported vector/logical types raise at runtime. Ecto coverage is analytics-first; edge cases in OLTP-style operations are not guaranteed. QuackDB does not stage local files to remote servers.
 
@@ -38,21 +38,29 @@ As of v0.5.18, the managed binary tracks DuckDB 1.5.4 (upgraded from 1.5.3).
 
 As of v0.5.19, the managed binary tracks DuckDB 1.5.5 (upgraded from 1.5.4); Mint is bumped to 1.9.3, fixing an HTTP/1 response-smuggling issue via sign-tolerant chunk-size parsing.
 
+As of v0.5.21, Mint is bumped to 1.10+, addressing CVE-2026-82728 and CVE-2026-82729 (HTTP/1 denial-of-service vulnerabilities). Daemon startup now reports exits promptly; database-lock conflicts are classified as `{:error, %QuackDB.Error{reason: :database_locked}}`.
+
+As of v0.5.21, `child_specs/1` accepts `client: {Module, options}` for pairing a local server with an Ecto Repo or custom client (the client must accept `:uri` and `:token` options):
+
 ```elixir
-# application.ex
+# application.ex — pair with Ecto Repo
 children =
   QuackDB.Server.child_specs(
     server: [
-      name: MyApp.DuckDB,       # GenServer name for the managed process
-      duckdb: :managed,          # download official binary; or path string
+      name: MyApp.DuckDB,
+      duckdb: :managed,
       endpoint: "quack:localhost:9494",
-      database: "/data/analytics.duckdb",  # omit for :memory:
-      boot_sql: ["LOAD spatial;"]          # extensions to load on start
+      database: "/data/analytics.duckdb",
+      boot_sql: ["LOAD spatial;"]
     ],
-    client: [
-      name: MyApp.QuackDB,
-      pool_size: System.schedulers_online()
-    ]
+    client: {MyApp.Repo, pool_size: 2}   # v0.5.21+: tuple form for Ecto Repos
+  )
+
+# Or with a plain QuackDB pool:
+children =
+  QuackDB.Server.child_specs(
+    server: [name: MyApp.DuckDB, duckdb: :managed, endpoint: "quack:localhost:9494"],
+    client: [name: MyApp.QuackDB, pool_size: System.schedulers_online()]
   )
 
 Supervisor.start_link(children, strategy: :one_for_one)
@@ -153,6 +161,8 @@ QuackDB.insert_table(conn, "staging", tabular_value)
 
 Pass `:columns` option with explicit type specs for empty/nil-only columns where DuckDB can't infer the type.
 
+Native append does **not** evaluate column defaults. Use `QuackDB.Sequence.next_values/4` to pre-allocate primary keys before bulk appends (see Sequences below).
+
 ---
 
 ### List Helpers (v0.5.17+)
@@ -173,6 +183,36 @@ from t in "tags",
     prefixed: prepend(t.values, "first_tag")
   }
 ```
+
+---
+
+### Sequences (v0.5.21+)
+
+`QuackDB.DDL` generates `CREATE/DROP SEQUENCE` SQL; `QuackDB.Sequence` allocates values.
+
+```elixir
+alias QuackDB.{DDL, Sequence}
+
+# Create a sequence
+QuackDB.query!(conn, DDL.create_sequence(:task_keys, start: 1, increment: 1))
+# With schema qualification:
+QuackDB.query!(conn, DDL.create_sequence({"analytics", "event_ids"}, if_not_exists: true))
+
+# Drop a sequence
+QuackDB.query!(conn, DDL.drop_sequence(:task_keys, if_exists: true))
+
+# Pre-allocate IDs for a bulk insert
+ids = Sequence.next_values(conn, :task_keys, 100)   # [1, 2, ..., 100]
+
+rows = Enum.zip_with(ids, my_data, fn id, row -> [id: id] ++ row end)
+QuackDB.insert_rows!(conn, "tasks", rows)
+
+# Inspect which sequence backs a column default
+{:ok, seq_name} = Sequence.for_column(conn, "tasks", "id")
+```
+
+`create_sequence/2` options: `:start` (integer), `:increment` (nonzero integer), `:if_not_exists` (boolean).
+`drop_sequence/2` options: `:if_exists` (boolean).
 
 ---
 
@@ -210,6 +250,27 @@ As of v0.5.16, `{:array, :map}` columns (`JSON[]` in DuckDB) are supported with 
 As of v0.5.19, adding a `null: false` column via `alter table` migrations no longer fails: the adapter splits DuckDB's unsupported inline `NOT NULL` constraint into a separate `ADD COLUMN` followed by `ALTER COLUMN ... SET NOT NULL`.
 
 As of v0.5.20, Ecto `:integer` expressions and parameters are cast to DuckDB `BIGINT` (64-bit) rather than `INTEGER` (32-bit). This aligns with Ecto's 64-bit integer standard and prevents overflow when removing timestamped migration versions (timestamps exceed 32-bit range).
+
+As of v0.5.22, decimal precision and scale are honored in migrations (invalid options are rejected rather than silently dropped), `nil` Ecto map values serialize as SQL `NULL` instead of JSON `null`, and nested map arrays and parameterized enum types round-trip correctly through native appends. Unsupported Ecto constraint operations now return actionable errors instead of silent failures.
+
+As of v0.5.22, Ecto UUID reads and native appends are corrected for nullable UUID fields and UUID arrays.
+
+As of v0.5.23, Ecto type-loading callbacks are preserved for custom UUID types such as UUIDv7, including nullable fields and arrays. DuckDB JSON exception metadata is exposed while the original server message is retained.
+
+#### DDL: CHECK Constraints (v0.5.24+)
+
+`QuackDB.DDL.check/1` builds inline CHECK expressions for `create_table/3`. Supports comparisons, logical operators, `is_nil/1`, bare column refs, `^` pinning, and `field/1` for dynamic column names. Arithmetic and arbitrary function calls are rejected.
+
+```elixir
+import QuackDB.DDL, only: [create_table: 3, check: 1]
+
+maximum = 100
+
+create_table(:events, [score: :integer, status: :string],
+  check(score >= 0 and score < ^maximum),
+  check(not is_nil(status))
+)
+```
 
 Import helpers:
 ```elixir
@@ -313,6 +374,8 @@ QuackDB.Profile.report(profile)         # compact human text
 QuackDB.Profile.explain!(conn, "SELECT ...")  # plan only, no execution
 ```
 
+As of v0.5.23, `Profile` structs export recursive JSON Schema and preserve string keys in open-ended maps.
+
 ---
 
 ### Storage / Observability
@@ -335,10 +398,12 @@ Telemetry events emitted: `[:quackdb, :query, :start | :stop]`, `[:quackdb, :app
 |----------|--------|-------|
 | SQL error | `{:error, %QuackDB.Error{}}` | Recoverable — inspect message |
 | Transaction conflict | `{:error, %QuackDB.Error{reason: :transaction_conflict}}` | Retriable as of v0.5.16 |
+| Database locked on startup | `{:error, %QuackDB.Error{reason: :database_locked}}` | Another process holds the lock (v0.5.21+) |
 | Unsupported type | raises at encode/decode | Fatal per query; avoid the type |
 | Connection timeout | `{:error, exception}` | Check `:receive_timeout` option |
 | Managed binary download fail | startup crash | Check DuckDB version / checksum |
 | Spatial query, extension not loaded | DuckDB error | Add `LOAD spatial` to `:boot_sql` |
+| Unsupported constraint op | `{:error, reason}` with message | Actionable error since v0.5.22 |
 
 ### Common Issues
 
@@ -352,19 +417,26 @@ Telemetry events emitted: `[:quackdb, :query, :start | :stop]`, `[:quackdb, :app
 | `Table.Reader` not available | Explorer not in deps | `{:explorer, "~> 0.11"}` for Livebook integration |
 | Token visible in `ps` output | Older server version | Upgrade to v0.5.15+ (boot SQL written to temp init file) |
 | JSON map array (`{:array, :map}`) dumps incorrectly | Bug in pre-0.5.16 versions | Upgrade to v0.5.16+ |
-| `ALTER TABLE ... ADD COLUMN ... NOT NULL` fails | Pre-0.5.19: DuckDB doesn't support the inline constraint | Upgrade to v0.5.19+ (adapter splits into `ADD COLUMN` + `SET NOT NULL`) |
+| `ALTER TABLE ... ADD COLUMN ... NOT NULL` fails | Pre-0.5.19: DuckDB doesn't support inline constraint | Upgrade to v0.5.19+ (adapter splits into `ADD COLUMN` + `SET NOT NULL`) |
 | Integer overflow removing timestamped migration versions | Pre-0.5.20: `:integer` mapped to 32-bit DuckDB `INTEGER` | Upgrade to v0.5.20+ (`:integer` now casts to `BIGINT`) |
+| UUID nullable/array fields round-trip incorrectly | Pre-0.5.22 UUID handling bug | Upgrade to v0.5.22+ |
+| Custom UUID types (UUIDv7) lose load callbacks | Pre-0.5.23 type-loading gap | Upgrade to v0.5.23+ |
+| Decimal migration silently drops precision/scale | Pre-0.5.22 | Upgrade to v0.5.22+ (invalid options now rejected) |
+| `nil` map field stored as JSON `null` instead of SQL `NULL` | Pre-0.5.22 | Upgrade to v0.5.22+ |
+| Database-lock startup crash with no useful error | Pre-0.5.21: lock conflicts not classified | Upgrade to v0.5.21+ (`:database_locked` reason) |
+| Bulk append overwrites sequence-defaulted PKs | Native append skips column defaults | Pre-allocate with `Sequence.next_values/4` (v0.5.21+) |
 
 ---
 
 ### DO NOT
 
 1. Use QuackDB as a drop-in production Postgres replacement — the Quack protocol is experimental.
-2. Pin to `"~> 0.3"` — the README snapshots on mirror sites are stale; 0.5.20 is current.
+2. Pin to `"~> 0.3"` — the README snapshots on mirror sites are stale; 0.5.24 is current.
 3. Call `LOAD spatial` inside queries at runtime without connection pooling awareness — load it in `:boot_sql`.
 4. Expect Windows managed-binary support — provide the DuckDB path explicitly on Windows.
 5. Use `insert_rows!` for very wide schemas with nil-only columns without `:columns` type specs — DuckDB cannot infer the type.
 6. Treat `QuackDB.Profile.slowest/2` output as wall-clock — operator timings are engine-internal metrics.
+7. Rely on native append to evaluate column defaults (including sequence-defaulted PKs) — pre-allocate with `Sequence.next_values/4`.
 
 ---
 
@@ -380,3 +452,5 @@ Telemetry events emitted: `[:quackdb, :query, :start | :stop]`, `[:quackdb, :app
 ```
 
 DuckDB binary: `duckdb: :managed` downloads and verifies the official binary automatically (Linux/macOS). For custom installs set `duckdb: "/path/to/duckdb"`.
+
+Mint 1.10+ is required as of v0.5.21 (security: CVE-2026-82728, CVE-2026-82729).
