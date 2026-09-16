@@ -397,6 +397,45 @@
       "started_at": "2026-07-13",
       "scored_at": "2026-07-13",
       "cross_repo": []
+    },
+    {
+      "id": 11,
+      "phase": 2,
+      "bundle": "stack-hygiene",
+      "status": "pending",
+      "title": "pre-commit-unified: resolve the mix project from the staged files, not only from cwd / a leading `cd`",
+      "scores": {
+        "d": 4,
+        "b": 7,
+        "u": 6
+      },
+      "eff": 1.63,
+      "dep_layer": 0,
+      "unlocks": 0,
+      "markers": [],
+      "depends_on": [],
+      "assignee": "codex",
+      "model": "gpt-5.5",
+      "acceptance_criteria": [
+        "In a mix monorepo, `git commit` from the repo root with staged files only under `packages/<pkg>/` runs every check inside `packages/<pkg>` (the `/tmp/elixir-precommit/<sha>` dir hashes that path) and never compiles the root project.",
+        "Staged files under two packages: both are graded; the failure report names the package each finding came from.",
+        "Staged files with no mix project ancestor (or only the root when the root itself is the only project) behave exactly as today.",
+        "The `cd <worktree> && git commit` pattern from a main-checkout session still grades the worktree's tree (existing behaviour preserved, covered by a documented manual repro).",
+        "`plugins/elixir/README.md` documents the resolution order: staged paths → `-C` / `cd` prefix → HOOK_CWD."
+      ],
+      "out_of_scope": [
+        "Changing which checks run or their flags — only where they run.",
+        "Making the root project of a monorepo pass the credo-dependency check; a root that is not a package is simply not graded when nothing at the root is staged.",
+        "The rustler_precompiled 404-before-release behaviour itself — that is upstream/design, not the hook's problem."
+      ],
+      "files_to_modify": [
+        "plugins/elixir/scripts/pre-commit-unified.sh",
+        "plugins/elixir/README.md"
+      ],
+      "body": "Observed 2026-09-16 in onchain-stack (a mix monorepo: root `mix.exs` declares all eight `packages/<name>` as dev path deps and has no credo). A `git commit` issued from the repo root with staged files only under `packages/cartouche/` made the hook grade the *root* project, because `PROJECT_ROOT` comes from `find_mix_project_root_from_dir` on the `cd <path>` prefix or `HOOK_CWD`, never from what is being committed. Two consequences, both reproduced in that session:\n\n1. A version bump in `packages/onchain_evm/mix.exs` (rustler_precompiled downloads `…/releases/download/onchain_evm-v<ver>/…`, which 404s until the GitHub release exists) made the root project uncompilable, and with it *every* commit in the repo — including commits touching only cartouche docs. Workaround was `cd packages/<pkg> && git commit`, which the agent has to know about.\n2. `Missing Required Dependency: credo` fired against the root `mix.exs`, a false positive: the root is not a Hex package and deliberately carries no credo; the packages do.\n\nWanted: derive candidate project roots from `git diff --cached --name-only` (nearest ancestor `mix.exs` per staged path, using the existing resolver), and prefer them over the cwd-derived root. One project → run there. Several → run the checks per project and report each failure with its package path. No staged path inside any mix project → suppress as today. Keep the `-C` / `cd <path>` handling as the fallback for the case where nothing is staged inside a mix project (and as a tie-breaker if a worktree `cd` points outside the current checkout — the existing worktree case in the comments must keep working).\n\nPremise verified: `PROJECT_ROOT` resolution is the block at `pre-commit-unified.sh:44-62`; nothing downstream reads staged paths.\n",
+      "created_at": "2026-09-16",
+      "scored_at": "2026-09-16",
+      "cross_repo": []
     }
   ]
 }
