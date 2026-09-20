@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+@~/.claude/includes/verification-policy.md
+
 Guidance for Claude Code working in this repository — the **`zenhive`** Claude
 Code plugin marketplace (`ZenHive/claude-marketplace`, default branch `main`).
 
