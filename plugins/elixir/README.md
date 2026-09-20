@@ -91,6 +91,50 @@ See [skills/hex-docs-search/SKILL.md](skills/hex-docs-search/SKILL.md) for detai
 
 See [skills/usage-rules/SKILL.md](skills/usage-rules/SKILL.md) for details.
 
+## Switching Individual Hooks Off
+
+Each hook script is identified by its **hook id** — its filename in `scripts/`
+without the `.sh` extension (`ls plugins/elixir/scripts/` lists them). A single
+hook can be switched off without disabling the whole plugin in `enabledPlugins`.
+
+**Per repo** — `.claude/zenhive-hooks.json` in the project root:
+
+```json
+{
+  "pre-commit-unified": false
+}
+```
+
+The key `"*"` sets the default for every unlisted hook, so an explicit
+allowlist is possible too:
+
+```json
+{
+  "*": false,
+  "post-edit-check": true
+}
+```
+
+**Per session / one-off** — environment variables holding a comma- or
+space-separated list of hook ids (`*` matches all):
+
+```bash
+ZENHIVE_HOOKS_DISABLED=pre-commit-unified   # force off
+ZENHIVE_HOOKS_ENABLED=pre-commit-unified    # force on, overrides the config file
+```
+
+Resolution order, first match wins: `ZENHIVE_HOOKS_ENABLED` →
+`ZENHIVE_HOOKS_DISABLED` → `<repo>/.claude/zenhive-hooks.json` →
+`~/.claude/zenhive-hooks.json` → on.
+
+A hook adopts the switch with one line after its input parsing:
+
+```bash
+hook_enabled "<hook-id>" "$HOOK_CWD" || { emit_suppress_json; exit 0; }
+```
+
+Currently wired: `pre-commit-unified`.
+
 ## Hook Timeouts
 
 | Hook | Timeout | Rationale |
@@ -177,6 +221,7 @@ mix deps.unlock --check-unused
 - **No tests, no dialyzer, no ex_doc** — tests run per-edit via `post-edit-check.sh`; tests/dialyzer/`mix docs` belong in CI / manual `mix precommit` / `mix precommit.full`. This keeps the commit gate fast and free of flaky-test denials and slow doc-builds.
 - **Authoritative** — the hook runs its own checks and does **not** defer to a project `mix precommit` alias (that alias is for manual / CI use).
 - **Saved output**: each failing check's full untruncated output is written to `/tmp/elixir-precommit/<sha256(project_root)>/<check>.log` and the paths are listed in the deny message — read those instead of re-running the check.
+- **Switchable on its own** — see [Switching Individual Hooks Off](#switching-individual-hooks-off); hook id `pre-commit-unified`.
 
 ### Suggest --failed for Repeated Tests (Non-blocking)
 - Runs before `mix test` commands (without `--failed`)

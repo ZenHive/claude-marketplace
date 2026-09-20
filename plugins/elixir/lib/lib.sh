@@ -168,3 +168,86 @@ has_staged_elixir_files() {
   local project_root="$1"
   git -C "$project_root" diff --cached --name-only 2>/dev/null | grep -qE '\.(ex|exs)$'
 }
+
+# ============================================================================
+# Per-Hook Enable / Disable
+# ============================================================================
+#
+# Every hook script has a "hook id": its basename without the .sh extension
+# (e.g. pre-commit-unified). A single hook can be switched off without
+# disabling the whole plugin in `enabledPlugins`.
+#
+# Resolution order, first match wins:
+#   1. ZENHIVE_HOOKS_ENABLED   env — force ON  (overrides a config file)
+#   2. ZENHIVE_HOOKS_DISABLED  env — force OFF
+#   3. <repo>/.claude/zenhive-hooks.json
+#   4. ~/.claude/zenhive-hooks.json
+#   5. default: ON
+#
+# Both env vars hold a comma- or space-separated list of hook ids; "*" matches
+# every hook. Config files are a flat JSON map of hook id -> bool, where the
+# key "*" sets the default for unlisted hooks:
+#
+#   { "*": true, "pre-commit-unified": false }
+
+# Check whether a hook id appears in a comma/space-separated list ("*" = all)
+# Usage: hook_list_matches "$ZENHIVE_HOOKS_DISABLED" "pre-commit-unified"
+hook_list_matches() {
+  local list="$1"
+  local hook_id="$2"
+  local entry
+  local -a entries=()
+
+  [[ -z "$list" ]] && return 1
+
+  # `read -a` splits on IFS without pathname expansion — an unquoted
+  # for-loop over the list would glob-expand a "*" entry into filenames.
+  IFS=', ' read -r -a entries <<< "$list"
+
+  for entry in "${entries[@]}"; do
+    [[ "$entry" == "*" || "$entry" == "$hook_id" ]] && return 0
+  done
+  return 1
+}
+
+# Look a hook id up in a config file
+# Echoes "true" / "false", or nothing when the hook is not configured.
+# Usage: value=$(hook_config_lookup "$file" "pre-commit-unified")
+#
+# NOTE: uses `has` rather than jq's `//` operator — `false // x` yields x,
+# which would make an explicit `false` fall through to the "*" default.
+hook_config_lookup() {
+  local file="$1"
+  local hook_id="$2"
+
+  [[ -f "$file" ]] || return 0
+
+  jq -r --arg id "$hook_id" '
+    if type != "object" then empty
+    elif has($id) then .[$id]
+    elif has("*") then .["*"]
+    else empty
+    end | tostring
+  ' "$file" 2>/dev/null
+}
+
+# Check whether a hook is enabled
+# Usage: hook_enabled "pre-commit-unified" "$HOOK_CWD" || { emit_suppress_json; exit 0; }
+hook_enabled() {
+  local hook_id="$1"
+  local repo_dir="${2:-${CLAUDE_PROJECT_DIR:-$PWD}}"
+  local file value
+
+  hook_list_matches "${ZENHIVE_HOOKS_ENABLED:-}" "$hook_id" && return 0
+  hook_list_matches "${ZENHIVE_HOOKS_DISABLED:-}" "$hook_id" && return 1
+
+  for file in "$repo_dir/.claude/zenhive-hooks.json" "$HOME/.claude/zenhive-hooks.json"; do
+    value=$(hook_config_lookup "$file" "$hook_id")
+    if [[ -n "$value" ]]; then
+      [[ "$value" == "true" ]]
+      return
+    fi
+  done
+
+  return 0
+}

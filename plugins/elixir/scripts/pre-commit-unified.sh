@@ -39,6 +39,11 @@ read_hook_input
 parse_precommit_input || { emit_suppress_json; exit 0; }
 is_git_commit_command "$HOOK_COMMAND" || { emit_suppress_json; exit 0; }
 
+# Individually switchable — see "Per-Hook Enable / Disable" in lib.sh.
+# Off for this repo:     .claude/zenhive-hooks.json  { "pre-commit-unified": false }
+# Off for one session:   ZENHIVE_HOOKS_DISABLED=pre-commit-unified
+hook_enabled "pre-commit-unified" "$HOOK_CWD" || { emit_suppress_json; exit 0; }
+
 GIT_DIR=$(extract_git_dir "$HOOK_COMMAND" "$HOOK_CWD")
 
 # Determine effective working directory for project-root resolution.

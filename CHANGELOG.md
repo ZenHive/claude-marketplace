@@ -33,6 +33,13 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 
 ### Added
 
+- **Per-hook enable/disable (`elixir` 0.3.4)** — a hook can now be switched off
+  individually instead of only plugin-wide via `enabledPlugins`. `hook_enabled`
+  in `plugins/_shared/lib.sh` resolves, first match wins: `ZENHIVE_HOOKS_ENABLED`
+  → `ZENHIVE_HOOKS_DISABLED` (comma/space-separated hook ids, `*` = all) →
+  `<repo>/.claude/zenhive-hooks.json` → `~/.claude/zenhive-hooks.json` → on.
+  Config files are a flat `hook id -> bool` map where `"*"` sets the default.
+  Wired into `pre-commit-unified`; any other hook adopts it with one line.
 - **`tools:gloomberb`** — Gloomberb CLI reference (headless JSON/NDJSON market
   data from Yahoo, Gloom Cloud, FRED, CNN), synced ← `gloomberb.md`. Carries the
   verified sharp edges: the level-vs-return correlation trap, unit-free econ
