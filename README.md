@@ -24,11 +24,21 @@ A repo composes the plugins it wants: an Elixir service driven by harness enable
 
 This marketplace supersedes the older `deltahedge` marketplace (`ZenHive/claude-marketplace-elixir`), rebranded to the `zenhive` org name and restructured so orchestration and per-language concerns are distinct plugins rather than one Elixir-centric bundle. The rename changes every plugin id (`x@deltahedge` → `x@zenhive`), so adopting it is a one-time cutover of `enabledPlugins` keys in `~/.claude/settings.json` and per-repo settings. Because the marketplace names differ, the old and new marketplaces can be registered simultaneously during a plugin-by-plugin migration; unregister `deltahedge` once everything has moved.
 
-> **Forward note (future session):** `elixir@deltahedge` currently bundles workflow concerns (worktree, Linear) that are not language-specific. A later refactor will extract those into their own plugin here, leaving `elixir` as pure Elixir dev tooling. No action needed now — recorded so a future Claude Code session knows the intended end state.
 
 ## Plugins
 
-- **`harness`** — orchestration surface for the harness OTP engine. Two skills (`harness-driver` = API/MCP contract, `harness-workflow` = the loop) plus a SessionStart stale-base guard hook. See `plugins/harness/README.md`.
+| Plugin | Kind | Ships |
+|---|---|---|
+| `harness` | orchestration | `harness-driver` + `harness-workflow` skills, SessionStart stale-base guard. See `plugins/harness/README.md`. |
+| `workflow` | methodology | rmap substrate, D/B/U prioritization, task-as-prompt authoring, pickup / plan-and-file modes, worktrees, upstream PRs, onchain verification. Skills only. |
+| `elixir` | per-language | Four mechanic hooks (post-edit format/compile/matching test, pre-commit format/compile/unused-deps, destructive-command block, test.json / dialyzer.json rewrites) + skills for ZenHive's own Hex packages and conventions. See `plugins/elixir/README.md`. |
+| `elixir-volt` | per-language | JS-on-BEAM stack skills (oxc, quickbeam, popcorn, npm_ex). Skills only. |
+| `tools` | personal | CLI reference skills (himalaya, gloomberb). Skills only. |
+| `dep-audit` | hygiene | SessionStart dependency-advisory nag across Hex / Cargo / npm. |
+
+`workflow`, `elixir-volt` and `tools` carry no hooks and are safe to enable globally. Full skill catalog: `SKILLS.md`. Hook rule IDs: `HOOK-RULES.md`.
+
+**What was deliberately removed (0.2.0):** review, delegation, dev-discipline, code-quality, git-commit, portfolio, elixir-workflows, marketplace-hygiene (now repo-local hooks), and the `elixir` plugin's reminder hooks and generic Elixir skills. Rationale in `CHANGELOG.md`: a current model does not need trigger-word nudges, and phxagents covers the framework layer.
 
 ## Recommended companion for Phoenix repos: phxagents.dev
 

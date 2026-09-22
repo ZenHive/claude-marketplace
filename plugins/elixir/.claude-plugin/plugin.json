@@ -1,7 +1,7 @@
 {
   "name": "elixir",
-  "version": "0.3.4",
-  "description": "Essential Elixir/OTP development support — per-edit check hooks (format, compile, test.json, credo, dialyzer.json, sobelow, doctor) plus core skills: code-style, development-commands/philosophy, dialyzer-json, ex-unit-json, elixir-setup, integration-testing, usage-rules, hex-docs-search, muex, reach, tidewave-guide, web-command, agent-economy, api-toolkit, zen-websocket, nexus-template.",
+  "version": "0.4.0",
+  "description": "Elixir/OTP development support — four mechanic hooks (format + compile + matching test after every edit; format/compile/unused-deps gate before git commit; destructive mix/build command block; mix test → test.json and mix dialyzer → dialyzer.json rewrites) plus skills for ZenHive's own Hex packages and conventions: elixir-setup, development-commands/philosophy, code-style, ex-unit-json, dialyzer-json, web-command, the elixir-vibe family (reach, ex_ast, ex_dna, ex_slop, exograph, quackdb, muex, …), zen-websocket, api-toolkit, agent-economy, nexus-template. Generic Elixir/Phoenix/Ecto/LiveView knowledge is phxagents' job.",
   "author": {
     "name": "ZenHive",
     "url": "https://github.com/ZenHive"

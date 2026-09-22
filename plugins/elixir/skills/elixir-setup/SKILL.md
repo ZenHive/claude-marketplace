@@ -97,62 +97,53 @@ Add `Styler` to `.formatter.exs` plugins: `plugins: [Styler]`.
 
 **Styler sets your Elixir floor to 1.17.** It rewrites `DateTime.add/3` into `DateTime.shift/2` whenever the running Elixir is ≥ 1.17, so `mix format` writes 1.17-only calls regardless of what `elixir:` claims. Declare `elixir: "~> 1.17"` (or higher) — a lower floor is a build that only works by accident.
 
-### Standard Aliases — four tiers, split by audience
+### Standard aliases — check scope comes from verification-policy.md
 
-Four tiers, each with a different consumer. The marketplace's `pre-commit-unified.sh` hook runs its **own** inline gate at commit time (format · compile · credo · doctor · sobelow · mix_audit · ash — **no tests, no dialyzer, no ex_doc**); it does **not** invoke these aliases. The aliases are for manual / dispatch / CI runs. (`mix docs` belongs in CI / a manual run — too slow for any gate.)
+`~/.claude/includes/verification-policy.md` owns scheduling. This template keeps
+full QA separate from the implementation/review command. Focused tests are chosen
+for the changed behavior, not baked into a whole-suite dispatch alias.
 
-| Alias | Consumer | Adds | Cost |
-|---|---|---|---|
-| `check.fast` | you, after every meaningful edit | format · compile-with-warnings · credo | seconds |
-| `precommit` | you, before handoff | + doctor · test+cover gate · sobelow | tens of seconds |
-| `check.dispatch` | harness reviewers — the registered `check_command` | + `ex_dna --max-clones 0` · `sobelow --exit Low` | tens of seconds |
-| `precommit.full` | CI / `harness.yml` / post-wave integration run | + dialyzer · `reach.check --arch --smells` | minutes |
+| Alias | Contents | Role |
+|---|---|---|
+| `check.fast` / `check.dispatch` | Format check and compile with warnings as errors | Scoped code verification; add focused tests |
+| `precommit` | Compatibility name for comprehensive checks below | Full QA, not an automatic commit/handoff trigger |
+| `precommit.full` / `ci` | Full suite, coverage and project analyzers | Post-merge audit + QA |
 
 ```elixir
 defp aliases do
   [
-    # TagTODO/TagFIXME stay on in .credo.exs for visibility (`mix credo` shows them);
-    # the gate excludes them so it fails only on real regressions, not tracked debt.
-    "check.fast": [
-      "format --check-formatted",
-      "compile --warnings-as-errors",
-      "credo --strict --ignore TagTODO,TagFIXME"
-    ],
-    # Manual pre-handoff gate (NOT run by the commit hook). No dialyzer; tests + sobelow + doctor.
+    "check.fast": ["format --check-formatted", "compile --warnings-as-errors"],
+    "check.dispatch": ["check.fast"],
     precommit: [
       "check.fast",
+      "credo --strict --ignore TagTODO,TagFIXME",
       "doctor --raise",
-      # `preferred_envs` (cli/0) is ignored for alias steps — set MIX_ENV explicitly.
+      # preferred_envs is ignored for alias steps; 85 is this template's QA coverage floor.
       "cmd MIX_ENV=test mix test.json --quiet --cover --cover-threshold 85 --summary-only --exclude integration",
-      "sobelow --skip"                 # --skip honors inline # sobelow_skip; drop on pure libs
+      "sobelow --skip --exit Low"
     ],
-    # Dispatch-scale gate: what a harness reviewer runs against a task's worktree.
-    # ex_dna is here, not in precommit.full, because it runs in ~1s and a clone introduced
-    # by a dispatched run is otherwise invisible to the per-task gate (observed in practice).
-    "check.dispatch": [
+    "precommit.full": [
       "precommit",
       "ex_dna --max-clones 0",
-      "sobelow --skip --exit Low"      # web-facing apps only; drop on pure libs
-    ],
-    # Full gate — adds the whole-suite invariants that need a graph or a PLT.
-    "precommit.full": [
-      "check.dispatch",
       "dialyzer.json --quiet",
       "reach.check --arch --smells"
-    ]
+    ],
+    ci: ["precommit.full"]
   ]
 end
 ```
 
-Each tier calls the previous one, so a step appears once and the ordering (cheapest-fail-first) is preserved by construction. Register `check.dispatch` as the harness `check_command`; `precommit.full` is what CI runs and what the post-wave integration run on landed `origin/<target>` uses.
+Register `check.dispatch` as the scoped hint and `ci` as full QA where supported.
+A registration does not prove that an automatic audit is configured or has run.
+Relevant live/security verification remains required for the changed behavior.
 
 **Flag rationale:**
 
 - **`credo --strict --ignore TagTODO,TagFIXME`.** TODO/FIXME are tracked-debt visibility (`development-philosophy.md` § "TODO Comment Requirements"), not regressions. Standalone `mix credo` still surfaces them so an agent can SEE the debt; the gate doesn't fail on them so PRs aren't blocked by accumulated tags. ExSlop rides this step as a Credo plugin — no separate alias entry (see § "ExSlop" below).
 - **`doctor --raise`.** Overrides `.doctor.exs` `raise: false` to gate CI without changing local behavior. Redundant if the repo already sets `raise: true`, but harmless. A `doctor` dep without a `doctor` alias step is a dead gate — the dep alone enforces nothing.
 - **`test.json --cover --cover-threshold 85 --summary-only --exclude integration`.** 85% is the project default (cartouche's empirical floor; meaningful bump from 80%, leaves headroom under typical ~87% project coverage). Critical-path repos (signing, money, crypto, wire-format encoders) raise to `95`. `--exclude integration` because the credentials/network for live services are not present in a normal run; run the integration tag separately where they are. **The threshold must live in the alias, not only in `AGENTS.md` prose** — a coverage tier enforced by telling the agent about it is not enforced.
-- **`ex_dna --max-clones 0`.** Zero-tolerance clone gate. Placed in `check.dispatch` because it costs ~1s and per-task review is the only point where a freshly introduced clone is visible before it lands. Generated/vendor clones: configure ExDNA ignore paths, don't relax the threshold.
-- **`sobelow --skip`** (precommit) / **`sobelow --skip --exit Low`** (check.dispatch). `--skip` makes sobelow honor inline `# sobelow_skip` annotations (without it they're ignored — see "Sobelow skip/config semantics" below). `--exit Low` fails on Low-confidence findings too: `Low` is the only threshold that catches `Traversal.FileModule` on an operator-supplied path, and every committed skip is Low or Medium, so nothing below Low exists to suppress. Phoenix / Plug / web-facing apps only — drop both steps on pure libraries. A `.sobelow-conf` needs no flag — it auto-loads since 0.14.1 (`--no-config` opts out).
+- **`ex_dna --max-clones 0`.** Zero-tolerance clone gate. Placed in `precommit.full` for the complete project comparison during audit + QA. Generated/vendor clones: configure ExDNA ignore paths, don't relax the threshold.
+- **`sobelow --skip --exit Low`** (full QA; also use for a relevant security change). `--skip` makes sobelow honor inline `# sobelow_skip` annotations (without it they're ignored — see "Sobelow skip/config semantics" below). `--exit Low` fails on Low-confidence findings too: `Low` is the only threshold that catches `Traversal.FileModule` on an operator-supplied path, and every committed skip is Low or Medium, so nothing below Low exists to suppress. Phoenix / Plug / web-facing apps only — drop both steps on pure libraries. A `.sobelow-conf` needs no flag — it auto-loads since 0.14.1 (`--no-config` opts out).
 - **`dialyzer.json --quiet`** (precommit.full). Agent-friendly JSON variant (agents prefer JSON over the human-readable default). For pipeline parsing: `dialyzer.json --quiet --output /tmp/dialyzer.json` then jq.
 - **`reach.check --arch --smells`** (precommit.full only). Needs the full SDG — too slow for the inner loop or the dispatch gate. `--arch` validates against `.reach.exs`; `--smells` runs the cross-function smell surface (see `reach.md` for the Credo overlap). An empty `.reach.exs` (`[]`) is a valid no-policy — `--arch` passes vacuously until you populate layers/boundaries, so populate it as the architecture settles.
 

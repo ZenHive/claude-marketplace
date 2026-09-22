@@ -4,8 +4,8 @@
     "name": "ZenHive"
   },
   "metadata": {
-    "description": "ZenHive Claude Code plugins — orchestration and per-language development tooling, each plugin independently toggleable per repo",
-    "version": "0.1.0"
+    "description": "ZenHive Claude Code plugins — harness orchestration, workflow/roadmap methodology, and per-language tooling for ZenHive's own packages, each plugin independently toggleable per repo",
+    "version": "0.2.0"
   },
   "plugins": [
     {
@@ -19,70 +19,14 @@
     {
       "name": "workflow",
       "source": "./plugins/workflow",
-      "description": "Language-agnostic development workflow — worktree isolation, the dev lifecycle, evaluator separation, upstream contributions, and layered Solidity/EVM verification. Skills: git-worktrees, dev-lifecycle, workflow-philosophy, upstream-pr-workflow, onchain-verification.",
-      "repository": "https://github.com/ZenHive/claude-marketplace",
-      "license": "MIT"
-    },
-    {
-      "name": "tasks",
-      "source": "./plugins/tasks",
-      "description": "Roadmap-driven task management — the rmap roadmap substrate (tasks.toml → ROADMAP.md), D/B/U prioritization scoring, task-as-prompt authoring, and pickup / plan-and-file execution modes. Skills: rmap, task-driver, task-writing, roadmap-planning.",
-      "repository": "https://github.com/ZenHive/claude-marketplace",
-      "license": "MIT"
-    },
-    {
-      "name": "review",
-      "source": "./plugins/review",
-      "description": "Universal staged review chain — code-review (pre-commit single-reviewer triage) and audit-review (post-merge dual-reviewer audit with mandatory Codex). SessionStart hook surfaces unaudited commit tails. Skills: code-review, audit-review.",
-      "repository": "https://github.com/ZenHive/claude-marketplace",
-      "license": "MIT"
-    },
-    {
-      "name": "delegation",
-      "source": "./plugins/delegation",
-      "description": "Linear-as-queue + cloud-agent (Codex, Cursor, Sprite) delegation. Composable skills: linear-queue (substrate), agent-dispatch, agent-pr-review, flow-review, delegation-rules, cloud-agent-environments, sprite-claude-code.",
-      "repository": "https://github.com/ZenHive/claude-marketplace",
-      "license": "MIT"
-    },
-    {
-      "name": "portfolio",
-      "source": "./plugins/portfolio",
-      "description": "Power-law portfolio rule — cross-repo decision framework for starting, continuing, or killing projects. Classify normal vs power-law bets, check portfolio health, enforce kill criteria. Skill: portfolio-strategy.",
-      "repository": "https://github.com/ZenHive/claude-marketplace",
-      "license": "MIT"
-    },
-    {
-      "name": "git-commit",
-      "source": "./plugins/git-commit",
-      "description": "Intelligent git commit workflow automation with AI-powered file grouping and configurable message formats. Command: /git-commit:commit.",
-      "repository": "https://github.com/ZenHive/claude-marketplace",
-      "license": "MIT"
-    },
-    {
-      "name": "code-quality",
-      "source": "./plugins/code-quality",
-      "description": "Language-agnostic LLM-based code quality gate — blocks untracked TODOs, unmarked deferred work, stub functions, and silent workarounds on every source-file edit.",
-      "repository": "https://github.com/ZenHive/claude-marketplace",
-      "license": "MIT"
-    },
-    {
-      "name": "dev-discipline",
-      "source": "./plugins/dev-discipline",
-      "description": "PreToolUse discipline hooks at the moments Claude tends to choose ceremony over inline fix: pause-and-pick reminders (about-to-rmap-new, about-to-add-[[task]]-via-direct-edit, about-to-sleep/poll) plus blocking roadmap/tasks.toml guards — including DD-8, which searches every task status and blocks filing an instance of a class existing tasks already cover. Fires at the trigger word, where memory entries don't.",
-      "repository": "https://github.com/ZenHive/claude-marketplace",
-      "license": "MIT"
-    },
-    {
-      "name": "marketplace-hygiene",
-      "source": "./plugins/marketplace-hygiene",
-      "description": "Marketplace-integrity hooks: blocks direct edits to auto-synced SKILL.md files (redirecting to the canonical ~/.claude/includes/*.md source via the shared scripts/skill-include-map.sh), and validates marketplace/plugin/hooks JSON on every edit so parse errors surface immediately. Self-contained, no plugin-internal dependencies.",
+      "description": "Language-agnostic workflow and roadmap methodology — rmap substrate, D/B/U prioritization, task-as-prompt authoring, pickup / plan-and-file modes, worktree isolation, upstream contributions, layered Solidity/EVM verification. Skills: rmap, task-writing, roadmap-planning, task-driver, git-worktrees, upstream-pr-workflow, onchain-verification. Skills only.",
       "repository": "https://github.com/ZenHive/claude-marketplace",
       "license": "MIT"
     },
     {
       "name": "elixir",
       "source": "./plugins/elixir",
-      "description": "Essential Elixir/OTP development support — per-edit check hooks (format, compile, test.json, credo, dialyzer.json, sobelow, doctor) plus core skills: code-style, development-commands/philosophy, dialyzer-json, ex-unit-json, elixir-setup, integration-testing, usage-rules, hex-docs-search, reach, tidewave-guide, web-command, agent-economy, api-toolkit, zen-websocket, nexus-template.",
+      "description": "Elixir/OTP development support — four mechanic hooks (post-edit format/compile/matching test, pre-commit format/compile/unused-deps gate, destructive-command block, test.json/dialyzer.json rewrites) plus skills for ZenHive's own Hex packages and conventions. Generic Elixir/Phoenix knowledge is phxagents' job.",
       "repository": "https://github.com/ZenHive/claude-marketplace",
       "license": "MIT"
     },
@@ -94,16 +38,9 @@
       "license": "MIT"
     },
     {
-      "name": "elixir-workflows",
-      "source": "./plugins/elixir-workflows",
-      "description": "Workflow-generator plugin — scaffolds project-agnostic research / planning / implementation / QA workflows and the commands that drive them. Skill: workflow-generator. Command: /elixir-workflows:workflow-generator.",
-      "repository": "https://github.com/ZenHive/claude-marketplace",
-      "license": "MIT"
-    },
-    {
       "name": "tools",
       "source": "./plugins/tools",
-      "description": "Personal/utility CLI-usage reference skills — not tied to a dev-lifecycle process or a specific language. Skills: himalaya, gloomberb.",
+      "description": "Personal/utility CLI-usage reference skills — not tied to a development process or a specific language. Skills: himalaya, gloomberb.",
       "repository": "https://github.com/ZenHive/claude-marketplace",
       "license": "MIT"
     },

@@ -2,7 +2,7 @@
 # Single source of truth for SKILL.md ↔ include mapping (zenhive marketplace).
 # Sourced by both:
 #   - scripts/sync-skills-from-includes.sh (writes the synced bodies)
-#   - plugins/marketplace-hygiene/scripts/block-skill-edits.sh (denies direct edits)
+#   - scripts/hooks/block-skill-edits.sh (repo-local PreToolUse hook) (denies direct edits)
 #
 # Format: "relative/path/to/SKILL.md:include-filename.md"
 # Adding a new entry here registers the skill as auto-synced; the block hook
@@ -37,30 +37,17 @@ MAPPINGS=(
   "plugins/elixir-volt/skills/npm-security-audit/SKILL.md:npm-security-audit.md"
   "plugins/elixir-volt/skills/npm-dep-analysis/SKILL.md:npm-dep-analysis.md"
 
-  # --- tasks (rename of task-driver; roadmap-planning moved in from elixir) ---
-  "plugins/tasks/skills/rmap/SKILL.md:rmap.md"
-  "plugins/tasks/skills/task-writing/SKILL.md:task-writing.md"
-  "plugins/tasks/skills/roadmap-planning/SKILL.md:task-prioritization.md"
+  # --- workflow (roadmap methodology; former tasks plugin) ---
+  "plugins/workflow/skills/rmap/SKILL.md:rmap.md"
+  "plugins/workflow/skills/task-writing/SKILL.md:task-writing.md"
+  "plugins/workflow/skills/roadmap-planning/SKILL.md:task-prioritization.md"
 
-  # --- workflow (new; worktree + lifecycle + philosophy + upstream-pr) ---
+  # --- workflow (worktree + upstream-pr + onchain) ---
   "plugins/workflow/skills/git-worktrees/SKILL.md:worktree-workflow.md"
   "plugins/workflow/skills/upstream-pr-workflow/SKILL.md:upstream-pr-workflow.md"
-  "plugins/workflow/skills/dev-lifecycle/SKILL.md:dev-lifecycle.md"
-  "plugins/workflow/skills/workflow-philosophy/SKILL.md:workflow-philosophy.md"
   "plugins/workflow/skills/onchain-verification/SKILL.md:onchain-verification.md"
 
-  # --- portfolio (rename of portfolio-strategy) ---
-  "plugins/portfolio/skills/portfolio-strategy/SKILL.md:portfolio-strategy.md"
 
-  # --- delegation (rename of cloud-delegation) ---
-  "plugins/delegation/skills/linear-workflow/SKILL.md:linear-workflow.md"
-  "plugins/delegation/skills/linear-queue/SKILL.md:linear-queue.md"
-  "plugins/delegation/skills/agent-dispatch/SKILL.md:agent-dispatch.md"
-  "plugins/delegation/skills/agent-pr-review/SKILL.md:agent-pr-review.md"
-  "plugins/delegation/skills/flow-review/SKILL.md:flow-review.md"
-  "plugins/delegation/skills/cloud-agent-environments/SKILL.md:cloud-agent-environments.md"
-  "plugins/delegation/skills/sprite-claude-code/SKILL.md:sprite-claude-code.md"
-  "plugins/delegation/skills/delegation-rules/SKILL.md:delegation-rules.md"
 
   # --- elixir-vibe ecosystem (dannote org; libs absent from training data) ---
   "plugins/elixir/skills/elixir-vibe/SKILL.md:elixir-vibe.md"

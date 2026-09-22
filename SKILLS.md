@@ -1,7 +1,7 @@
 # Skills catalog — `zenhive` marketplace
 
 Every skill shipped by a `zenhive` plugin, grouped by plugin. Invoke as
-`<plugin>:<skill>` (e.g. `tasks:rmap`, `elixir-volt:oxc`).
+`<plugin>:<skill>` (e.g. `workflow:rmap`, `elixir-volt:oxc`).
 
 **Sync status:**
 - **synced** — body auto-generated from `~/.claude/includes/<file>.md` via
@@ -18,34 +18,13 @@ Every skill shipped by a `zenhive` plugin, grouped by plugin. Invoke as
 - `harness-workflow` (self-sync) — the implement → review → land loop.
 
 ### workflow
-- `git-worktrees` (synced ← worktree-workflow.md)
-- `dev-lifecycle` (synced ← dev-lifecycle.md)
-- `workflow-philosophy` (synced ← workflow-philosophy.md)
-- `upstream-pr-workflow` (synced ← upstream-pr-workflow.md)
-- `onchain-verification` (synced ← onchain-verification.md)
-
-### tasks
 - `rmap` (synced ← rmap.md)
 - `task-writing` (synced ← task-writing.md)
 - `roadmap-planning` (synced ← task-prioritization.md)
 - `task-driver` (native)
-
-### review
-- `code-review` (native)
-- `audit-review` (native)
-
-### delegation
-- `linear-workflow` (synced ← linear-workflow.md)
-- `linear-queue` (synced ← linear-queue.md)
-- `agent-dispatch` (synced ← agent-dispatch.md)
-- `agent-pr-review` (synced ← agent-pr-review.md)
-- `flow-review` (synced ← flow-review.md)
-- `cloud-agent-environments` (synced ← cloud-agent-environments.md)
-- `sprite-claude-code` (synced ← sprite-claude-code.md)
-- `delegation-rules` (synced ← delegation-rules.md)
-
-### portfolio
-- `portfolio-strategy` (synced ← portfolio-strategy.md)
+- `git-worktrees` (synced ← worktree-workflow.md)
+- `upstream-pr-workflow` (synced ← upstream-pr-workflow.md)
+- `onchain-verification` (synced ← onchain-verification.md)
 
 ## Personal tooling
 
@@ -55,23 +34,25 @@ Every skill shipped by a `zenhive` plugin, grouped by plugin. Invoke as
 
 ## Per-language dev tooling
 
+Generic Elixir / Phoenix / Ecto / LiveView knowledge is not shipped here —
+that is [phxagents.dev](https://phxagents.dev)'s job. These skills cover
+ZenHive's own packages and conventions only.
+
 ### elixir
-- synced ← includes: `code-style`, `development-commands`,
-  `development-philosophy`, `dialyzer-json`, `ex-unit-json`, `elixir-setup`,
-  `reach`, `web-command`, `agent-economy`, `api-toolkit`, `zen-websocket`,
-  `nexus-template`
-- native: `hex-docs-search`, `integration-testing`,
-  `tidewave-guide`, `usage-rules`
+- conventions, synced ← includes: `code-style`, `development-commands`,
+  `development-philosophy`, `elixir-setup`, `web-command`
+- own packages, synced ← includes: `dialyzer-json`, `ex-unit-json`, `reach`,
+  `agent-economy`, `api-toolkit`, `zen-websocket`, `nexus-template`,
+  `elixir-vibe`, `building-blocks`, `ex-ast`, `ex-dna`, `ex-slop`, `exograph`,
+  `program-facts`, `pi-elixir`, `vibe`, `vibe-kit`, `vibe-actions`,
+  `hex-playground`, `quackdb`, `fsst`, `phoenix-replay`, `cringe`, `ttycast`,
+  `theoria`, `muex`, `systemdkit`, `host-kit`, `safe-rpc`, `unitctl`
 
 ### elixir-volt
 - synced ← includes: `oxc`, `quickbeam`, `elixir-volt`, `npm-ci-verify`,
   `npm-security-audit`, `npm-dep-analysis`
 - native: `popcorn`
 
-### elixir-workflows
-- `workflow-generator` (native)
-
 ## Hook-only plugins (no skills)
 
-`code-quality`, `dev-discipline`, `marketplace-hygiene`, `git-commit` ship
-hooks/commands only — see each plugin's `README.md`.
+`dep-audit` ships a SessionStart hook only — see its `README.md`.

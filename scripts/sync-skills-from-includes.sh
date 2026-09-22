@@ -19,7 +19,7 @@ fi
 
 # Mapping: skill_path -> include_filename
 # Single source of truth lives in scripts/skill-include-map.sh — sourced by
-# both this script and plugins/marketplace-hygiene/scripts/block-skill-edits.sh.
+# both this script and scripts/hooks/block-skill-edits.sh (repo-local hook).
 # shellcheck source=skill-include-map.sh
 source "$SCRIPT_DIR/skill-include-map.sh"
 

@@ -66,24 +66,9 @@ git worktree prune
 
 To start working in a new worktree, open a fresh Claude Code session in that directory: `claude` from `~/_DATA/worktrees/<repo>/<id>/`.
 
-## After PR Merge — `audit-review` Is Deferred
+## After PR Merge — Audit Is Deferred
 
-`review:audit-review` catches hygiene drift (extractions, doc gaps, missing TODO markers, ROADMAP/CHANGELOG drift) that pre-commit `code-review` may have skipped, writes `.audit/<sha>.md` reports, and lands one `audit(...)` commit on the default branch.
-
-**Not chained off `gh pr merge`.** The post-merge tail ends at branch cleanup. The `review` plugin's SessionStart hook (`check-unaudited-commits.sh`, ≥3 unaudited threshold) surfaces accumulated tails next session:
-
-```
-/review:audit-status        # read-only snapshot of unaudited commits per branch
-Skill(audit-review) <range>        # batched audit over the accumulated range
-```
-
-`<range>` is typically `<last-audit-sha>..<default-branch-HEAD>` — one batched pass covers all merge SHAs since the last audit.
-
-**Manual override:** `/review:audit-review [<sha>|<range>]` for catch-up audits, batch passes, or compliance asks.
-
-**Tiny-commit fast path.** For commits ≤100 LOC AND no `lib/` (or language equivalent) touched, the skill skips Codex dispatch and writes a `verdict: clean — fast-path` report. No separate skip flag needed; if every commit in the range is fast-path-eligible, the audit is cosmetic and ends in seconds.
-
-**Why deferred, not chained.** Bots (CodeRabbit, Copilot, Codex's GitHub bot) run between PR-open and merge, so auditing pre-bot risks re-auditing. The audit commit lands on the default branch where it's durable. Batching N merges into one pass is strictly cheaper than N synchronous passes, and `.audit/<sha>.md` artifacts indexed off merge SHAs in default-branch history remain the canonical inspection surface.
+Post-merge audit is **not chained off `gh pr merge`**; the post-merge tail ends at branch cleanup. In harness-driven repos the audit is harness's post-merge QA (see `harness-workflow.md`); elsewhere it is the full-QA pass defined in `verification-policy.md`, run on the landed revision as a separate, nonblocking responsibility. Batching N merges into one pass is strictly cheaper than N synchronous passes, and bots (CodeRabbit, Copilot, Codex's GitHub bot) run between PR-open and merge, so auditing pre-bot risks re-auditing.
 
 ## PR Auto-Merge — Set It When You Open
 
@@ -142,4 +127,4 @@ A project can opt out of the worktree workflow by pinning a memory file under `~
 - `~/.claude/includes/critical-rules.md` § "Git Commit / Push / PR-Create — Allowed by Default" + § "STAGE PATH-SCOPED" — commits are allowed; staging stays path-scoped
 - `~/.claude/includes/delegation-rules.md` — strict rules that stay strict (cloud-agent branches); auto-merge loosened for cloud-agent PRs
 - `~/.claude/includes/task-prioritization.md` § "Parallel Work (`parallel` marker)" — when roadmap-tracked work uses worktrees
-- `review:audit-review` skill — the post-merge hygiene pass
+- `verification-policy.md` § Post-merge audit + QA, `harness-workflow.md` — the post-merge pass

@@ -261,34 +261,38 @@ Don't use without explicit user approval:
 - Must move on → leave a tracked TODO, not a silent gap.
 
 
-<!-- Selective-load (Opus 4.8): only critical-rules is eager-imported — the
-irreducible guardrail floor. Everything else (code-style, rmap, workflow, etc.)
-is reachable on demand as a skill or a Read of ~/.claude/includes/*.md. Re-add an
-@-import here only if Opus quality drops on that surface. -->
-
 ## What this is
 
-A single Claude Code **marketplace** (`zenhive`) distributing ~14 **independent
+A single Claude Code **marketplace** (`zenhive`) distributing six **independent
 plugins**. A marketplace is the distribution unit; a plugin is the isolation
 unit. Per-repo configurability comes from enabling/disabling plugins in
 `enabledPlugins`, not from drawing marketplace boundaries. See `README.md` for
-the orchestration-vs-language split and `CHANGELOG.md` for the plugin roster.
+the roster and the phxagents boundary, `SKILLS.md` for the skill catalog, and
+`CHANGELOG.md` for history.
 
-This supersedes the older `deltahedge` marketplace
-(`ZenHive/claude-marketplace-elixir`) — renamed to the org name and restructured.
+The marketplace ships only what a current model does not carry and what
+phxagents does not cover: harness orchestration, ZenHive's roadmap/workflow
+methodology, ZenHive's own Hex packages, and a handful of deterministic
+mechanic hooks. Generic Elixir/Phoenix knowledge, style nudges and
+"model-limitation" reminder hooks were removed in 0.2.0; do not reintroduce
+them. A hook earns its place by running a tool (format, compile, a test, a
+git check), not by reminding the model of a rule it already has in
+`critical-rules.md`.
 
 ## Includes → Skills sync (the load-bearing invariant)
 
 **`~/.claude/includes/*.md` are canonical.** Most skill `SKILL.md` bodies in this
 repo are auto-synced *from* those includes — never edit a synced `SKILL.md` body
-directly (the `marketplace-hygiene` block hook denies it and redirects you to the
-include). The single source of truth for the mapping is
-`scripts/skill-include-map.sh`, which drives **both**:
+directly (the repo-local MH-1 hook denies it and redirects you to the include).
+The single source of truth for the mapping is `scripts/skill-include-map.sh`,
+which drives **both**:
 
 - `scripts/sync-skills-from-includes.sh` — writes synced bodies (preserves
   frontmatter, replaces body with include content).
-- `plugins/marketplace-hygiene/scripts/block-skill-edits.sh` — denies direct
-  edits to mapped files.
+- `scripts/hooks/block-skill-edits.sh` — denies direct edits to mapped files.
+  Wired in this repo's `.claude/settings.json` (PreToolUse), together with
+  `scripts/hooks/validate-marketplace-json.sh` (PostToolUse, MH-2). Rule IDs in
+  `HOOK-RULES.md`.
 
 After editing any include:
 
@@ -305,19 +309,13 @@ headers. Native (hand-authored) skills are copied directly, not synced.
 
 | Script | Purpose |
 |---|---|
-| `skill-include-map.sh` | Single source of truth for SKILL.md ↔ include mapping (sourced by the two below + the block hook). |
+| `skill-include-map.sh` | Single source of truth for SKILL.md ↔ include mapping (sourced by the sync script and the block hook). |
 | `sync-skills-from-includes.sh` | Sync mapped SKILL.md bodies from `~/.claude/includes/`. |
-| `sync-agents-md.sh` | **Manual** AGENTS.md generator — inlines a repo's CLAUDE.md @-imports for Codex. Run from inside the target repo. (Was a delegation-plugin auto-hook; retired to manual in the zenhive migration.) |
+| `hooks/block-skill-edits.sh`, `hooks/validate-marketplace-json.sh` | Repo-local hooks (MH-1, MH-2). |
+| `sync-agents-md.sh` | **Manual** AGENTS.md generator — inlines a repo's CLAUDE.md @-imports for Codex. Run from inside the target repo. |
 | `sync-coderabbit-yaml.sh` | Sync the comments-only `.coderabbit.yaml` from `templates/` into a target repo. |
 | `clear-cache.sh` | Clear zenhive plugin cache + stale registry entries (also sweeps legacy deltahedge/claude-code-elixir). |
 | `migrate-repos-deltahedge-to-zenhive.sh` | Rename `@deltahedge` → `@zenhive` in a repo's `.claude/settings.json` (dry-run by default). |
-
-## Hook rule catalog
-
-Every hard-deny and soft-warn rule enforced by `code-quality`, `dev-discipline`,
-and `marketplace-hygiene` is named and numbered (`CQ-*`, `DD-*`, `MH-*`) in
-[`HOOK-RULES.md`](HOOK-RULES.md) — each hook's deny/warn message cites its ID.
-Add new rules there in the same change that adds the hook/check.
 
 ## Roadmap
 

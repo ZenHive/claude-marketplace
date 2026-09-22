@@ -6,6 +6,78 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 
 ## [Unreleased]
 
+### Removed — marketplace 0.2.0: retire what a current model does not need
+
+Audit premise: the marketplace was built for every model generation; with
+Claude 5-class models and phxagents.dev enabled globally, most of it was
+either unused (per-repo `enabledPlugins` survey: seven plugins enabled in
+zero repos, `elixir-workflows` enabled in ten with zero generated commands),
+superseded, or a trigger-word nudge for knowledge the model carries.
+Fifteen plugins → six. Deleted outright:
+
+- **`review`** — `code-review` duplicated the first-party `/code-review`
+  skill and `phx:review`; `audit-review` was the 796-line manual version of
+  harness's `audit_review-*` MCP tools.
+- **`delegation`** — its own `agent-dispatch` skill declared Codex Cloud
+  suspended; `harness-workflow` states harness subsumes the dispatch+review
+  loop. Includes stay in `~/.claude/includes/` for the record.
+- **`code-quality`** (CQ-1..4) — one LLM call per edit to re-check rules that
+  `critical-rules.md` already carries ambiently.
+- **`dev-discipline`** (DD-1..8) — judgment encoded as regex (pause-and-pick,
+  demand-hedge phrases, sibling-class fuzzy match) plus a hardcoded model pin.
+  DD-1's `# human:` format check belongs in `rmap validate` if wanted.
+- **`git-commit`** — stock commit workflow with a "Shall I proceed?" gate that
+  contradicts commit-by-default.
+- **`portfolio`** — enabled nowhere, untouched since June; include remains.
+- **`elixir-workflows`** — workflow-generator never produced a command in any
+  repo that enabled it.
+- **`marketplace-hygiene`** — self-referential; MH-1/MH-2 now run as this
+  repo's own `.claude/settings.json` hooks from `scripts/hooks/`. It was not
+  even enabled here while `CLAUDE.md` relied on it.
+- **`tasks`** — folded into `workflow` (`rmap`, `task-writing`,
+  `roadmap-planning`, `task-driver`). Invoke as `workflow:<skill>`.
+- **`workflow`**: `workflow-philosophy` and `dev-lifecycle` skills + the
+  `/workflow:dev-lifecycle` command — they described the five-phase plugin
+  chain this release removes. Includes remain for repos that `@`-import them.
+- **`elixir` 0.3.4 → 0.4.0**:
+  - Hooks removed (all tagged `[model-limitation]` in the old README, or
+    duplicated by phxagents): `recommend-docs-lookup` (ran `mix deps` on every
+    prompt), `recommend-docs-on-read` (every Read), `suggest-test-failed` +
+    `reset-test-tracker`, `suggest-test-include`, `warn-shell-eval-elixir`,
+    `warn-missing-tool-flags`, `warn-doctest-io-and-untagged-todos`,
+    `ash-codegen-check` (+ its Cursor adapter), `check-branch-behind-origin`
+    (phxagents' `check-branch-freshness.sh` and harness's stale-base guard
+    already fetch at SessionStart), `phx-new-check` (blocked a missing
+    `--live` flag; per the current `mix phx.new` docs LiveView is the default
+    and `--no-live` is the opt-out, so the flag it demanded no longer exists).
+  - `post-edit-check.sh` cut to format + compile + matching test. Per-edit
+    credo/sobelow/doctor were project-wide gates on every edit, which
+    `verification-policy.md` forbids; the defstruct / hidden-failure / mix.exs
+    heuristics were nudges.
+  - `pre-commit-unified.sh` cut to format-check + compile + `deps.unlock
+    --check-unused`. credo/doctor/sobelow/mix_audit/ash.codegen ran
+    project-wide on every commit and belong to the reviewer, CI and post-merge
+    QA. Timeout 180s → 120s.
+  - Skills removed as phxagents territory: `hex-docs-search`, `usage-rules`
+    (→ `phx:hexdocs-fetcher`), `tidewave-guide` (→ `phx:tidewave-integration`),
+    `integration-testing` (policy lives in `critical-rules.md`, patterns in
+    `phx:testing`). `scripts/_deprecated/` (9 scripts) deleted.
+- `HOOK-RULES.md` keeps CQ-*/DD-* under **Retired** so old deny messages stay
+  resolvable; MH-* are now repo-local rules.
+- Include cross-references to `review:*` updated (`worktree-workflow.md`,
+  `task-prioritization.md`, `task-driver`).
+
+### Kept on purpose
+
+- **`dep-audit`** — deterministic, silent when clean, and the only hook that
+  covers cargo-audit and npm-audit; rollout to the onchain repos is Task 10.
+- **`elixir`'s four mechanic hooks** — format/compile/matching test after an
+  edit, the three-check commit gate, the destructive-command block, and the
+  test.json / dialyzer.json rewrites: they run a tool, they don't remind.
+- Every skill for a ZenHive-owned package (elixir-vibe family, ex_unit_json,
+  dialyzer_json, zen_websocket, api_toolkit, descripex, nexus, the Volt set,
+  himalaya, gloomberb, rmap, harness) — not in any model's training data.
+
 ### Fixed
 
 - **Dated-prompt-pattern audit** (`/claude-api prompt-audit` over `~/.claude/includes` +
