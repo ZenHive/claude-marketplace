@@ -65,6 +65,39 @@ Himalaya is installed and pre-authed for all mail accounts (Proton via local Bri
 
 himalaya v2 ships a `jmap` backend/subcommand tree, but the configured accounts run IMAP. `jmapcli` (https://boogie.digital/cli/) remains the tool for JMAP-level ops against Stalwart (`jmapcli accounts`; default `efries@deltahedge.io`, plus `efries@pulau-indah.com`, via https://mail.deltahedge.io).
 
-## Port 465 blocked on some networks — fall back to 587 STARTTLS via a temp config
+## SMTP is permanently on 587 STARTTLS — Starlink Indonesia blocks 465 outbound
 
-Observed 2026-09-06 (Bali network): `message send` on a Stalwart account hung ~4 min and died with `connect mail.deltahedge.io:465 … Operation timed out (os error 60)` while 587 and 993 were reachable (`nc -z -G 8 mail.deltahedge.io 465|587|993`). Nothing is sent on a connect timeout — safe to retry — but with `--save sent` himalaya had ALREADY appended the Sent copy over IMAP before SMTP failed, so a stale duplicate row sits in Sent Items (delete it after the successful resend; the Stalwart delivery log, not the Sent folder, is the proof). Fix without touching the real config: copy `config.toml` to a scratch path, in that account's block replace `smtp.server = "smtps://…:465"` with `smtp.server = "smtp://mail.deltahedge.io:587"` plus `smtp.starttls = true` (the key is `starttls`, not `encryption`), then `himalaya -c <tmp> message send …`. Probe with a self-addressed mail first, delete the temp copy afterwards (it inherits the password commands, not secrets, but keep it out of the repo).
+**Config state since 2026-09-22: every remote SMTP account uses port 587 + STARTTLS.** Five Stalwart accounts (`pulau-indah`, `deltahedge`, `tapakly`, `inetpeople`, `anya pulau-indah`) on `smtp.server = "smtp://mail.deltahedge.io:587"`, both Gmail accounts (`ernesto.fries2 gmail`, `inetpeopleholding gmail`) on `smtp.server = "smtp://smtp.gmail.com:587"` — each with `smtp.starttls = true` (the key is `starttls`, not `encryption`). **Proton Bridge is the one exception and must stay as it is**: `smtps://127.0.0.1:1025`, implicit TLS, loopback — no upstream filter can touch it. Backups of the 465-era config: `config.toml.bak-20260922-smtp587` (Stalwart), `config.toml.bak-*-gmail587` (Gmail). **Do NOT build a temp config for this any more** — that was the 2026-09-06 workaround and it is obsolete.
+
+**Why — it is a regulatory block, not a spam measure and not a server fault.** This network egresses through `AS45700 PT Starlink Services Indonesia` (Lombok dish, exit Surabaya). Starlink blocks TCP 25 globally as an anti-spam policy, and per its own support article is **required by Indonesian regulation to block TCP 465**, naming 587 as the workaround. That explains the otherwise arbitrary shape: 465 and 587 are equally capable submission ports, so no spam-motivated filter would take one and leave the other. Source: <https://starlink.com/support/article/c3caacdf-1c1f-98db-b821-bbb36ca9d89b> (JS-rendered — `curl` returns an empty SPA shell; read it in a browser or via a search index).
+
+Measured 2026-09-22 with `nc -4 -z -w 8`, plus an `openssl s_client -starttls smtp` handshake on the 587 paths (two implementations, because a single probe tool that reports "closed" is exactly the kind of detector that lies):
+
+| host:port | from Lombok (Starlink) | from mac mini (KL, AS9930) |
+|---|---|---|
+| `mail.deltahedge.io:587` | open | open |
+| `mail.deltahedge.io:465` | **timeout/drop** | **open** |
+| `mail.deltahedge.io:993` | open | — |
+| `mail.deltahedge.io:443` | open | — |
+| `mail.deltahedge.io:25` | timeout | timeout |
+| `smtp.gmail.com:587` | open | — |
+| `smtp.gmail.com:465` | **timeout/drop** | — |
+| `smtp.gmail.com:993` | open | — |
+
+The mini column is the control that rules out the server: Stalwart binds all four sockets (`ss -ltnp` → `*:25 *:465 *:587 *:993`, one pid), and 465 answers fine from another country. The block is purely destination-independent and port-based — Gmail's 465 dies exactly like ours.
+
+⚠️ **Correction to an earlier note in this file: Gmail is NOT blocked on both ports.** The claim that `smtp.gmail.com:587` also timed out was a **broken detector**, not a measurement: under zsh, `set -- $hp` does not word-split an unquoted variable, so `nc` received an empty port argument and *every* host read as timeout — including `mail.deltahedge.io:443`, over which that same session was actively working. Third instance of this class (see the `LC_ALL=C`/`tr` and `awk`-on-ANSI cases): **a detector that indicts everything is indicting itself.** Sanity-check any port sweep against a port you know is open.
+
+**The failure signature, and why the Sent folder lies about it** (observed twice, most recently 2026-09-22 03:33:43Z): `message send` hangs up to ~4 min and dies with `connect mail.deltahedge.io:465 … Operation timed out (os error 60)`. **Nothing is sent on a connect timeout — a resend is safe.** But with `--save sent` himalaya appends the Sent copy over IMAP *before* the SMTP submit, so a message sits in Sent Items having never left. An agent seeing the Sent copy will report "saved but not sent" — believe the *log*, not the folder.
+
+**Ground truth, per message:** grep the server log for the recipient, not for a generic queue word. On `mail.deltahedge.io`, `/var/log/stalwart/stalwart.<date>`:
+
+```bash
+ssh root@mail.deltahedge.io \
+  'sed -e "s/\x1b\[[0-9;]*m//g" /var/log/stalwart/stalwart.$(date -u +%F) \
+   | grep -E "<recipient>" | grep -E "delivery.delivered|queue.authenticated-message-queued"'
+```
+
+Two traps, both hit on 2026-09-22:
+- **The log is ANSI-colored.** `awk '$1 >= "<timestamp>"'` silently matches nothing because `$1` starts with an escape sequence, and every count comes back `0` — which reads as "nothing happened" instead of "my filter is broken". Pipe through `sed -e 's/\x1b\[[0-9;]*m//g'` first.
+- **The submission event is `queue.authenticated-message-queued`**, not `queue.queued`. Grepping the latter returns 0 hits on a server that queued the message fine, and invites the conclusion that a successfully sent mail was lost.
