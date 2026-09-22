@@ -6,6 +6,15 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-09-22
+
+### Changed
+
+- **`harness` 0.2.13 → 0.2.14** — synced driver + workflow skills from the
+  harness repo: run insights (advisory witness), repository maintenance,
+  integrated post-merge QA, graceful shutdown recovery, explicit audit
+  selection.
+
 ### Removed — marketplace 0.2.0: retire what a current model does not need
 
 Audit premise: the marketplace was built for every model generation; with

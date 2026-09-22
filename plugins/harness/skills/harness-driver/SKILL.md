@@ -48,7 +48,9 @@ Four setup steps the consuming repo needs:
 
 - **IEx / MCP ad-hoc:** dispatch `Harness.ProjectRegistry.upsert/1` via IEx or the `project_eval` escape hatch (`mcp__harness_eval__project_eval`, wired in step 3). With Postgres enabled, the upsert persists across BEAM restarts.
 
-`check_command` is a free-text dispatch-scale hint handed to the reviewer AI — the reviewer runs the project's checks itself and judges the output; harness never executes this command. For Elixir projects, prefer `mix check.dispatch` plus focused `mix test.json ...` checks for touched behavior; keep `mix precommit.full` / `mix ci` for the landed-base Architect/QA pass that the orchestrator runs between waves. Because `mix check.dispatch` is normally verbose, capture the first run to a unique tmp log (`LOG=$(mktemp -t harness-check-dispatch.XXXXXX.log)` then `mix check.dispatch > "$LOG" 2>&1`) and inspect that file instead of re-running for readable output. For a multi-language monorepo, describe each component's dispatch-scale command. `language` is an optional atom (`nil`/`:elixir` keeps Elixir injected rules; other atoms suppress Elixir-specific rule sections).
+`check_command` is a free-text dispatch-scale hint handed to the reviewer AI — the reviewer runs the project's checks itself and judges the output; harness never executes this command. For Elixir projects, prefer explicit `mix format --check-formatted` and `mix compile --warnings-as-errors` plus focused `mix test.json ...` checks for touched behavior and risk-relevant security/live verification. Keep `mix precommit.full` / `mix ci` on `Project.qa_command` for post-merge audit QA. Capture the first dispatch run to a unique tmp log (`LOG=$(mktemp -t harness-check-dispatch.XXXXXX.log)` then `mix check.dispatch > "$LOG" 2>&1`) and inspect that file instead of re-running. For a multi-language monorepo, describe each component's dispatch-scale command. `language` is an optional atom (`nil`/`:elixir` keeps Elixir injected rules; other atoms suppress Elixir-specific rule sections).
+
+Operator rollout of the fleet split is `mix harness.projects.rollout_dispatch_qa` (dry-run by default; `--apply` after deployed QA support). Focused dispatch and full QA commands are installed together; prior QA outcomes never gate the switch. Captures include actual alias sources and active hook/plugin configuration; hook inventory is read-only and never installs or wraps hooks. Persisted readback and rollback failures are explicit errors. Settings-only edits do not complete consumer alias/instruction work; those stay on each repo's normal review/landing path. The operator dashboard at `/harness/qa` lists fleet QA status, evidence, start/retry, and rollout visibility. After editing this skill or `priv/includes/harness-workflow.md`, run `scripts/sync-harness-skills.sh`.
 
 `roadmap_target_branch` on `%Harness.Project{}` names the git branch for durable `mark_*` writes when `roadmap_path` lives in a different repository than `source` (the split-repo case). It is required in that case; omitting it on a split-repo project falls back to a local rmap write and origin never advances. Same-repo registrations omit it — durable writes then derive the branch from `target_branch`. Set it from `dispatch-register_project`, the `/harness/settings` create/edit form (blank stays `nil`), or `ProjectRegistry.upsert/1`.
 
@@ -137,7 +139,7 @@ For every dispatched task, the cross-family reviewer AI's verdict — not the im
 | `dispatch-status` | Live snapshot of an in-flight (or 5s-lingering) run by `run_id`: state, review verdict so far, agent pid. |
 | `dispatch-transcript` / `dispatch-transcript_events` | Buffered raw / parsed transcript for a live run, with a `seq` to poll deltas. |
 | `dispatch-cancel` | Cancel an in-flight run (idempotent). |
-| `dispatch-hold` / `dispatch-steer` / `dispatch-resume` | Operator-mediated run recovery by `run_id`: park a run (`hold`, `interrupt:` to kill the agent now), stash guidance for the next agent boundary (`steer`), re-enter `:running` in the same worktree (`resume`). The JSON-native counterparts to `Harness.Run.hold/2` · `steer/2` · `resume/1`. |
+| `dispatch-hold` / `dispatch-steer` / `dispatch-resume` | Operator-mediated run recovery by `run_id`: park a run (`hold`, `interrupt:` to kill the agent now), stash guidance for the next agent boundary (`steer`), re-enter `:running` in the same worktree (`resume`). The JSON-native counterparts to `Harness.Run.hold/2` · `steer/2` · `resume/1`. The same `steer` + `resume` pair answers an implementer question-hold (see § "Implementer question channel"). |
 | `dispatch-rereview` | Queue a reviewer-only run from a retained, validated commit. No implementer runs; stale selections fail visibly instead of starting fresh. |
 | `dispatch-resume_failed` | Recover a SETTLED `:failed` run by `run_id`: re-dispatch its roadmap task on a NEW run branched off the retained `harness/<run-id>` branch (prior commits are the start point) with the failure report injected. Same agent by default; `escalate: true` routes via capability score to the recommended agent. DISTINCT from `dispatch-resume` (which un-pauses a live `:held` run). |
 | `dispatch-reland` | Re-enqueue the landing job for a run whose land-train hit its cap and left the task `blocked`. Pure git, reviewer-approved branch — **zero agent tokens**. `Harness.Dispatch.reland/1` → `Harness.Lander.enqueue/1`. |
@@ -161,6 +163,29 @@ For every dispatched task, the cross-family reviewer AI's verdict — not the im
 **Anti-staleness contract:** before relying on a remembered tool shape, call `describe-tools` to see the live catalog and `describe-tool` for one tool's params/returns. This is the MCP-visible source of truth for chat/project_eval drivers that cannot see protocol-level `tools/list`.
 
 **Live recovery loop — hold → steer → resume.** `dispatch-steer` is async: it only stashes a note for the next agent boundary. It does not interrupt a continuous live turn, so steer alone will not reach an agent that is grinding inside the same attempt. To redirect a live turn, call `dispatch-hold` with `interrupt: true`, then `dispatch-steer` with the new instruction, then `dispatch-resume`. For an implementer over-grinding the gate (for example, repeatedly rerunning `mix check.dispatch` trying to make it green before committing), the operator move is force-handoff: hold/interruption → steer "commit your work and hand off; you do not need to green the dispatch check" → resume. The cross-family reviewer runs the gate and can fix checks inline, so the implementer does not need to pass the gate before handing off. This is operator use of existing mechanical primitives, not new harness judgment.
+
+**Implementer question channel — park via `.harness/question.json`, answer via steer + resume.** A headless implementer that hits genuinely ambiguous acceptance criteria writes `.harness/question.json` and ends its invocation. Harness reads the file mechanically at the agent-invocation boundary (same pattern as `review.json` / `recovery.json`): a well-formed, identity-fenced artifact parks the run in `:held` with `hold_reason: :question` and emits a `:question` witness event carrying the question string verbatim. Anything else (missing, empty, malformed, stale identity, already-consumed) is ignored-and-logged and the run proceeds to commit/review. There is no classifier, regex, or content-branch on the question text.
+
+Schema (injected into agent rules so no consumer-repo setup is required):
+
+```json
+{
+  "question": "<the ambiguity, as a string>",
+  "context": "<optional extra prose>",
+  "run_id": "<$HARNESS_RUN_ID>",
+  "invocation": "<$HARNESS_IMPLEMENTER_ATTEMPT>"
+}
+```
+
+Identity is `run_id` + `invocation`. Consumption is the sidecar `.harness/question-state.json` (pending/answered/consumed ids) plus an archive under `.harness/questions/` — harness does not delete `question.json` by convention. A leftover file cannot park the next invocation; a later genuine question with a new identity can.
+
+Answer path reuses existing primitives: `dispatch-steer` with the answer text, then `dispatch-resume`. Resume of a question-held run requires a non-empty steer (`{:error, :answer_required}` otherwise) and injects question + answer into the re-invoked agent's prompt. It does **not** re-arm a fresh lifetime budget.
+
+**Timeout policy (deliberate):** question-held time stays inside the existing `lifetime_timeout`. The timer is not suspended (unlike operator hold). Expiry settles `:timed_out` with the worktree retained — recoverable via `dispatch-resume_failed` / inspect, not an ambient new timeout. `max_hold_timeout` (`:hold_expired`) remains operator-hold only.
+
+**Recovery boundary:** after process/node failure or timeout, `dispatch-resume_failed` restores pending/answered question facts from the explicitly selected source run's retained worktree. The replacement run parks without another question notification. Use `dispatch-resume` if an answer was already recorded; otherwise `dispatch-steer` then `dispatch-resume`. Consumed question/answer context also survives a later failure. This requires the retained worktree on the same storage and the source run recorded as failed; it is not resurrection of the old process. A fresh dispatch never imports question state. The replacement gets the existing normal per-run lifetime budget, including its held time. Sidecar writes use atomic rename; persistence errors fail visibly. Notifications retain the sinks' existing best-effort delivery: the durable notified flag prevents replay, but a crash between recording that flag and delivery can lose a notification. The sidecar remains inspectable.
+
+This is an escape hatch, not a substitute for well-written tasks. Reviewer and audit questions are out of scope (reviewer already has `concerns`).
 
 `project_eval` is deliberately **not** on this surface — it's the escape hatch (next section), reached for only when you need arbitrary eval or one of the struct-passing ops the flat tools omit (`supervisor-start_run`, `batch-*`, `agent_evaluation-compare`, `audit_review-grade_fix_with`). The Manifest's `:exchange_data` filter is what keeps those off the JSON surface; the flat wrappers above are the JSON-native way around it. For the full descripex/MCP mechanics, see § "Driving via Chat / MCP".
 
@@ -640,6 +665,7 @@ Changes that require an update to this skill:
 - Changes to the MCP transport (`/harness/mcp` path, JSON-RPC envelope, tool naming, `Harness.Chat.Tools` registry shape)
 - Additional MCP backends beyond `Harness.Chat.Claude` (if/when a library-backed metered-API backend lands as an opt-in)
 - New or changed `Harness.Playbooks` (catalog entries, `priv/playbooks/*.md` recipes that drift from the actual tool surface, or the `list/0` / `get/1` shapes)
+- New or changed implementer question-channel protocol (`.harness/question.json` schema, identity fence, sidecar consumption, timeout policy, or the steer/resume answer path)
 
 **How this skill reaches the orchestrator's context.**
 
@@ -703,3 +729,184 @@ Run records and status/verdict responses expose `dispatch_decision`; durable
 `task_ids` preserves coalesced membership. Deploy migration
 `20260918230000_add_dispatch_decision_to_run_records` before activating this code.
 The driving orchestrator owns runtime activation and installed-skill propagation.
+
+### Run Insights — advisory witness
+
+`insights-status` reports independent enablement (disabled by default), explicit
+Codex or Claude selection, hourly default cadence, last successful pass, next pass,
+durable scan progress and persistence mode. Configure at
+`/harness/insights/settings`; dispatch autonomy does not enable the witness.
+
+- `insights-observe_now`: enqueue one serialized pass when enabled.
+- `insights-findings(project: "", run_id: "", offset: 0)`: at most 50 findings,
+  newest revision first, filtered before pagination; follow `next_offset`.
+- `insights-history(id: "…", offset: 0)`: finding plus at most 50 revisions and
+  preserved citations. Revisions are chronological within each page; later pages
+  contain older revisions.
+- Elixir equivalents: `Harness.Insights.status/0`, `observe_now/0`,
+  `findings/3`, `history/2`, `configure/1` (string-keyed settings map).
+
+An unconfigured observer uses the enabled Codex standing model. An explicit
+saved selection is preserved; unavailable agents or models require visible
+reconfiguration. Choices respect enabled agents, selected catalogs and runtime
+availability. There is no provider or model fallback.
+
+Codex uses the owning adapter package's explicit read-only observation command
+in an isolated temporary directory, with user/project configuration, shell,
+hooks, web search and MCP disabled. It is sandboxed, not described as tool-free.
+Claude is an explicit choice using its tool-free invocation. Neither observer
+receives lifecycle tools. Provider output is advisory finding data or a bounded
+read request; source excerpts remain untrusted text.
+
+Bootstrap covers seven days of changed records, then cycles through bounded
+pages with persisted fingerprints, including later landing/audit updates and
+active snapshots. Partial/missing/truncated evidence is explicit; a pass is not
+proof that all history was reviewed. Active conclusions are provisional. A
+merge alone does not resolve a finding; later outcome evidence must support it.
+The AI can request older finding pages (20 per read) and immutable source
+continuations (8,000 bytes per read) before publication. Full source hashes
+observe changes beyond excerpts, including structured reviewer checks, concerns
+and run reasons. At most 32 retrievals fit within a 180-second consultation;
+exhaustion fails without consuming evidence. Invalid publications receive one AI
+correction turn with indexed structural/citation diagnostics within that same
+deadline and read budget. Repeated invalid output fails with the concrete reason
+and preserves the successful checkpoint; exact citation validation is never relaxed.
+Retrieval performs no semantic
+ranking or relevance filtering.
+Repeated publication of the same pass id is idempotent. Failure preserves the
+last successful checkpoint; attempt scheduling is separate, so exhausted retries
+respect the selected cadence. Status reconciliation marks dead-worker and
+previous-VM passes interrupted, under the observation lock. Postgres retains passes, excerpts and revisions;
+`repo_enabled: false` is visibly ephemeral and has no persistent Oban scheduler.
+
+Independent reviewers must check each claim against retained citations, including
+contradictions and recurrence, rather than accepting the observer's self-report.
+Installed-skill propagation and production enablement belong to the orchestrator.
+
+### Repository Maintenance
+
+Maintenance has mutation authority only through durable roadmap publication. It is
+independent of Run Insights and disabled per repository until explicitly enabled.
+The `/harness/maintenance` navigation entry exposes fleet state, repository settings,
+findings and chronological assessments. `repo_enabled: false` is visibly ephemeral;
+Sweep now refuses scheduling without Postgres.
+
+- `maintenance-configure(project, enabled, cadence_minutes, agent, model, deadline_seconds)`:
+  weekly default (`10080` minutes), explicit Codex/model pin, default deadline `1800`
+  seconds. Cadence accepts 60–525600 minutes; deadline accepts 60–3600 seconds.
+  Model catalog changes never replace saved selections.
+- `maintenance-sweep_now(project)`: unique queued job for that repository on the
+  serialized `maintenance` queue. It does not change dispatch or landing policy.
+- `maintenance-status(project)`: disabled, ready, queued, running, no_findings,
+  successful, partial_evidence or failed; progress, next sweep and persistence mode.
+- `maintenance-findings(project, offset: 0)` and `maintenance-history(id, offset: 0)`:
+  bounded 50-entry pages; follow `next_offset`. History is chronological within a page.
+- Elixir equivalents live on `Harness.Maintenance`. `sweep(project, pass_id)` is the
+  internal worker boundary; reuse the pass id when recovering publication. Recovery
+  retains that pass's explicit agent/model selection.
+
+Analysis uses a freshly fetched target in an isolated checkout. Agent shell execution
+is disabled. The analyst requests tracked regular-file pages (24 KB, at most 40 reads
+per assessment); path traversal and symlinks are refused. Provider web research is
+available. Dependency-freshness and suite-health snapshots are evidence, not verdicts.
+Unavailable advisories, credentials, consumers or measurements must remain visible.
+Raw private advisory responses and agent tool output are never persisted to Postgres
+or shown. A separate tool-free AI disclosure pass removes private details before
+assessment publication; transient command captures are private and deleted.
+
+Discovery is persisted before publication. The durable roadmap writer fetches and
+re-reads the current roadmap for each attempt, asks the AI to reconcile semantic
+relationships, and creates tasks with persisted publication markers while rmap allocates numeric
+task ids. Generated tasks name an existing roadmap bundle. It uses
+fast-forward pushes with remote observation. After interruption, existing identities
+are recovered before new creation; deleted markers are checked against git history; unknown roadmap/history stops publication.
+At most three unfinished maintenance tasks may be published for a repository.
+Additional findings remain available for later assessment. Generated work uses the
+existing recovery-aware implement/review/land workflow; maintenance never implements
+code. A landed task is not a verified improvement: the outcome assessment needs
+independent delivery evidence and comparable measurements where applicable.
+
+Focused checks use a disposable database with the inherited connection URL removed:
+
+```sh
+env -u HARNESS_DATABASE_URL -u DATABASE_URL HARNESS_DB_NAME=harness_maintenance_test MIX_ENV=test mix ecto.create
+env -u HARNESS_DATABASE_URL -u DATABASE_URL HARNESS_DB_NAME=harness_maintenance_test MIX_ENV=test mix ecto.migrate
+env -u HARNESS_DATABASE_URL -u DATABASE_URL HARNESS_DB_NAME=harness_maintenance_test MIX_ENV=test mix test test/harness/maintenance test/harness/dashboard/maintenance_live_test.exs --include integration
+HARNESS_MAINTENANCE_TEST_MODEL=gpt-6-astra MIX_ENV=test mix test test/harness/maintenance/live_test.exs --include live_agent
+```
+
+The live test requires `codex login` and the explicit available model pin. It must fail
+loudly when access is missing. Deploy migration `20260920050000` before runtime
+activation. The orchestrator owns integrated checks, installed-skill propagation and
+production activation; dispatched sessions must not restart or enable production.
+
+Browser verification uses a runner-owned loopback server and memory-only fixtures:
+`npm install --prefix .harness/browser --no-audit --no-fund playwright`, then
+`node test/browser/maintenance.mjs`. Port `44044` must be free; override with
+`MAINTENANCE_BROWSER_PORT`. The runner refuses another server, terminates its owned
+process tree on success/failure/cancellation, and saves screenshots and results under
+`.harness/maintenance-browser/`. It never connects to the operator dashboard.
+
+## Integrated post-merge QA
+
+`Project.qa_command` is an optional full-project check command, independent of
+`check_command` (focused reviewer checks). Configure it explicitly through
+project registration/upsert or Settings; `nil` keeps legacy audit behavior.
+`dispatch-register_project` appends `qa_command` after `roadmap_target_branch`,
+retaining all existing positional arguments.
+
+The audit worker performs hygiene and full QA after landing, asynchronously.
+`dispatch-qa_status(project_name, limit=20)` returns up to 100 recent attempts and
+100 pending audit jobs; `dispatch-qa_evidence(id, offset=0, limit=8000)` returns up
+to 32000 characters of durable report/transcript per call. Elixir equivalents
+are `Harness.Dispatch.qa_status/2` and `qa_evidence/3`. Evidence includes clean
+passes and failed/incomplete attempts, with exact revisions and commands.
+Database unavailability is an explicit error, never a passing result.
+
+QA agents have a one-hour absolute budget, including silent tool calls. Attempt
+evidence retains the driver termination reason. Rejected audit pushes retain
+`audit/recovery/<sha>` branches for operator recovery.
+
+Full suites, coverage, Dialyzer, Reach, Sobelow, Credo, Doctor and clone checks
+belong here where applicable, including aave_sim. The independent reviewer keeps
+focused tests and risk-relevant security/live checks. Never wait for QA to land
+or deploy, and never revert or restart production for a QA result. The audit AI
+owns repair and semantic deduplication; substantial changes go through ordinary
+implementation/review. Keep undisclosed security details in private advisories.
+The orchestrator owns production migration and propagation of this skill.
+
+### Graceful shutdown recovery
+
+Application shutdown settles runs in `Harness.Application.prep_stop/1`, before
+Oban, the endpoint, task supervision or storage stop. Stopping
+`Harness.Run.Supervisor` directly uses the same admission fence. Its shutdown
+child closes admission before the inner DynamicSupervisor terminates run children
+concurrently; the admission process remains alive until settlement finishes.
+Run processes trap supervisor exits and persist `state: :failed` with
+`reason: {:shutdown, interrupted_state}`. Dispatch jobs retain that reason in
+their cancellation error; this is an interrupted attempt, not an operator cancel.
+
+Admission is serialized at the agent-driver boundary, including reviewer
+reprompts/rotation, recovery and the in-run grader. Already-admitted invocations
+have five seconds to deliver their spawn handle; no new invocation is admitted
+after the fence closes. A hung pre-spawn driver is killed and logged. The fence
+child has a seven-second shutdown budget, run children have thirty seconds in
+parallel, and admission teardown has one second: a 38-second run-layer budget,
+below the documented 120-second service stop timeout. This budget does not cover
+transport drain or promise persistence when storage/callbacks exceed the budget;
+OTP reports forced termination. Store errors are logged and spill through the
+existing ResultStore dead-letter/replay path. A spill failure remains a visible
+persistence failure, never a successful write.
+
+Retained branches and worktrees are recovery evidence. After restart, inspect the
+shutdown record and compare its branch with `origin`; use `dispatch-rereview` for
+review-ready commits or `dispatch-resume_failed` for incomplete implementation.
+Both operations validate and pin the retained commit through the ordinary queue.
+A missing branch returns `source_unavailable_or_landed`; shutdown does not invent
+a commit or justify a hand-built `start_run`. If persistence spilled, repair the
+store and replay the spill before using record-based recovery. SIGKILL and power
+loss cannot run these callbacks and carry no graceful-cleanup guarantee.
+
+### Explicit audit selection
+
+The QA page `/harness/qa` owns the global audit agent/model picker and shows current eligibility and unavailable reasons. `Harness.Audit.Selection.configure(agent_name, model)` atomically persists this pair in SettingsStore; an empty agent selects automatic routing. Explicit selection starts a separate audit session and may reuse the implementation or review adapter. It still requires reviewer eligibility, an installed available adapter and an available explicit model; no fallback changes the saved choice. Automatic routing continues to exclude the run's implementer and reviewer and may produce `no_audit_agent`. QA summaries show the last incomplete reason directly. Changing selection affects new audit sessions and neither changes reviewer trust nor restarts existing jobs.
