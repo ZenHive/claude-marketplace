@@ -35,4 +35,5 @@
 | Task 9 | ✅ | 🎁 **skill-ref-hygiene** · Sweep stale `@deltahedge` marketplace-name refs in plugin README install blocks [D:2/B:3/U:4 → Eff:1.75?] 🚀 |
 | Task 10 | 🔄 | 🎁 **stack-hygiene** · Enable dep-audit@zenhive across the seven onchain-stack repos [D:3/B:5/U:6 → Eff:1.83?] 🚀 |
 | Task 11 | ⬜ | 🎁 **stack-hygiene** · pre-commit-unified: resolve the mix project from the staged files, not only from cwd / a leading `cd` [D:4/B:7/U:6 → Eff:1.62] 🚀 |
+| Task 12 | ⬜ | 🎁 **stack-hygiene** · sync-agents-md.sh: publish-exposure guard misfires on a one-line `files:` / `extras:` list [D:2/B:6/U:6 → Eff:3.0] 🎯 |
 <!-- TASKS:END -->

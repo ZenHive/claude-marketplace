@@ -436,6 +436,41 @@
       "created_at": "2026-09-16",
       "scored_at": "2026-09-16",
       "cross_repo": []
+    },
+    {
+      "id": 12,
+      "phase": 2,
+      "bundle": "stack-hygiene",
+      "status": "pending",
+      "title": "sync-agents-md.sh: publish-exposure guard misfires on a one-line `files:` / `extras:` list",
+      "scores": {
+        "d": 2,
+        "b": 6,
+        "u": 6
+      },
+      "eff": 3.0,
+      "dep_layer": 0,
+      "unlocks": 0,
+      "markers": [],
+      "depends_on": [],
+      "assignee": "codex",
+      "model": "gpt-5.5",
+      "acceptance_criteria": [
+        "A mix.exs with `files: ~w(lib mix.exs README.md)` (single balanced line) and an alias helper whose *string* mentions `AGENTS.md` within the next 60 lines passes `sync-agents-md.sh --check` cleanly.",
+        "A mix.exs that lists AGENTS.md inside a single-line or multi-line `files:` / `extras:` / `groups_for_extras` list still fails with the EXPOSED message.",
+        "Every vendored copy (`bin/sync-agents-md.sh` in zen_websocket, descripex, faucet_ex, onchain-stack and any other repo found by `grep -rl 'd=opens(line)' ~/_DATA/code/*/bin`) carries the same fix; a shell fixture test in `scripts/` covers both cases above."
+      ],
+      "out_of_scope": [
+        "Changing what the guard considers exposure (files:/extras:/groups_for_extras) or its 60-line span cap.",
+        "Re-adding the retired auto-sync hook."
+      ],
+      "files_to_modify": [
+        "scripts/sync-agents-md.sh"
+      ],
+      "body": "Observed 2026-09-23 bootstrapping faucet_ex: `bin/sync-agents-md.sh` (vendored verbatim from `scripts/sync-agents-md.sh`) refused to write AGENTS.md with `EXPOSED: ./mix.exs publishes to Hex and lists AGENTS.md in files:/extras:` although neither list mentions it. Cause, read in the awk in `check_publish_exposure`: `seen` is only set when a line's *net* bracket depth is positive (`d=opens(line); depth+=d; if (d>0) seen=1`). A list opened and closed on one line (`files: ~w(lib mix.exs README.md LICENSE CHANGELOG.md),` or `extras: [\"README.md\", \"CHANGELOG.md\"],`) nets to 0, so `seen` stays 0, the window never closes and keeps collecting up to 60 lines; the alias helper `repo_script(\"bin/sync-agents-md.sh\", [\"--check\"], \"AGENTS.md freshness check\")` further down then matches `AGENTS\\.md` and trips the guard. The comment above the awk says exactly this false signal must not fire.\n\nFix verified in faucet_ex's vendored copy: set `seen` whenever the line contains an opener (`if (line ~ /[[({]/) seen=1`), so a balanced line closes the window immediately; multi-line lists behave as before. Apply upstream, then sweep the vendored copies — they are byte-identical to upstream today and would otherwise drift.\n",
+      "created_at": "2026-09-23",
+      "scored_at": "2026-09-23",
+      "cross_repo": []
     }
   ]
 }
