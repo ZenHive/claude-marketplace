@@ -514,3 +514,20 @@ Fix verified in faucet_ex's vendored copy: set `seen` whenever the line contains
 '''
 created_at = "2026-09-23"
 scored_at = "2026-09-23"
+
+[[task]]
+id = 13
+phase = 2
+bundle = "stack-hygiene"
+status = "pending"
+title = "sync-agents-md.sh: refuse to regress AGENTS.md when rendered on a host with stale includes"
+scores = { d = 3, b = 4, u = 3 }
+acceptance_criteria = ["Rendering on a host whose ~/.claude/includes/* is older than the content already committed in AGENTS.md fails loudly (or no-ops with a warning) instead of overwriting newer sections with older ones", "A fixture test reproduces the regression (committed AGENTS.md contains a section the local include lacks) and shows the guard firing; normal fresh-host regeneration still writes", "Vendored copies (bin/sync-agents-md.sh in other repos) carry the same guard"]
+files_to_modify = ["scripts/sync-agents-md.sh"]
+assignee = "codex"
+model = "gpt-6-astra"
+body = """
+Observed 2026-09-24 in zen_macro, harness run run-1790246395846-b9529709 (task 5): the implementer ran sync-agents-md.sh inside the harness worktree on the remote harness host, whose ~/.claude/includes/harness-workflow.md is older than this Mac's. The regenerated AGENTS.md dropped the 'Explicit audit selection' section and reverted the eager-adopt guidance; it was reverted afterwards (zen_macro commit fecb4fb). Any dispatched agent that regenerates AGENTS.md on a harness host can silently regress it. Pick a detection mechanism, e.g. an include content-hash stamp in the rendered header that refuses to overwrite newer content, or skipping regeneration when HARNESS_RUN_ID is set. Decide in implementation and state the choice.
+"""
+created_at = "2026-09-24"
+scored_at = "2026-09-24"
