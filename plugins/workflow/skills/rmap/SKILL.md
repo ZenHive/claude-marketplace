@@ -35,7 +35,7 @@ This file is the **decision layer** — *which* command, *when*. The authoritati
 | Pick the next task | `rmap next [--marker M] [--bundle B] [--milestone V] [--count N] [--json]` |
 | Pick a session-sized bundle | `rmap next-bundle [--json]` · `rmap bundles` to discover them |
 | Pick the parallel-safe dispatch set | `rmap ready [--bundle B] [--phase N] [--marker M] [--milestone V] [--count N] [--dispatchable] [--fields a,b,c] [--json]` |
-| See the parallel dispatch schedule | `rmap waves [--json]` — every pending/unblocked task grouped by `dep_layer`; wave 0 runs first, each wave gates the next |
+| See the parallel dispatch schedule | `rmap waves [--json]` — open tasks (pending / in_progress / blocked) grouped by depth over the open subgraph; done deps count as satisfied; wave 0 runs first, each wave gates the next |
 | List release lines / pin to a release | `rmap milestones [--has-next\|--status\|--json]` · `rmap milestone <id> <name\|none>` |
 | Change status | `rmap status <id> <pending\|in_progress\|blocked\|done\|superseded> [--implemented "..."] [--delivered-by <agent>] [--verified --verified-by <evaluator> [--verification-ref <ref>]] [--shipped-in <sha>] [--reason "..."] [--landing-ref <ref>]` (bulk `1,2,3` atomic; `done` requires `implemented`; new verification claims require evaluator provenance; outcome flags settable only on `done`; `--reason` settable only on `blocked`; `--landing-ref` settable only on `in_progress`) |
 | Toggle a marker | `rmap mark <id> +parallel -cx` |
@@ -190,6 +190,8 @@ rmap's scoring **is** the `task-prioritization.md` framework, executable:
 - `scores = { d, b, u }` on each `[[task]]` ⇒ the `[D:X/B:Y/U:Z]` you'd otherwise hand-write
 - `eff = (b + u) / (2 × d)`, computed at read time, never stored — same formula, same tiers (`≥2.0 🎯 / ≥1.5 🚀 / ≥1.0 📋 / else ⚠️`)
 - `scored_at` older than 30 days renders an `Eff:W?` decay suffix
+- `D` = cost and risk of landing in one implement→review→land cycle, not human hours (see `task-prioritization.md`)
+- `rmap next` / `rmap ready` rank focus × active-milestone tier, then Eff, then computed `unlocks` descending; `rmap doctor` reports score decay only on open tasks
 
 Set scores in `tasks.toml` (via `rmap new` or editing the file); never hand-format the bracket — `rmap render` produces it.
 

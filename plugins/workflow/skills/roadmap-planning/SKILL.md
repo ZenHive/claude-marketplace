@@ -29,14 +29,16 @@ Each `[[task]]` in `roadmap/tasks.toml` carries `scores = { d, b, u }`. `rmap` c
 
 | Value | Difficulty | Benefit | Usefulness |
 |-------|------------|---------|------------|
-| 1 | < 1hr, trivial | Minimal impact | Pure hygiene, invisible |
-| 3 | Few hours | Minor/cosmetic | Infrastructure only |
-| 5 | 1–2 days | Nice to have | Moderate unlock |
-| 7 | 2–5 days | Significant QoL | Common question OR unblocks 2+ tasks |
-| 9 | 1–2 weeks | Major improvement | Daily question AND unblocks 3+ tasks |
-| 10 | Weeks, architectural | Transforms system | — |
+| 1 | One-file mechanical change, obvious check | Minimal impact | Pure hygiene, invisible |
+| 3 | One module, clear AC, focused tests settle it | Minor/cosmetic | Infrastructure only |
+| 5 | Several modules or a public contract; reviewer must reason about edge cases | Nice to have | Moderate unlock |
+| 7 | Cross-cutting, migration, or ambiguous spec; expect a rework cycle | Significant QoL | Common question OR unblocks 2+ tasks |
+| 9 | Architectural or multi-repo; needs a spec or decomposition first | Major improvement | Daily question AND unblocks 3+ tasks |
+| 10 | Unbounded — split before scoring | Transforms system | — |
 
-**U vs B:** U captures unlock leverage, query frequency, and gap visibility. B captures impact magnitude. Infrastructure-only tasks score high D/B but low U — U prevents them from crowding out user-facing features.
+**D is landing cost and risk, not hours** (decided 2026-09-29, rmap Phase 17): score how hard it is for an agent to land the task correctly in one implement → review → land cycle — ambiguity, blast radius, how hard the reviewer's judgment is. Human-hours estimates mis-rank agent work, where typing is cheap and rework is expensive.
+
+**U vs B:** U captures unlock leverage, query frequency, and gap visibility. rmap breaks equal Eff on the computed `unlocks` count (transitive dependents), so graph leverage no longer has to be hand-guessed for ties. B captures impact magnitude. Infrastructure-only tasks score high D/B but low U — U prevents them from crowding out user-facing features.
 
 ### Exclusions (don't score)
 
