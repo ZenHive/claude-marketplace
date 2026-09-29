@@ -6,6 +6,13 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 
 ## [Unreleased]
 
+### Changed
+
+- **`harness` 0.2.15 → 0.2.16** — harness-workflow is now skill-on-demand: repos
+  `@`-import the ~2.5 KB `harness-guardrails.md` instead of the 55 KB
+  include; `when-to-use` tells the model to invoke the skill before
+  dispatch/recovery/landing.
+
 ## [0.2.1] — 2026-09-29
 
 ### Changed
