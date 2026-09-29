@@ -6,6 +6,21 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-09-29
+
+### Changed
+
+- **`workflow` 0.2.0 → 0.2.1** — rmap skill: `specs` command, `spec_changes`,
+  `context_refs`, `checks`; roadmap-planning: D = landing risk, unlocks
+  tiebreak, waves open-only; task-writing: gate question 7 (stack decided on
+  the merits).
+- **`elixir` 0.4.0 → 0.4.1** — ex-slop skill tracks ex_slop 0.4.5 (narrowed
+  false positives); elixir-setup only after Elixir was chosen on the merits.
+- **`harness` 0.2.14 → 0.2.15** — resynced driver + workflow skills from the
+  harness repo.
+- **`tools` 0.2.0 → 0.2.1** — himalaya skill resynced from its include.
+- `AGENTS.md` regenerated (critical-rules § Stack is chosen per idea).
+
 ## [0.2.0] — 2026-09-22
 
 ### Changed

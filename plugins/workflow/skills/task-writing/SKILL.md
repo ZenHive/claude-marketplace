@@ -1,6 +1,6 @@
 ---
 name: task-writing
-description: Writing roadmap task descriptions as prompts. Use when authoring a roadmap/tasks.toml task (rmap new), writing a cross-instance handoff doc, or justifying a task's score — covers the 4-question pre-creation gate (baseline-before-optimization, one-session=one-task merge rule, milestone-fit, no pseudo-rigorous hedging), task-as-prompt vs over-specification, and the tasks.toml field set (body, acceptance_criteria, out_of_scope, scores).
+description: Writing roadmap task descriptions as prompts. Use when authoring a roadmap/tasks.toml task (rmap new), writing a cross-instance handoff doc, or justifying a task's score — covers the 7-question pre-creation gate (baseline-before-optimization, one-session=one-task merge rule, milestone-fit, no pseudo-rigorous hedging, stack decided on the merits, …), task-as-prompt vs over-specification, and the tasks.toml field set (body, acceptance_criteria, out_of_scope, scores).
 allowed-tools: Read, Bash
 ---
 
@@ -49,7 +49,7 @@ Do not phrase a source-level proof as evidence about deployed bytecode. Financia
 
 ### Pre-Creation Gate
 
-Run all 6 before `rmap new`. Any fail → defer / merge / rewrite. Do not create the task.
+Run all 7 before `rmap new`. Any fail → defer / merge / rewrite. Do not create the task.
 
 **1. Baseline before optimization.** Quality / normalization / fuzzy-match / ML / multi-variant / observability-depth tasks score U:low until the raw single-path version is shipped.
 - "Cheaper to build now than retrofit" is not a valid score input.
@@ -84,7 +84,10 @@ Run all 6 before `rmap new`. Any fail → defer / merge / rewrite. Do not create
 - **The orchestrator asks before it dispatches.** A pending task carrying named open decisions is dispatch-*ready*, not dispatch-*now*: the driving AI reads the body when it picks the task up, puts those questions to the human, folds the answers into `body`/`acceptance_criteria` (per § "Observable Results and Reality Contracts" — an answer that stays in chat is invisible to the implementer), and only then dispatches. That obligation is the orchestrator's, on the seat that already reads task bodies to plan a wave — it is not something the queue mechanism enforces for it. **🚨 That seat does not exist in a project on `dispatch_mode: "auto"`** — a cron poller dispatches the ready set unattended and reads no bodies, so an open decision filed there is addressed to nobody and gets answered silently by the implementer. Check `autonomy-status` before filing; under auto-dispatch, decide it yourself and write the decision in (vetoable, with an evidence gate when a premise could flip it). Full rule: `harness-workflow.md` § "The routing gate fires at `assignee =`".
 - Test: for each decision the human owns, is it written in `body` as an answerable question? A task routed `human` or parked `blocked` because "the human needs to weigh in" has mis-encoded a briefing as a routing or blocking fact.
 
-Pass all 6 → write body (next section).
+**7. Stack decided on the merits.** A task that creates a project, library or client names its target platforms, its stack and the deciding criterion (`critical-rules.md` § Stack is chosen per idea). An own library or a port is not filed without explicit user approval.
+- Test: point to the stack sentence in `body`. "The repo/user is Elixir" alone fails.
+
+Pass all 7 → write body (next section).
 
 ### 🚨 Re-Generalize an Agent's Decomposition Before Filing
 

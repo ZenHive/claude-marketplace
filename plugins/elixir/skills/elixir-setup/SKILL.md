@@ -1,6 +1,6 @@
 ---
 name: elixir-setup
-description: Standard Elixir project setup and dev tooling. ALWAYS invoke when running `mix new`, starting a new Elixir project, or adding dev dependencies. Configures Styler, Credo, Dialyxir, Doctor, Tidewave, ex_unit_json, dialyzer_json, .formatter.exs, and quality gates. For Phoenix projects, use this as base then add phoenix-setup.
+description: Standard Elixir project setup and dev tooling. Invoke only AFTER Elixir was chosen on the merits (critical-rules § Stack is chosen per idea) — then ALWAYS invoke when running `mix new`, starting a new Elixir project, or adding dev dependencies. Configures Styler, Credo, Dialyxir, Doctor, Tidewave, ex_unit_json, dialyzer_json, .formatter.exs, and quality gates. For Phoenix projects, use this as base then add phoenix-setup.
 allowed-tools: Read, Bash, Grep, Glob
 ---
 

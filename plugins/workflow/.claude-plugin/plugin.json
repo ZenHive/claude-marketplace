@@ -1,6 +1,6 @@
 {
   "name": "workflow",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Language-agnostic development workflow and roadmap methodology: the rmap roadmap substrate (tasks.toml → ROADMAP.md), D/B/U prioritization, task-as-prompt authoring, pickup / plan-and-file modes, worktree isolation, upstream contributions, and layered Solidity/EVM verification. Skills: rmap, task-writing, roadmap-planning, task-driver, git-worktrees, upstream-pr-workflow, onchain-verification. Skills only, no hooks.",
   "author": {
     "name": "ZenHive",

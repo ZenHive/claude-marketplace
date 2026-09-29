@@ -10,7 +10,7 @@ allowed-tools: Read, Bash, Grep, Glob
 
 Catches patterns LLMs over-produce but experienced Elixir devs don't: blanket rescues, N+1 queries, narrator docs, obvious comments, anti-idiomatic Enum usage, try/rescue around non-raising functions, and more. 40 checks organized as Warning / Refactor / Readability.
 
-**Min version: `{:ex_slop, "~> 0.1", only: [:dev, :test], runtime: false}`** (latest: 0.4.4, July 2026).
+**Min version: `{:ex_slop, "~> 0.1", only: [:dev, :test], runtime: false}`** (latest: 0.4.5, September 2026).
 **31 checks enabled by default** when you register `{ExSlop, []}` as a plugin; 9 are opt-in (noisier style/perf).
 **Credo plugin — not a standalone Mix task.** Runs inside your existing `mix credo --strict` gate.
 **Intentional non-overlap with stock Credo** for doc/comment content and Ecto patterns; a few performance checks intentionally overlap so ExSlop can serve as a generated-code validation pipeline on its own.
@@ -35,7 +35,7 @@ Catches patterns LLMs over-produce but experienced Elixir devs don't: blanket re
 }
 ```
 
-**0.4.4 warning:** if you register `{ExSlop, []}` as a plugin AND you have an explicit `checks: [enabled: [...]]` list, ExSlop's checks will be silently absent from that list — and as of 0.4.4, ExSlop emits a runtime warning directing you to add them. Fix: append `ExSlop.recommended_checks/0` to your enabled list:
+**Warning:** if you register `{ExSlop, []}` as a plugin AND you have an explicit `checks: [enabled: [...]]` list, ExSlop's checks will be silently absent from that list — and ExSlop emits a runtime warning directing you to add them. Fix: append `ExSlop.recommended_checks/0` to your enabled list:
 
 ```elixir
 # recommended_checks/0 returns bare module atoms — Credo's enabled list wants
@@ -90,20 +90,20 @@ To cherry-pick specific checks (opt-in, or disable defaults), add them to the `c
 | `RejectNil` | `Enum.reject(fn x -> x == nil end)` | `Enum.reject(&is_nil/1)` |
 | `ReduceAsMap` | `Enum.reduce([], fn x, acc -> [f(x) \| acc] end)` | `Enum.map(&f/1)` |
 | `MapIntoLiteral` | `Enum.map(...) \|> Enum.into(%{})` | `Map.new(...)` |
-| `IdentityPassthrough` | `case r do {:ok, v} -> {:ok, v}; {:error, e} -> {:error, e} end` | `r` |
-| `IdentityMap` | `Enum.map(fn x -> x end)` | Remove the call |
+| `IdentityPassthrough` | `case r do {:ok, v} -> {:ok, v}; {:error, e} -> {:error, e} end` | `r` — map/struct projections (`%{a: a} -> %{a: a}`) no longer flagged (0.4.5); non-exhaustive identity still reported with `CaseClauseError` note |
+| `IdentityMap` | `Enum.map(fn x -> x end)` | Remove the call; `Enum.to_list/1` for non-list inputs (ranges, streams, MapSet) (0.4.5) |
 | `CaseTrueFalse` | `case flag do true -> a; false -> b end` | `if flag, do: a, else: b` |
 | `TryRescueWithSafeAlternative` | `try do String.to_integer(x) rescue _ -> nil end` | `Integer.parse(x)` |
-| `WithIdentityElse` | `with {:ok, v} <- f() do v else {:error, r} -> {:error, r} end` | Drop the `else` |
+| `WithIdentityElse` | `with {:ok, v} <- f() do v else {:error, r} -> {:error, r} end` | Drop the `else` — map/struct patterns no longer treated as identity (0.4.5); non-exhaustive identity still reported with `WithClauseError` note |
 | `WithIdentityDo` | `with {:ok, v} <- f() do {:ok, v} end` | `f()` |
-| `SortThenReverse` | `Enum.sort() \|> Enum.reverse()` | `Enum.sort(:desc)` |
+| `SortThenReverse` | `Enum.sort() \|> Enum.reverse()` | `Enum.sort(:desc)` — `Enum.sort_by/2 \|> Enum.reverse/1` no longer flagged (stable sort changes relative order of equal keys) (0.4.5) |
 | `StringConcatInReduce` | `Enum.reduce("", fn x, acc -> acc <> x end)` | `Enum.join/1` or IO data |
-| `ReduceMapPut` | `Enum.reduce(%{}, fn x, acc -> Map.put(acc, k, v) end)` | `Map.new/2` |
+| `ReduceMapPut` | `Enum.reduce(%{}, fn x, acc -> Map.put(acc, k, v) end)` | `Map.new/2` — not flagged when key or value reads the accumulator (e.g. merging duplicate keys) (0.4.5) |
 | `RedundantBooleanIf` | `if cond, do: true, else: false` | Use the condition directly |
-| `FlatMapFilter` | `Enum.flat_map(fn x -> if cond, do: [x], else: [] end)` | `Enum.filter/2` |
+| `FlatMapFilter` | `Enum.flat_map(fn x -> if cond, do: [x], else: [] end)` | `Enum.filter/2` — only flagged when singleton holds argument unchanged; `[x * 2]` is not flagged (0.4.5) |
 | `RedundantEnumJoinSeparator` | `Enum.join(parts, "")` | `Enum.join(parts)` |
 | `UseMapJoin` | `Enum.map(...) \|> Enum.join(...)` | `Enum.map_join(...)` |
-| `PreferEnumSlice` | `Enum.drop(n) \|> Enum.take(k)` | `Enum.slice(enum, n, k)` |
+| `PreferEnumSlice` | `Enum.drop(n) \|> Enum.take(k)` | `Enum.slice(enum, n, k)` — negative literal args no longer flagged (semantics differ) (0.4.5) |
 | `GraphemesLength` | `String.graphemes(s) \|> length()` | `String.length(s)` |
 | `ManualStringReverse` | `String.graphemes(s) \|> Enum.reverse() \|> Enum.join()` | `String.reverse(s)` |
 | `SortThenAt` | `Enum.sort() \|> Enum.at(0)` | `Enum.min/1` / `Enum.max/1` |
@@ -114,7 +114,7 @@ To cherry-pick specific checks (opt-in, or disable defaults), add them to the `c
 | `LengthComparison` | `if length(xs) == 0`, `length(xs) <= 5` | Pattern match or `Enum.count_until/2` |
 | `ExplicitSumReduce` | `Enum.reduce(nums, 0, fn n, acc -> n + acc end)` | `Enum.sum(nums)` |
 
-### Readability Checks (6)
+### Readability Checks (7)
 
 | Check | What it catches |
 |---|---|
@@ -148,7 +148,10 @@ These stock Credo checks pair well — enable them alongside ExSlop:
 | Problem | Cause | Fix |
 |---|---|---|
 | ExSlop checks not appearing in `mix credo` | Plugin not registered in `.credo.exs` | Add `plugins: [{ExSlop, []}]` to the named config block |
-| Warning: "ExSlop is registered as a plugin but none of its checks are active." (0.4.4+) | Explicit `checks.enabled` list omits ExSlop checks — Credo treats it as authoritative and discards plugin-registered checks | Append `Enum.map(ExSlop.recommended_checks(), &{&1, []})` to the enabled list (see wiring example above) |
+| Warning: "ExSlop is registered as a plugin but none of its checks are active." | Explicit `checks.enabled` list omits ExSlop checks — Credo treats it as authoritative and discards plugin-registered checks | Append `Enum.map(ExSlop.recommended_checks(), &{&1, []})` to the enabled list (see wiring example above) |
+| `IdentityPassthrough` fires on `%{a: a} -> %{a: a}` struct pattern | Pre-0.4.5 behavior; a struct projection drops extra keys so it is not identity | Upgrade to 0.4.5; the check no longer flags these |
+| `FlatMapFilter` fires on `[f(x)]` transformation | Pre-0.4.5 behavior; `Enum.filter/2` cannot express a transformation | Upgrade to 0.4.5; the check now only flags `[x]` (argument unchanged) |
+| `SortThenReverse` fires on `sort_by \|> reverse` | Pre-0.4.5 behavior; stable sort means `:desc` and `reverse` differ on equal keys | Upgrade to 0.4.5; `sort_by/2 \|> reverse/1` is no longer flagged |
 | `ObviousComment` false positive on domain terms | Default keyword set too broad | Add `additional_keywords: []` option with only the words you want, or disable the check |
 | Refactor check fires on intentional code | Legitimate pattern that matches a heuristic | Cherry-pick checks instead of using `{ExSlop, []}` bulk registration; disable specific checks in `checks: [false: [...]]` |
 | Overlap with stock Credo output | Some perf checks intentionally overlap | Expected — ExSlop serves as a standalone AI-code gate; suppress duplicates in CI if running both |
