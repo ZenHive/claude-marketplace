@@ -50,6 +50,7 @@ This file is the **decision layer** — *which* command, *when*. The authoritati
 | Strict gates (pre-commit / CI) | `rmap validate` · `rmap validate --check-render` |
 | Render after editing tasks.toml directly | `rmap render` (or `rmap watch` for live re-render) |
 | Emit data.json to stdout (read-only) | `rmap export json` (`render` is what writes the file) |
+| Capability specs (rule ids, task history) | `rmap specs [--json]` · `rmap list --rule <ID>` — register `[specs.<cap>] = { path, status }` (plain Markdown, rule lines `PREFIX-n:`); a task declares `spec_changes = [{ rule, op = add\|change\|remove }]` and `delegate` quotes the current rule text. `context_refs` (read first) and `checks` (reviewer hints, never executed) render as their own delegate sections |
 | Emit the dep graph as Graphviz (read-only) | `rmap export dot` — DOT digraph of the in-repo `depends_on` graph (edges dependency → dependent); pipe to `dot` |
 
 All mutators **validate-then-write**: an invalid mutation leaves `tasks.toml` byte-equal to its prior state. `--json` envelopes on the read commands are append-only stable surfaces.
