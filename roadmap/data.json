@@ -502,6 +502,39 @@
       "created_at": "2026-09-24",
       "scored_at": "2026-09-24",
       "cross_repo": []
+    },
+    {
+      "id": 14,
+      "phase": 2,
+      "bundle": "skill-ref-hygiene",
+      "status": "pending",
+      "title": "Audit includes: move repo and package knowledge into the repos that own it",
+      "scores": {
+        "d": 5,
+        "b": 7,
+        "u": 5
+      },
+      "eff": 1.2,
+      "dep_layer": 0,
+      "unlocks": 0,
+      "markers": [],
+      "depends_on": [],
+      "assignee": "codex",
+      "model": "gpt-6-astra",
+      "acceptance_criteria": [
+        "Every file in ~/.claude/includes/ appears in the mapping table with a class and, for (b)/(c), a target path",
+        "Every (b)/(c) row with a roadmap-carrying target has a filed follow-up task id in the table",
+        "Every own Hex package is checked for a usage-rules filename mismatch; mismatches have a filed fix task",
+        "No include content is deleted in this task — moves happen in the follow-up tasks, after the target holds the content"
+      ],
+      "out_of_scope": [
+        "Performing the migrations themselves",
+        "Changing the includes-to-skills sync mechanism"
+      ],
+      "body": "The operator decided (2026-10-02) that durable knowledge belongs in versioned, PR-reviewed repo docs, not in private agent memory or global includes. Today ~/.claude/includes/*.md mixes three kinds of content; classify every include (and, where an include mixes kinds, every section) into exactly one:\n\n(a) cross-repo methodology and operator preferences — stays an include;\n(b) knowledge about one of our own packages (zen-websocket, api-toolkit, agent-economy/descripex, dialyzer-json, ex-unit-json, reach, ex-ast, ex-dna, ex-slop, quackdb, …) — belongs in the package as usage-rules.md, so every consumer gets it through usage_rules and it is reviewed with the code it describes; the include shrinks to a pointer or is retired together with its synced skill;\n(c) domain knowledge of a single application repo — belongs in that repo's docs/.\n\nOutput is a mapping table committed to this repo (include → class → target path → what moves) plus follow-up tasks filed with rmap new in each target repo that has a roadmap; targets without a roadmap are listed in the table. Classification is judgment — read each include, do not sort by filename.\n\nKnown pitfall found while filing: usage_rules only reads `usage-rules.md` / `usage-rules/*.md`; zen_websocket ships USAGE_RULES.md and is therefore invisible to consumers (fix filed in zen_websocket). Check every own package for the same mismatch and file the fix in its repo.\n",
+      "created_at": "2026-10-02",
+      "scored_at": "2026-10-02",
+      "cross_repo": []
     }
   ]
 }
