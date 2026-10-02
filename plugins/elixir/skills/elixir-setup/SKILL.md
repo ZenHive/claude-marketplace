@@ -29,6 +29,7 @@ Standard dependencies and tooling for Elixir projects (libraries, CLI tools, esc
 | ex_ast | AST-based code search/replace | Always |
 | ex_slop | Credo plugin — AI-generated-code antipatterns; rides `credo --strict` (see `ex-slop.md`) | Always |
 | reach | PDG/SDG — `reach.check --arch --smells` architecture + smell gate (see `reach.md`) | Always |
+| usage_rules | Syncs dep-shipped `usage-rules.md` into versioned agent skills | When a dep the model knows poorly ships usage rules (ash*, oban, igniter, req_llm, own packages) |
 
 ### Version Pinning
 
@@ -97,6 +98,30 @@ Add `Styler` to `.formatter.exs` plugins: `plugins: [Styler]`.
 
 **Styler sets your Elixir floor to 1.17.** It rewrites `DateTime.add/3` into `DateTime.shift/2` whenever the running Elixir is ≥ 1.17, so `mix format` writes 1.17-only calls regardless of what `elixir:` claims. Declare `elixir: "~> 1.17"` (or higher) — a lower floor is a build that only works by accident.
 
+### usage_rules — Dep Context for Agents
+
+Library authors ship `usage-rules.md` inside their Hex package; `usage_rules` builds them into skills versioned with `mix.lock`, so a dep bump updates the agent's guidance with it. Configure only packages the model knows poorly — not Phoenix/Ecto/stdlib. Working reference: `tapakly/mix.exs` (`usage_rules/0`).
+
+```elixir
+# deps
+{:usage_rules, "~> 1.2", only: :dev, runtime: false}
+
+# project/0
+usage_rules: [
+  skills: [
+    location: ".claude/skills",
+    build: [
+      "ash-framework": [
+        description: "Consult when creating or changing Ash resources, actions, policies, queries or code interfaces.",
+        usage_rules: [:ash, ~r/^ash_/]
+      ]
+    ]
+  ]
+]
+```
+
+`mix usage_rules.sync` writes the skills; commit them. `usage_rules.sync --check` in `precommit` fails on drift after a dep bump. Repos also serving Codex: use `location: ".agents/skills"` and symlink into `.claude/skills` (tapakly pattern).
+
 ### Standard aliases — check scope comes from verification-policy.md
 
 `~/.claude/includes/verification-policy.md` owns scheduling. This template keeps
@@ -118,6 +143,7 @@ defp aliases do
       "check.fast",
       "credo --strict --ignore TagTODO,TagFIXME",
       "doctor --raise",
+      "usage_rules.sync --check", # only when usage_rules is configured
       # preferred_envs is ignored for alias steps; 85 is this template's QA coverage floor.
       "cmd MIX_ENV=test mix test.json --quiet --cover --cover-threshold 85 --summary-only --exclude integration",
       "sobelow --skip --exit Low"

@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "ZenHive Claude Code plugins — harness orchestration, workflow/roadmap methodology, and per-language tooling for ZenHive's own packages, each plugin independently toggleable per repo",
-    "version": "0.2.1"
+    "version": "0.2.2"
   },
   "plugins": [
     {

@@ -6,8 +6,16 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 
 ## [Unreleased]
 
+## [0.2.2] — 2026-10-02
+
 ### Changed
 
+- **`elixir` 0.4.1 → 0.4.2** — development-philosophy cut to what a current
+  model doesn't carry (spec-on-defp mandate, TODO prefix, precedent/library
+  rules, validator tracing); generic Elixir tables removed. elixir-setup gains
+  a usage_rules section and `usage_rules.sync --check` in `precommit`.
+- `AGENTS.md` regenerated (critical-rules audit: fact/preference kept,
+  outdated behavior corrections removed, emphasis replaced by reasons).
 - **`harness` 0.2.15 → 0.2.16** — harness-workflow is now skill-on-demand: repos
   `@`-import the ~2.5 KB `harness-guardrails.md` instead of the 55 KB
   include; `when-to-use` tells the model to invoke the skill before
