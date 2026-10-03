@@ -6,6 +6,15 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 
 ## [Unreleased]
 
+## [0.2.3] — 2026-10-03
+
+### Changed
+
+- **`elixir` 0.4.2 → 0.4.3** — quackdb skill resynced to 0.5.26:
+  `QuackDB.Ecto.Decimal` for exact decimals, `contains/3` with
+  `case_sensitive: false`, inf/NaN float decoding, tagged UUID dumps,
+  NOT NULL column adds require `@disable_ddl_transaction true`.
+
 ## [0.2.2] — 2026-10-02
 
 ### Changed

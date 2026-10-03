@@ -12,11 +12,11 @@ OTP-supervised DuckDB via the Quack protocol: DBConnection client, Ecto adapter,
 
 **Min version: `{:quackdb, "~> 0.5"}`.** Requires DuckDB 1.5.5+ with the `quack` extension. Managed binary auto-downloads on Linux/macOS; Windows support is incomplete.
 
-**Experimental protocol.** QuackDB targets DuckDB's Quack protocol, which DuckDB itself marks experimental. Public APIs, result shapes, Ecto adapter behavior, and protocol coverage may change between releases.
+**Stability.** As of v0.5.26 QuackDB no longer labels itself experimental: protocol handling, the Ecto adapter and result shapes have been stable across many releases and are validated against real DuckDB in CI. Ecto coverage remains analytics-first.
 
 **Optional integrations activate when packages are present:** `{:ecto_sql, "~> 3.13"}`, `{:explorer, "~> 0.11"}`, `{:geo, "~> 4.1"}`.
 
-**Hex-published at v0.5.24.** Use `{:quackdb, "~> 0.5"}` — do NOT pin to 0.3.x (older readme snapshots show that).
+**Hex-published at v0.5.26.** Use `{:quackdb, "~> 0.5"}` — do NOT pin to 0.3.x (older readme snapshots show that).
 
 **Caveat:** Unsupported vector/logical types raise at runtime. Ecto coverage is analytics-first; edge cases in OLTP-style operations are not guaranteed. QuackDB does not stage local files to remote servers.
 
@@ -227,6 +227,8 @@ frame = DataFrame.new(id: [1, 2], name: ["duck", "goose"])
 QuackDB.Explorer.insert_dataframe!(conn, "events", frame)   # columnar, efficient
 ```
 
+As of v0.5.26, `QuackDB.Explorer.dataframe/4` given an Ecto query **and a Repo** plans the query through Ecto so every parameter is sent; with a bare connection the hand-rolled parameter walk can still miss a parameter inside an aggregate `FILTER` — pass the Repo.
+
 ---
 
 ### Ecto Adapter
@@ -247,7 +249,7 @@ Supported Ecto operations: raw `Repo.query/3`, schema selects, `Repo.get!/2`, jo
 
 As of v0.5.16, `{:array, :map}` columns (`JSON[]` in DuckDB) are supported with full round-trip dump/load through both the SQL and native append paths.
 
-As of v0.5.19, adding a `null: false` column via `alter table` migrations no longer fails: the adapter splits DuckDB's unsupported inline `NOT NULL` constraint into a separate `ADD COLUMN` followed by `ALTER COLUMN ... SET NOT NULL`.
+As of v0.5.19, adding a `null: false` column via `alter table` migrations no longer fails: the adapter splits DuckDB's unsupported inline `NOT NULL` constraint into a separate `ADD COLUMN` followed by `ALTER COLUMN ... SET NOT NULL`. As of v0.5.26 that split is refused inside the DDL transaction with an explicit `:ecto_feature_not_supported` error (DuckDB would otherwise fail with "Cannot create index with outstanding updates") — migrations adding NOT NULL columns must set `@disable_ddl_transaction true`.
 
 As of v0.5.20, Ecto `:integer` expressions and parameters are cast to DuckDB `BIGINT` (64-bit) rather than `INTEGER` (32-bit). This aligns with Ecto's 64-bit integer standard and prevents overflow when removing timestamped migration versions (timestamps exceed 32-bit range).
 
@@ -256,6 +258,28 @@ As of v0.5.22, decimal precision and scale are honored in migrations (invalid op
 As of v0.5.22, Ecto UUID reads and native appends are corrected for nullable UUID fields and UUID arrays.
 
 As of v0.5.23, Ecto type-loading callbacks are preserved for custom UUID types such as UUIDv7, including nullable fields and arrays. DuckDB JSON exception metadata is exposed while the original server message is retained.
+
+As of v0.5.26, `:binary_id`, `Ecto.UUID` and custom `:uuid` types always dump as tagged `UUID '...'` literals in `insert_all`, pins and `update_all` (previously a UUID whose 16 bytes were valid UTF-8 went out as text and DuckDB rejected it with "Could not convert string to INT128").
+
+As of v0.5.26, infinite/NaN `FLOAT` and `DOUBLE` values decode as `:infinity`, `:neg_infinity` and `:nan` (Explorer's atoms) instead of failing the whole result with `:truncated_float64`; the atoms are accepted back as SQL parameters and in native appends. Ecto `:float` schema fields still reject them (like Postgrex) — use a custom type (see the package's type support guide).
+
+#### Exact Decimals: `QuackDB.Ecto.Decimal` (v0.5.25+)
+
+Bare `:decimal` casts use DuckDB's `DECIMAL(18,3)` default and **silently round** (e.g. `9.5001`). For exact comparisons use the parameterized type, which emits the given precision/scale in SQL casts:
+
+```elixir
+alias QuackDB.Ecto.Decimal, as: DuckDecimal
+
+decimal = Ecto.ParameterizedType.init(DuckDecimal, precision: 18, scale: 4)
+estimate = dynamic([t], type(t.fields[^field], ^decimal))
+from t in "tasks", where: ^dynamic([t], ^estimate > ^minimum)
+```
+
+`precision` in 1..38, `scale` in 0..precision; DuckDB enforces rounding/overflow.
+
+#### Case-Insensitive Text Containment (v0.5.25+)
+
+`contains(event.name, ^search, case_sensitive: false)` lowercases both operands in DuckDB and treats `%`, `_` and backslashes literally. The option must be a literal keyword list. `contains/2` is unchanged; under `use QuackDB.Ecto`, `contains_text/2` disambiguates from spatial `contains/2`.
 
 #### DDL: CHECK Constraints (v0.5.24+)
 
@@ -424,14 +448,18 @@ Telemetry events emitted: `[:quackdb, :query, :start | :stop]`, `[:quackdb, :app
 | Decimal migration silently drops precision/scale | Pre-0.5.22 | Upgrade to v0.5.22+ (invalid options now rejected) |
 | `nil` map field stored as JSON `null` instead of SQL `NULL` | Pre-0.5.22 | Upgrade to v0.5.22+ |
 | Database-lock startup crash with no useful error | Pre-0.5.21: lock conflicts not classified | Upgrade to v0.5.21+ (`:database_locked` reason) |
+| `:ecto_feature_not_supported` adding a `null: false` column | v0.5.26+: NOT NULL split refused inside the DDL transaction | `@disable_ddl_transaction true` in that migration |
+| `Could not convert string to INT128` on UUID insert/pin | Pre-0.5.26: UTF-8-valid UUID bytes sent as text | Upgrade to v0.5.26+ |
+| `:truncated_float64` on a query result | Pre-0.5.26: inf/NaN floats undecodable | Upgrade to v0.5.26+ (decodes to `:infinity` / `:neg_infinity` / `:nan`) |
+| Decimal comparison silently rounds | Bare `:decimal` casts to `DECIMAL(18,3)` | `QuackDB.Ecto.Decimal` with explicit precision/scale (v0.5.25+) |
 | Bulk append overwrites sequence-defaulted PKs | Native append skips column defaults | Pre-allocate with `Sequence.next_values/4` (v0.5.21+) |
 
 ---
 
 ### DO NOT
 
-1. Use QuackDB as a drop-in production Postgres replacement — the Quack protocol is experimental.
-2. Pin to `"~> 0.3"` — the README snapshots on mirror sites are stale; 0.5.24 is current.
+1. Use QuackDB as a drop-in production Postgres replacement — Ecto coverage is analytics-first, not OLTP.
+2. Pin to `"~> 0.3"` — the README snapshots on mirror sites are stale; 0.5.26 is current.
 3. Call `LOAD spatial` inside queries at runtime without connection pooling awareness — load it in `:boot_sql`.
 4. Expect Windows managed-binary support — provide the DuckDB path explicitly on Windows.
 5. Use `insert_rows!` for very wide schemas with nil-only columns without `:columns` type specs — DuckDB cannot infer the type.
