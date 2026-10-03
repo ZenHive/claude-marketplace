@@ -141,6 +141,10 @@ Claude finds where, matches existing patterns, survives codebase changes. Clear 
 
 Separate the *requirement* from the *suggestion* even then.
 
+### Blast Radius
+
+A task touching persisted formats, money, authorization, a distribution/protocol path or a hot path says so in `body` — it sets review depth (`verification-policy.md`). Performance-relevant tasks name the benchmark and the baseline comparison in `acceptance_criteria`.
+
 ### Task Fields in `roadmap/tasks.toml`
 
 A task's prose lives in two `rmap` schema fields; the rest is structured metadata:
