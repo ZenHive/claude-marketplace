@@ -6,6 +6,16 @@ track `.claude-plugin/marketplace.json` `metadata.version`.
 
 ## [Unreleased]
 
+## [0.2.4] — 2026-11-19
+
+### Fixed
+
+- **`elixir` 0.4.3 → 0.4.4** — `pre-commit-unified` no longer spins until
+  the 120 s hook timeout on `git -C <relative-path> commit`:
+  `find_mix_project_root_from_dir` resolves its argument to an absolute
+  path before walking upward, and `extract_git_dir` resolves a relative
+  `-C` path against the hook cwd.
+
 ## [0.2.3] — 2026-10-03
 
 ### Changed
