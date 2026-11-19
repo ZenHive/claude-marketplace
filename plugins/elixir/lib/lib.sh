@@ -28,6 +28,9 @@ is_null_or_empty() {
 # Usage: PROJECT_ROOT=$(find_mix_project_root_from_dir "$dir")
 find_mix_project_root_from_dir() {
   local dir="$1"
+  # Resolve to an absolute path first: dirname of a relative path ends at "."
+  # and never reaches "/", which made this loop spin until the hook timeout.
+  dir=$(cd "$dir" 2>/dev/null && pwd) || return 1
   while [[ "$dir" != "/" ]]; do
     if [[ -f "$dir/mix.exs" ]]; then
       echo "$dir"
@@ -153,6 +156,10 @@ extract_git_dir() {
   if echo "$command" | grep -qE 'git\s+-C\s+'; then
     # Extract path: match "git" + whitespace + "-C" + whitespace + capture non-whitespace
     git_dir=$(echo "$command" | sed -n 's/.*git[[:space:]]*-C[[:space:]]*\([^[:space:]]*\).*/\1/p')
+    # A relative -C path is relative to the hook cwd, not to this process.
+    if ! is_null_or_empty "$git_dir" && [[ "$git_dir" != /* ]]; then
+      git_dir="$cwd/$git_dir"
+    fi
     # Fall back to cwd if extraction failed or path doesn't exist
     if is_null_or_empty "$git_dir" || [[ ! -d "$git_dir" ]]; then
       git_dir="$cwd"
